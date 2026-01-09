@@ -2,53 +2,51 @@
 <html lang="es">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Flores virtuales</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Girasoles bajo estrellas</title>
   <style>
     :root{
-      --bg1:#0b0f1a;
-      --bg2:#101a2d;
-      --txt:rgba(255,255,255,.88);
+      --bg1:#060714;
+      --bg2:#0a0f2b;
+      --bg3:#131b43;
     }
     *{box-sizing:border-box}
     html,body{height:100%}
     body{
       margin:0;
-      font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;
-      color:var(--txt);
-      background:radial-gradient(1200px 700px at 20% 10%, var(--bg2), var(--bg1));
       overflow:hidden;
+      background: radial-gradient(1100px 700px at 20% 10%, var(--bg3), var(--bg2), var(--bg1));
+      touch-action: manipulation;
     }
-    canvas{
+    canvas{position:fixed; inset:0; width:100vw; height:100vh; display:block;}
+
+    /* Optional: tiny, non-intrusive hint that doesn't look like a "menu" */
+    .hint{
       position:fixed;
-      inset:0;
-      width:100vw;
-      height:100vh;
-      display:block;
+      left:14px;
+      bottom:14px;
+      padding:8px 10px;
+      border-radius:999px;
+      background:rgba(0,0,0,.22);
+      border:1px solid rgba(255,255,255,.10);
+      color:rgba(255,255,255,.72);
+      font: 12px/1.1 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;
+      backdrop-filter: blur(8px);
+      user-select:none;
     }
   </style>
 </head>
 <body>
   <canvas id="c"></canvas>
+  <div class="hint">Toca para plantar un girasol 🌻</div>
 
 <script>
 (() => {
   const canvas = document.getElementById('c');
   const ctx = canvas.getContext('2d', { alpha: true });
 
-  // ====== CONFIG (aquí “configuras” sin mostrar menú) ======
-  const CONFIG = {
-    preset: 'garden',      // 'garden' | 'neon' | 'pastel' | 'sunset' | 'mono'
-    baseColor: '#ff4fd8',  // color base
-    count: 90,             // cantidad de flores en pantalla
-    speed: 0.35,           // 0..1 (más = más rápido)
-    size: 26,              // tamaño base
-    wind: 0.28,            // 0..1 (más = más viento)
-    mode: 'float',         // 'float' | 'sprout' | 'orbit'
-  };
-  // ==========================================================
-
-  let W = 0, H = 0, DPR = 1;
+  // Mobile-friendly: cap devicePixelRatio to reduce load on phones
+  let W=0,H=0,DPR=1;
   function resize(){
     DPR = Math.min(2, window.devicePixelRatio || 1);
     W = Math.floor(window.innerWidth);
@@ -62,352 +60,362 @@
   window.addEventListener('resize', resize);
   resize();
 
-  // Helpers
-  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-  const lerp = (a, b, t) => a + (b - a) * t;
-  const rand = (a, b) => a + Math.random() * (b - a);
-  const randi = (a, b) => Math.floor(rand(a, b + 1));
+  const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+  const lerp  = (a,b,t)=>a+(b-a)*t;
+  const rand  = (a,b)=>a+Math.random()*(b-a);
+  const randi = (a,b)=>Math.floor(rand(a,b+1));
+  const TAU = Math.PI*2;
 
-  // Color utils
-  function hexToRgb(hex){
-    const h = hex.replace('#','').trim();
-    const full = h.length === 3 ? h.split('').map(ch => ch+ch).join('') : h;
-    const n = parseInt(full, 16);
-    return { r:(n>>16)&255, g:(n>>8)&255, b:n&255 };
+  function rgba(r,g,b,a){ return `rgba(${r},${g},${b},${a})`; }
+
+  // ===== CONFIG (sin menú, listo para teléfono) =====
+  const CONFIG = {
+    sunflowerCount: 16,
+    starCount: 180,
+    twinkle: 0.9,
+    sway: 0.55,           // movement of stems
+    breeze: 0.45,         // horizontal drift
+    vignette: 0.55,
+    hintAutoHideMs: 3500, // hide hint after a few seconds
+    reduceMotion: false,  // set true if you want static scene
+  };
+
+  // Auto-hide hint after first seconds or on first tap
+  const hint = document.querySelector('.hint');
+  let hintHidden = false;
+  function hideHint(){
+    if(hintHidden) return;
+    hintHidden = true;
+    hint.style.display = 'none';
   }
-  function rgbToHsl(r, g, b){
-    r/=255; g/=255; b/=255;
-    const max=Math.max(r,g,b), min=Math.min(r,g,b);
-    let h=0, s=0, l=(max+min)/2;
-    if(max !== min){
-      const d = max-min;
-      s = l > 0.5 ? d/(2-max-min) : d/(max+min);
-      switch(max){
-        case r: h = (g-b)/d + (g < b ? 6 : 0); break;
-        case g: h = (b-r)/d + 2; break;
-        case b: h = (r-g)/d + 4; break;
-      }
-      h /= 6;
+  setTimeout(hideHint, CONFIG.hintAutoHideMs);
+
+  // Stars
+  const stars = [];
+  function seedStars(){
+    stars.length = 0;
+    const n = CONFIG.starCount;
+    for(let i=0;i<n;i++){
+      stars.push({
+        x: Math.random(),
+        y: Math.random(),
+        r: rand(0.6, 1.9),
+        a: rand(0.04, 0.25),
+        p: rand(0, TAU),
+        s: rand(0.25, 1.25),
+        hue: rand(0,1),
+      });
     }
-    return { h, s, l };
   }
-  function hslToRgb(h, s, l){
-    let r, g, b;
-    if(s === 0){ r=g=b=l; }
-    else{
-      const hue2rgb = (p, q, t) => {
-        if(t < 0) t += 1;
-        if(t > 1) t -= 1;
-        if(t < 1/6) return p + (q - p) * 6 * t;
-        if(t < 1/2) return q;
-        if(t < 2/3) return p + (q - p) * (2/3 - t) * 6;
-        return p;
-      };
-      const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-      const p = 2 * l - q;
-      r = hue2rgb(p, q, h + 1/3);
-      g = hue2rgb(p, q, h);
-      b = hue2rgb(p, q, h - 1/3);
+  seedStars();
+
+  function drawBackground(t){
+    ctx.clearRect(0,0,W,H);
+
+    // star field
+    for(const st of stars){
+      const tw = CONFIG.reduceMotion ? 1 : (0.55 + 0.45*Math.sin(t*0.001*st.s + st.p) * CONFIG.twinkle);
+      const alpha = st.a * (0.7 + 0.6*tw);
+      ctx.globalAlpha = alpha;
+      ctx.beginPath();
+      ctx.arc(st.x*W, st.y*H, st.r, 0, TAU);
+      // slightly tinted stars
+      const cool = 210 + 25*Math.sin(st.hue*TAU);
+      ctx.fillStyle = `hsla(${cool}, 70%, 92%, 1)`;
+      ctx.fill();
     }
-    return { r:Math.round(r*255), g:Math.round(g*255), b:Math.round(b*255) };
-  }
-  function rgba({r,g,b}, a){ return `rgba(${r},${g},${b},${a})`; }
+    ctx.globalAlpha = 1;
 
-  function paletteFromPreset(baseHex, preset){
-    const base = hexToRgb(baseHex);
-    const hsl = rgbToHsl(base.r, base.g, base.b);
+    // moon-ish glow
+    const moonX = W*0.78, moonY = H*0.20;
+    const mg = ctx.createRadialGradient(moonX, moonY, 10, moonX, moonY, Math.max(W,H)*0.35);
+    mg.addColorStop(0, 'rgba(255,255,255,0.10)');
+    mg.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = mg;
+    ctx.fillRect(0,0,W,H);
 
-    const palettes = {
-      garden: () => ([
-        { h: (hsl.h + 0.00) % 1, s: clamp(hsl.s*0.95, 0.2, 0.95), l: clamp(hsl.l*1.05, 0.25, 0.75) },
-        { h: (hsl.h + 0.08) % 1, s: clamp(hsl.s*0.85, 0.2, 0.95), l: clamp(hsl.l*0.95, 0.2, 0.7) },
-        { h: (hsl.h + 0.16) % 1, s: clamp(hsl.s*0.90, 0.25, 0.98), l: clamp(hsl.l*0.90, 0.18, 0.7) },
-        { h: (hsl.h - 0.10 + 1) % 1, s: clamp(hsl.s*0.70, 0.2, 0.9), l: clamp(hsl.l*1.10, 0.25, 0.78) },
-      ]),
-      neon: () => ([
-        { h: (hsl.h + 0.00) % 1, s: 0.95, l: 0.60 },
-        { h: (hsl.h + 0.18) % 1, s: 0.95, l: 0.58 },
-        { h: (hsl.h + 0.36) % 1, s: 0.95, l: 0.56 },
-        { h: (hsl.h + 0.54) % 1, s: 0.95, l: 0.54 },
-      ]),
-      pastel: () => ([
-        { h: (hsl.h + 0.00) % 1, s: clamp(hsl.s*0.55, 0.15, 0.55), l: 0.78 },
-        { h: (hsl.h + 0.12) % 1, s: clamp(hsl.s*0.50, 0.15, 0.55), l: 0.80 },
-        { h: (hsl.h + 0.24) % 1, s: clamp(hsl.s*0.45, 0.15, 0.55), l: 0.76 },
-        { h: (hsl.h - 0.10 + 1) % 1, s: clamp(hsl.s*0.50, 0.15, 0.60), l: 0.82 },
-      ]),
-      sunset: () => ([
-        { h: 0.02, s: 0.90, l: 0.58 },
-        { h: 0.08, s: 0.92, l: 0.60 },
-        { h: 0.14, s: 0.90, l: 0.58 },
-        { h: 0.86, s: 0.75, l: 0.60 },
-      ]),
-      mono: () => ([
-        { h: hsl.h, s: clamp(hsl.s*0.25, 0.05, 0.25), l: 0.70 },
-        { h: hsl.h, s: clamp(hsl.s*0.20, 0.05, 0.25), l: 0.55 },
-        { h: hsl.h, s: clamp(hsl.s*0.15, 0.05, 0.25), l: 0.40 },
-        { h: hsl.h, s: clamp(hsl.s*0.10, 0.05, 0.25), l: 0.28 },
-      ]),
-    };
-
-    const builder = palettes[preset] || palettes.garden;
-    return builder().map(p => hslToRgb(p.h, p.s, p.l));
+    // vignette
+    const vg = ctx.createRadialGradient(W*0.5, H*0.55, Math.min(W,H)*0.18, W*0.5, H*0.55, Math.max(W,H)*0.9);
+    vg.addColorStop(0, 'rgba(0,0,0,0)');
+    vg.addColorStop(1, `rgba(0,0,0,${clamp(CONFIG.vignette,0,1)})`);
+    ctx.fillStyle = vg;
+    ctx.fillRect(0,0,W,H);
   }
 
-  class Flower {
-    constructor(x, y, opt){
+  // Sunflowers
+  class Sunflower {
+    constructor(x, groundY, scale){
       this.x = x;
-      this.y = y;
-      this.z = rand(0.3, 1.0); // pseudo-depth
-      this.r = opt.size * rand(0.7, 1.25) * lerp(0.75, 1.25, this.z);
-      this.petals = randi(5, 10);
-      this.rot = rand(0, Math.PI*2);
-      this.rotSpd = rand(-0.012, 0.012) * opt.speed;
-      this.vx = rand(-0.4, 0.4) * opt.wind;
-      this.vy = rand(-0.8, -0.25) * opt.speed * lerp(0.5, 1.1, this.z);
-      this.wobble = rand(0.6, 2.4);
-      this.wobblePhase = rand(0, Math.PI*2);
-      this.fade = 0;
-      this.color = opt.color;
-      this.center = opt.center;
-      this.outline = opt.outline;
-      this.mode = opt.mode;
-      this.orbitA = rand(30, 180);
-      this.orbitB = rand(25, 140);
-      this.orbitT = rand(0, Math.PI*2);
-      this.seed = Math.random();
+      this.groundY = groundY;
+      this.scale = scale;
+      this.height = rand(170, 360) * scale;
+      this.stemW = rand(5.0, 9.0) * scale;
+      this.headR  = rand(30, 54) * scale;
+      this.petals = randi(18, 28);
+      this.lean = rand(-0.14, 0.14);
+      this.phase = rand(0, TAU);
+      this.speed = rand(0.6, 1.25);
+      this.depth = rand(0.55, 1.0);
+      this.seed  = Math.random();
+      this.leafSide = Math.random()<0.5 ? -1 : 1;
+
+      // colors
+      this.petal = { r: 245, g: 198, b: 60 };
+      this.petal2= { r: 235, g: 170, b: 35 };
+      this.center= { r: 64, g: 40, b: 22 };
+      this.center2={ r: 92, g: 58, b: 28 };
+      this.stem  = { r: 52, g: 166, b: 92 };
+      this.stem2 = { r: 34, g: 128, b: 70 };
+      this.leaf  = { r: 55, g: 190, b: 110 };
     }
 
-    step(t, opt){
-      this.fade = clamp(this.fade + 0.02, 0, 1);
+    draw(t){
+      const sway = CONFIG.reduceMotion ? 0 : Math.sin(t*0.001*CONFIG.sway*this.speed + this.phase) * 0.22 * CONFIG.sway;
+      const breeze = CONFIG.reduceMotion ? 0 : Math.sin(t*0.0007 + this.seed*9) * 0.12 * CONFIG.breeze;
+      const angle = this.lean + sway + breeze;
 
-      if(this.mode === 'orbit'){
-        this.orbitT += 0.004 * opt.speed * lerp(0.35, 0.9, this.z);
-        const cx = W * 0.5 + Math.sin(this.seed * 9) * 160;
-        const cy = H * 0.55 + Math.cos(this.seed * 7) * 110;
-        this.x = cx + Math.cos(this.orbitT) * this.orbitA;
-        this.y = cy + Math.sin(this.orbitT) * this.orbitB;
-      } else {
-        const wob = Math.sin(t * 0.002 * this.wobble + this.wobblePhase);
-        this.x += this.vx + wob * 0.35 * opt.wind;
-        this.y += this.vy;
+      const baseX = this.x;
+      const baseY = this.groundY;
+      const topY = baseY - this.height;
 
-        if(this.mode === 'sprout'){
-          this.vy *= 0.992;
-        }
-      }
+      const cp1x = baseX + Math.sin(this.phase)*12*this.scale;
+      const cp1y = baseY - this.height*0.38;
+      const cp2x = baseX + Math.cos(this.phase*1.7)*18*this.scale;
+      const cp2y = baseY - this.height*0.74;
 
-      this.rot += this.rotSpd;
+      const headX = baseX + Math.sin(angle) * 18 * this.scale;
+      const headY = topY + Math.cos(angle) * 6 * this.scale;
 
-      if(this.y < -this.r - 40 || this.x < -200 || this.x > W + 200){
-        this.x = rand(0, W);
-        this.y = (this.mode === 'sprout') ? H + rand(20, 220) : H + rand(10, 220);
-        this.fade = 0;
-        this.rot = rand(0, Math.PI*2);
-        this.petals = randi(5, 10);
-        this.z = rand(0.3, 1.0);
-        this.r = opt.size * rand(0.7, 1.25) * lerp(0.75, 1.25, this.z);
-        this.vx = rand(-0.4, 0.4) * opt.wind;
-        this.vy = rand(-0.8, -0.25) * opt.speed * lerp(0.5, 1.1, this.z);
-        this.rotSpd = rand(-0.012, 0.012) * opt.speed;
-      }
+      // leaves first (behind)
+      this.drawLeaf(baseX, baseY, angle, this.leafSide);
+      this.drawLeaf(baseX, baseY, angle, -this.leafSide, true);
+
+      // stem
+      ctx.save();
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      const stemGrad = ctx.createLinearGradient(baseX, baseY, headX, headY);
+      stemGrad.addColorStop(0, rgba(this.stem2.r, this.stem2.g, this.stem2.b, 0.95));
+      stemGrad.addColorStop(1, rgba(this.stem.r, this.stem.g, this.stem.b, 0.95));
+      ctx.strokeStyle = stemGrad;
+      ctx.lineWidth = this.stemW;
+      ctx.beginPath();
+      ctx.moveTo(baseX, baseY);
+      ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, headX, headY);
+      ctx.stroke();
+
+      // subtle highlight
+      ctx.strokeStyle = rgba(255,255,255,0.06);
+      ctx.lineWidth = Math.max(1, this.stemW*0.28);
+      ctx.beginPath();
+      ctx.moveTo(baseX+1.2*this.scale, baseY);
+      ctx.bezierCurveTo(cp1x+1.2*this.scale, cp1y, cp2x+1.2*this.scale, cp2y, headX+1.2*this.scale, headY);
+      ctx.stroke();
+      ctx.restore();
+
+      // head (petals + center)
+      this.drawHead(headX, headY, angle, t);
     }
 
-    draw(){
-      const x = this.x, y = this.y, r = this.r;
+    drawLeaf(baseX, baseY, angle, side, second=false){
+      const attachY = baseY - this.height * (second ? 0.62 : 0.42);
+      const attachX = baseX;
+      const len = (second ? 110 : 150) * this.scale;
+      const wid = (second ? 34 : 46) * this.scale;
+      const leafAngle = angle + side * (second ? 0.42 : 0.56);
+      const tipX = attachX + Math.cos(leafAngle) * len;
+      const tipY = attachY - Math.sin(leafAngle) * len;
 
       ctx.save();
+      const g = ctx.createLinearGradient(attachX, attachY, tipX, tipY);
+      g.addColorStop(0, rgba(this.leaf.r, this.leaf.g, this.leaf.b, 0.78));
+      g.addColorStop(1, rgba(this.stem2.r, this.stem2.g, this.stem2.b, 0.90));
+      ctx.fillStyle = g;
+      ctx.strokeStyle = rgba(255,255,255,0.07);
+      ctx.lineWidth = 1;
+
+      ctx.beginPath();
+      const midX = (attachX + tipX)*0.5 + side * 18*this.scale;
+      const midY = (attachY + tipY)*0.5 - 10*this.scale;
+      ctx.moveTo(attachX, attachY);
+      ctx.quadraticCurveTo(midX, midY, tipX, tipY);
+      ctx.quadraticCurveTo(midX + side*wid*0.55, midY + wid*0.55, attachX, attachY);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // midrib
+      ctx.strokeStyle = rgba(255,255,255,0.06);
+      ctx.beginPath();
+      ctx.moveTo(attachX, attachY);
+      ctx.quadraticCurveTo(midX, midY, tipX, tipY);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    drawHead(x, y, angle, t){
+      const r = this.headR;
+      ctx.save();
       ctx.translate(x, y);
-      ctx.rotate(this.rot);
+      ctx.rotate(angle);
 
-      const glow = 0.10 + 0.22 * this.z;
-      ctx.shadowColor = rgba(this.color, 0.55 * this.fade);
-      ctx.shadowBlur = 14 + 22 * this.z;
+      // soft glow
+      ctx.shadowColor = rgba(this.petal.r, this.petal.g, this.petal.b, 0.35);
+      ctx.shadowBlur = 16 + 22*this.depth;
 
+      // petals
       for(let i=0;i<this.petals;i++){
-        const a = (i / this.petals) * Math.PI * 2;
+        const a = (i/this.petals)*TAU;
         ctx.save();
         ctx.rotate(a);
 
-        const petalLen = r * (1.0 + 0.18 * Math.sin(i*1.7 + this.seed*10));
-        const petalWid = r * 0.55;
+        const wig = CONFIG.reduceMotion ? 0 : Math.sin(t*0.002 + i*0.8 + this.phase) * 0.06;
+        const petLen = r * (1.65 + 0.22*wig);
+        const petWid = r * 0.55;
 
-        const g = ctx.createRadialGradient(0, 0, r*0.1, petalLen*0.65, 0, petalLen);
-        g.addColorStop(0, rgba(this.color, (0.62 + glow) * this.fade));
-        g.addColorStop(1, rgba(this.color, (0.06 + glow*0.25) * this.fade));
+        const pg = ctx.createLinearGradient(0, 0, petLen, 0);
+        pg.addColorStop(0, rgba(this.petal.r, this.petal.g, this.petal.b, 0.95));
+        pg.addColorStop(1, rgba(this.petal2.r, this.petal2.g, this.petal2.b, 0.85));
 
-        ctx.fillStyle = g;
+        ctx.fillStyle = pg;
+        ctx.strokeStyle = rgba(255,255,255,0.08);
+        ctx.lineWidth = 1;
+
         ctx.beginPath();
-        ctx.moveTo(r*0.12, 0);
-        ctx.quadraticCurveTo(petalLen*0.35, -petalWid*0.55, petalLen, 0);
-        ctx.quadraticCurveTo(petalLen*0.35,  petalWid*0.55, r*0.12, 0);
+        ctx.moveTo(r*0.10, 0);
+        ctx.quadraticCurveTo(petLen*0.35, -petWid*0.60, petLen, 0);
+        ctx.quadraticCurveTo(petLen*0.35,  petWid*0.60, r*0.10, 0);
         ctx.closePath();
         ctx.fill();
-
         ctx.shadowBlur = 0;
-        ctx.strokeStyle = rgba(this.outline, (0.12 + 0.10*this.z) * this.fade);
-        ctx.lineWidth = 1;
         ctx.stroke();
 
         ctx.restore();
       }
 
-      ctx.shadowBlur = 18 + 24*this.z;
-      const cg = ctx.createRadialGradient(0,0, r*0.06, 0,0, r*0.45);
-      cg.addColorStop(0, rgba(this.center, (0.95) * this.fade));
-      cg.addColorStop(1, rgba(this.center, (0.12) * this.fade));
+      // center disc
+      ctx.shadowBlur = 18 + 20*this.depth;
+      const cg = ctx.createRadialGradient(0,0, r*0.10, 0,0, r*0.95);
+      cg.addColorStop(0, rgba(this.center2.r, this.center2.g, this.center2.b, 0.95));
+      cg.addColorStop(1, rgba(this.center.r, this.center.g, this.center.b, 0.98));
       ctx.fillStyle = cg;
       ctx.beginPath();
-      ctx.arc(0,0, r*0.28, 0, Math.PI*2);
+      ctx.arc(0,0, r*0.72, 0, TAU);
       ctx.fill();
 
+      // seed spiral dots (cheap but effective)
       ctx.shadowBlur = 0;
-      ctx.fillStyle = rgba(this.center, 0.65 * this.fade);
-      for(let i=0;i<8;i++){
-        const a = (i/8)*Math.PI*2;
+      ctx.fillStyle = rgba(15, 10, 6, 0.28);
+      const dots = randi(70, 120);
+      for(let i=0;i<dots;i++){
+        const theta = i * 0.35;
+        const rr = (i/dots) * r*0.66;
+        const dx = Math.cos(theta) * rr;
+        const dy = Math.sin(theta) * rr;
         ctx.beginPath();
-        ctx.arc(Math.cos(a)*r*0.17, Math.sin(a)*r*0.17, r*0.03, 0, Math.PI*2);
+        ctx.arc(dx, dy, r*0.03 + (i%7===0? r*0.02:0), 0, TAU);
         ctx.fill();
       }
+
+      // little highlight
+      ctx.fillStyle = rgba(255,255,255,0.06);
+      ctx.beginPath();
+      ctx.arc(-r*0.18, -r*0.22, r*0.22, 0, TAU);
+      ctx.fill();
 
       ctx.restore();
     }
   }
 
-  // Background sparkles
-  const stars = Array.from({length: 120}, () => ({
-    x: Math.random(),
-    y: Math.random(),
-    r: rand(0.6, 1.6),
-    a: rand(0.05, 0.22),
-    p: rand(0, Math.PI*2),
-    s: rand(0.3, 1.3)
-  }));
+  function groundY(){
+    return H - Math.min(64, Math.max(44, H*0.10));
+  }
 
-  function drawBackground(t){
-    ctx.clearRect(0,0,W,H);
+  let sunflowers = [];
+  function plant(force){
+    if(force) sunflowers = [];
 
-    ctx.save();
-    for(const st of stars){
-      const tw = 0.5 + 0.5*Math.sin(t*0.001*st.s + st.p);
-      const x = st.x * W;
-      const y = st.y * H;
-      ctx.globalAlpha = st.a * (0.7 + 0.6*tw);
-      ctx.beginPath();
-      ctx.arc(x, y, st.r, 0, Math.PI*2);
-      ctx.fillStyle = 'white';
-      ctx.fill();
+    const target = CONFIG.sunflowerCount;
+    while(sunflowers.length < target){
+      const margin = 24;
+      const x = rand(margin, W - margin);
+      const y = groundY() + rand(-2, 2);
+      const scale = rand(0.75, 1.35) * lerp(0.9, 1.12, Math.min(1, W/900));
+      sunflowers.push(new Sunflower(x, y, scale));
     }
-    ctx.restore();
-    ctx.globalAlpha = 1;
+    while(sunflowers.length > target) sunflowers.pop();
 
-    const vg = ctx.createRadialGradient(W*0.5, H*0.55, Math.min(W,H)*0.15, W*0.5, H*0.55, Math.max(W,H)*0.8);
-    vg.addColorStop(0, 'rgba(0,0,0,0)');
-    vg.addColorStop(1, 'rgba(0,0,0,0.45)');
-    ctx.fillStyle = vg;
-    ctx.fillRect(0,0,W,H);
+    // layer by depth
+    sunflowers.sort((a,b)=>a.depth-b.depth);
   }
 
-  // Fixed options (no UI)
-  function getOptions(){
-    const pal = paletteFromPreset(CONFIG.baseColor, CONFIG.preset);
-    const center = (CONFIG.preset === 'mono') ? pal[3] : { r: 255, g: 214, b: 98 };
-    const outline = { r: 255, g: 255, b: 255 };
+  // initial
+  plant(true);
 
-    return {
-      speed: lerp(0.3, 2.2, clamp(CONFIG.speed,0,1)),
-      wind:  lerp(0.0, 2.8, clamp(CONFIG.wind,0,1)),
-      size:  CONFIG.size,
-      count: CONFIG.count,
-      mode:  CONFIG.mode,
-      palette: pal,
-      center,
-      outline,
-    };
+  // Touch/click to plant an extra sunflower
+  function plantOne(clientX){
+    const margin = 24;
+    const x = clamp(clientX, margin, W - margin);
+    const y = groundY();
+    const scale = rand(0.8, 1.35) * lerp(0.9, 1.12, Math.min(1, W/900));
+    sunflowers.push(new Sunflower(x, y, scale));
+    // soft cap to keep phones happy
+    const cap = CONFIG.sunflowerCount + 10;
+    if(sunflowers.length > cap) sunflowers.splice(0, sunflowers.length - cap);
+    sunflowers.sort((a,b)=>a.depth-b.depth);
   }
 
-  let flowers = [];
+  canvas.addEventListener('pointerdown', (e)=>{
+    hideHint();
+    plantOne(e.clientX);
+  }, { passive:true });
+
+  // Optional: space pauses, R replants (desktop)
   let running = true;
+  window.addEventListener('keydown', (e)=>{
+    if(e.code === 'Space'){ e.preventDefault(); running = !running; hideHint(); }
+    if(e.key.toLowerCase() === 'r'){ plant(true); hideHint(); }
+  });
 
-  function seedFlowers(force){
-    const opt = getOptions();
-    const target = opt.count;
+  // Gentle ground haze
+  function drawGround(){
+    const y = groundY();
+    const gh = ctx.createLinearGradient(0, H, 0, y - 220);
+    gh.addColorStop(0, 'rgba(0,0,0,0.70)');
+    gh.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = gh;
+    ctx.fillRect(0, y - 260, W, 260);
 
-    if(force) flowers = [];
-
-    while(flowers.length < target){
-      const x = rand(0, W);
-      const y = (opt.mode === 'sprout') ? rand(H*0.75, H + 220) : rand(-100, H + 120);
-      const color = opt.palette[randi(0, opt.palette.length - 1)];
-      flowers.push(new Flower(x, y, {
-        size: opt.size,
-        speed: opt.speed,
-        wind: opt.wind,
-        color,
-        center: opt.center,
-        outline: opt.outline,
-        mode: opt.mode,
-      }));
-    }
-    while(flowers.length > target) flowers.pop();
+    // faint ground line
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, y+3);
+    ctx.lineTo(W, y+3);
+    ctx.stroke();
   }
-
-  // Controls (hidden): Space pausa, R regenera, click planta
-  window.addEventListener('keydown', (e) => {
-    if(e.code === 'Space'){
-      e.preventDefault();
-      running = !running;
-    }
-    if(e.key.toLowerCase() === 'r'){
-      seedFlowers(true);
-    }
-  });
-
-  canvas.addEventListener('pointerdown', (e) => {
-    const opt = getOptions();
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    const color = opt.palette[randi(0, opt.palette.length - 1)];
-    const f = new Flower(x, y, {
-      size: opt.size,
-      speed: opt.speed,
-      wind: opt.wind,
-      color,
-      center: opt.center,
-      outline: opt.outline,
-      mode: opt.mode,
-    });
-    f.fade = 0;
-    flowers.push(f);
-
-    const cap = opt.count + 20;
-    if(flowers.length > cap) flowers.splice(0, flowers.length - cap);
-  });
-
-  seedFlowers(true);
 
   let lastT = 0;
   function frame(t){
     requestAnimationFrame(frame);
-
     drawBackground(t);
-    const opt = getOptions();
-    seedFlowers(false);
+    drawGround();
+
+    // keep base count steady
+    plant(false);
 
     if(!running){
-      for(const f of flowers) f.draw();
+      for(const s of sunflowers) s.draw(0);
       return;
     }
 
+    // avoid huge jumps
     const dt = Math.min(60, t - lastT);
     lastT = t;
 
-    for(const f of flowers){
-      f.mode = opt.mode;
-      f.step(t, opt);
-      f.draw();
+    for(const s of sunflowers){
+      s.draw(t);
     }
   }
   requestAnimationFrame(frame);
