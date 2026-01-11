@@ -1,453 +1,312 @@
-<!doctype html>
-<html lang="es">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>Ramo de tulipanes (noche)</title>
-  <style>
-    :root{
-      --bg1:#070814;
-      --bg2:#0b1030;
-      --bg3:#151a40;
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0;
-      overflow:hidden;
-      background: radial-gradient(900px 650px at 50% 10%, var(--bg3), var(--bg2), var(--bg1));
-      touch-action: manipulation;
-    }
-    canvas{position:fixed; inset:0; width:100vw; height:100vh; display:block;}
-  </style>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="main.css">
+    <link rel="icon" href="img/flowers.png" type="image/x-icon">
+    <title>flowers</title>
 </head>
-<body>
-  <canvas id="c"></canvas>
-
-<script>
-(() => {
-  const canvas = document.getElementById('c');
-  const ctx = canvas.getContext('2d', { alpha:true });
-
-  // Móvil friendly: limita DPR para no freír teléfonos
-  let W=0, H=0, DPR=1;
-
-  const TAU = Math.PI*2;
-  const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
-  const lerp  = (a,b,t)=>a+(b-a)*t;
-  const rand  = (a,b)=>a+Math.random()*(b-a);
-  const rgba  = (r,g,b,a)=>`rgba(${r},${g},${b},${a})`;
-
-  // ====== CONFIG (simple, sin saturar) ======
-  const CONFIG = {
-    tulips: 7,        // ramo fijo
-    stars: 55,        // pocas estrellas
-    twinkle: 0.7,
-    sway: 0.28,       // movimiento leve
-    reduceMotion: false // true = estático
-  };
-
-  // Stars (pocas, suaves)
-  const stars = [];
-  function seedStars(){
-    stars.length = 0;
-    for(let i=0;i<CONFIG.stars;i++){
-      stars.push({
-        x: Math.random(),
-        y: Math.random(),
-        r: (0.7 + Math.random()*1.1),
-        a: (0.06 + Math.random()*0.16),
-        p: Math.random()*TAU,
-        s: (0.25 + Math.random()*0.8)
-      });
-    }
-  }
-
-  function resize(){
-    DPR = Math.min(1.8, window.devicePixelRatio || 1);
-    W = Math.floor(window.innerWidth);
-    H = Math.floor(window.innerHeight);
-    canvas.width  = Math.floor(W * DPR);
-    canvas.height = Math.floor(H * DPR);
-    canvas.style.width = W + 'px';
-    canvas.style.height = H + 'px';
-    ctx.setTransform(DPR,0,0,DPR,0,0);
-
-    seedBouquet();
-  }
-  window.addEventListener('resize', resize);
-
-  function drawSky(t){
-    ctx.clearRect(0,0,W,H);
-
-    for(const st of stars){
-      const tw = CONFIG.reduceMotion ? 1 : (0.55 + 0.45*Math.sin(t*0.001*st.s + st.p) * CONFIG.twinkle);
-      ctx.globalAlpha = st.a * (0.7 + 0.6*tw);
-      ctx.beginPath();
-      ctx.arc(st.x*W, st.y*H, st.r, 0, TAU);
-      ctx.fillStyle = 'white';
-      ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-
-    // brillo leve arriba
-    const gx = W*0.5, gy = H*0.18;
-    const g = ctx.createRadialGradient(gx, gy, 10, gx, gy, Math.max(W,H)*0.55);
-    g.addColorStop(0, 'rgba(255,255,255,0.08)');
-    g.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = g;
-    ctx.fillRect(0,0,W,H);
-
-    // viñeta
-    const vg = ctx.createRadialGradient(W*0.5, H*0.55, Math.min(W,H)*0.18, W*0.5, H*0.55, Math.max(W,H)*0.95);
-    vg.addColorStop(0, 'rgba(0,0,0,0)');
-    vg.addColorStop(1, 'rgba(0,0,0,0.55)');
-    ctx.fillStyle = vg;
-    ctx.fillRect(0,0,W,H);
-  }
-
-  // Hojas tipo tulipán (lanceoladas, con pliegue y brillo)
-  function drawTulipLeaf(attachX, attachY, angle, scale, side){
-    const len = 185 * scale;
-    const wid = 44 * scale;
-    const leafAngle = angle + side * 0.20; // más vertical
-
-    // un poquito de "twist" para que no se vean como paletas perfectas
-    const twist = side * 0.10;
-    const tipX = attachX + Math.cos(leafAngle) * len;
-    const tipY = attachY - Math.sin(leafAngle) * len;
-
-    const LEAF  = {r:62,g:176,b:110};
-    const LEAF2 = {r:34,g:120,b:72};
-
-    const g = ctx.createLinearGradient(attachX, attachY, tipX, tipY);
-    g.addColorStop(0, rgba(LEAF.r, LEAF.g, LEAF.b, 0.80));
-    g.addColorStop(1, rgba(LEAF2.r, LEAF2.g, LEAF2.b, 0.92));
-
-    ctx.save();
-    ctx.fillStyle = g;
-    ctx.strokeStyle = rgba(255,255,255,0.05);
-    ctx.lineWidth = 1;
-
-    // forma alargada con pliegue (dos curvas: borde externo e interno)
-    const midX = (attachX + tipX)*0.5 + side * 14*scale;
-    const midY = (attachY + tipY)*0.5 - 14*scale;
-
-    ctx.beginPath();
-    ctx.moveTo(attachX, attachY);
-    ctx.quadraticCurveTo(midX, midY, tipX, tipY);
-    ctx.quadraticCurveTo(midX - side*wid*0.35, midY + wid*0.55, attachX, attachY);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-
-    // nervadura principal
-    ctx.strokeStyle = rgba(255,255,255,0.045);
-    ctx.beginPath();
-    ctx.moveTo(attachX, attachY);
-    ctx.quadraticCurveTo(midX, midY, tipX, tipY);
-    ctx.stroke();
-
-    // brillo en el pliegue
-    ctx.globalAlpha = 0.22;
-    ctx.strokeStyle = rgba(255,255,255,0.12);
-    ctx.lineWidth = Math.max(1, 1.2*scale);
-    ctx.beginPath();
-    ctx.moveTo(attachX + side*2*scale, attachY);
-    ctx.quadraticCurveTo(midX + side*2*scale, midY, tipX + side*1*scale, tipY);
-    ctx.stroke();
-    ctx.globalAlpha = 1;
-
-    // sombra suave del lado interno
-    ctx.globalAlpha = 0.18;
-    ctx.strokeStyle = rgba(0,0,0,0.35);
-    ctx.lineWidth = Math.max(1, 1.6*scale);
-    ctx.beginPath();
-    ctx.moveTo(attachX - side*2*scale, attachY);
-    ctx.quadraticCurveTo(midX - side*4*scale, midY + 4*scale, tipX - side*2*scale, tipY);
-    ctx.stroke();
-    ctx.globalAlpha = 1;
-
-    ctx.restore();
-  }
-
-  // Flor tipo tulipán (pétalos en capas + luces/sombras + sépalos)
-  function drawTulipBloom(w, h, col){
-    // helpers locales (baratos)
-    const mix = (a,b,t)=>({
-      r: Math.round(lerp(a.r,b.r,t)),
-      g: Math.round(lerp(a.g,b.g,t)),
-      b: Math.round(lerp(a.b,b.b,t))
-    });
-    const dark  = mix(col, {r:18,g:6,b:28}, 0.40);
-    const deep  = mix(col, {r: 8,g:3,b:14}, 0.62);
-    const light = mix(col, {r:255,g:255,b:255}, 0.28);
-
-    // sombra global suave (como material "satín")
-    ctx.shadowColor = rgba(col.r, col.g, col.b, 0.18);
-    ctx.shadowBlur = Math.max(10, w*0.35);
-
-    // pétalo: forma simple pero con carácter
-    const drawPetal = (k, zFront) => {
-      const petW = w * (zFront ? 0.64 : 0.58);
-      const petH = h * (zFront ? 1.02 : 0.96);
-
-      const pg = ctx.createLinearGradient(0, -petH, 0, petH*0.22);
-      pg.addColorStop(0, rgba(light.r, light.g, light.b, zFront ? 0.40 : 0.28));
-      pg.addColorStop(0.35, rgba(col.r, col.g, col.b, zFront ? 0.96 : 0.88));
-      pg.addColorStop(1, rgba(dark.r, dark.g, dark.b, 0.96));
-
-      ctx.fillStyle = pg;
-      ctx.strokeStyle = rgba(255,255,255, zFront ? 0.12 : 0.08);
-      ctx.lineWidth = 1;
-
-      ctx.beginPath();
-      // base
-      ctx.moveTo(-petW*0.45, 0);
-      // lado izq
-      ctx.bezierCurveTo(-petW*0.70, -petH*0.30, -petW*0.45, -petH*0.98, 0, -petH);
-      // lado der
-      ctx.bezierCurveTo(petW*0.45, -petH*0.98, petW*0.70, -petH*0.30, petW*0.45, 0);
-      // panza
-      ctx.quadraticCurveTo(0, petH*0.22, -petW*0.45, 0);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-
-      // venas (poquitas, baratas)
-      ctx.shadowBlur = 0;
-      ctx.globalAlpha = zFront ? 0.16 : 0.12;
-      ctx.strokeStyle = rgba(255,255,255,0.16);
-      ctx.lineWidth = 1;
-      for(let i=-1;i<=1;i++){
-        ctx.beginPath();
-        ctx.moveTo(i*petW*0.16, -petH*0.96);
-        ctx.quadraticCurveTo(i*petW*0.12, -petH*0.62, i*petW*0.04, -petH*0.20);
-        ctx.stroke();
-      }
-      ctx.globalAlpha = 1;
-
-      // borde superior (highlight)
-      ctx.globalAlpha = zFront ? 0.22 : 0.15;
-      ctx.strokeStyle = rgba(255,255,255,0.22);
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(-petW*0.18, -petH*0.98);
-      ctx.quadraticCurveTo(0, -petH*1.02, petW*0.18, -petH*0.98);
-      ctx.stroke();
-      ctx.globalAlpha = 1;
-    };
-
-    // back petals (3)
-    for(let i=0;i<3;i++){
-      ctx.save();
-      const a = (-0.34 + i*0.34);
-      ctx.rotate(a);
-      ctx.translate(0, h*0.03);
-      // un toque más oscuro atrás
-      const saveFill = ctx.fillStyle;
-      drawPetal(i, false);
-      ctx.restore();
-    }
-
-    // interior shadow
-    const ig = ctx.createRadialGradient(0, -h*0.35, w*0.05, 0, -h*0.25, w*0.95);
-    ig.addColorStop(0, rgba(0,0,0,0));
-    ig.addColorStop(1, rgba(0,0,0,0.28));
-    ctx.fillStyle = ig;
-    ctx.beginPath();
-    ctx.ellipse(0, -h*0.34, w*0.50, h*0.56, 0, 0, TAU);
-    ctx.fill();
-
-    // front petals (3)
-    for(let i=0;i<3;i++){
-      ctx.save();
-      const a = (-0.38 + i*0.38);
-      ctx.rotate(a);
-      ctx.translate(0, 0);
-      drawPetal(i, true);
-      ctx.restore();
-    }
-
-    // sépalos (verde) en la unión
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = rgba(50,170,105,0.92);
-    ctx.strokeStyle = rgba(255,255,255,0.06);
-    ctx.lineWidth = 1;
-    for(let i=0;i<3;i++){
-      const a = (-0.55 + i*0.55);
-      ctx.save();
-      ctx.rotate(a);
-      ctx.beginPath();
-      ctx.moveTo(-w*0.10, h*0.02);
-      ctx.quadraticCurveTo(0, -h*0.08, w*0.10, h*0.02);
-      ctx.quadraticCurveTo(0, h*0.14, -w*0.10, h*0.02);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-      ctx.restore();
-    }
-
-    // base cap
-    ctx.fillStyle = rgba(40,140,85,0.55);
-    ctx.beginPath();
-    ctx.ellipse(0, 0, w*0.18, h*0.10, 0, 0, TAU);
-    ctx.fill();
-
-    // pequeña sombra de profundidad
-    ctx.fillStyle = rgba(deep.r, deep.g, deep.b, 0.10);
-    ctx.beginPath();
-    ctx.ellipse(0, -h*0.05, w*0.34, h*0.18, 0, 0, TAU);
-    ctx.fill();
-  }
-
-  // Bouquet fijo: descriptores (no random por frame)
-  const DESCS = [
-    {dx:-0.30, hf:0.86, bs:0.92},
-    {dx: 0.30, hf:0.88, bs:0.95},
-    {dx:-0.12, hf:0.98, bs:1.00},
-    {dx: 0.12, hf:0.98, bs:1.00},
-    {dx:-0.44, hf:0.72, bs:0.84},
-    {dx: 0.44, hf:0.74, bs:0.86},
-    {dx: 0.00, hf:0.80, bs:0.90},
-  ];
-
-  // Colores tipo tulipán (puedes cambiar a rojos si quieres)
-  const COLORS = [
-    {r:225,g: 55,b: 85},  // rojo
-    {r:255,g:110,b:198},  // rosa
-    {r:162,g: 92,b:255},  // morado
-    {r: 70,g:170,b:255},  // azul
-    {r:255,g:170,b: 55},  // naranja
-    {r:255,g:220,b: 80},  // amarillo
-    {r:245,g:245,b:245},  // blanco
-  ];
-
-  let bouquet = [];
-
-  function seedBouquet(){
-    const cx = W*0.5;
-    const baseY = H*0.93;
-    const scaleBase = lerp(0.74, 1.12, clamp(Math.min(W, H)/820, 0, 1));
-    const spread = Math.min(W*0.45, 240 + W*0.08);
-
-    bouquet = DESCS.map((p,i)=>{
-      const scale = scaleBase * p.bs;
-      // tamaños estables por flor
-      const bw = (40 + ((i%3)-1)*2) * scale;
-      const bh = (86 + ((i%4)-2)*4) * scale;
-      const twist = (i-3) * 0.018;
-
-      return {
-        i,
-        x: cx + p.dx*spread,
-        baseY,
-        scale,
-        height: (265 * scaleBase) * p.hf,
-        phase: i*0.85,
-        bw, bh,
-        twist,
-        col: COLORS[i] || COLORS[i % COLORS.length]
-      };
-    });
-  }
-
-  function drawBouquet(t){
-    // haze detrás del ramo
-    const hx = W*0.5, hy = H*0.78;
-    const hg = ctx.createRadialGradient(hx, hy, 10, hx, hy, Math.max(W,H)*0.40);
-    hg.addColorStop(0, 'rgba(0,0,0,0)');
-    hg.addColorStop(1, 'rgba(0,0,0,0.30)');
-    ctx.fillStyle = hg;
-    ctx.fillRect(0,0,W,H);
-
-    // masa verde sutil en la base
-    const bush = ctx.createRadialGradient(W*0.5, H*0.95, 10, W*0.5, H*0.95, Math.min(W,H)*0.45);
-    bush.addColorStop(0, 'rgba(65,150,95,0.18)');
-    bush.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = bush;
-    ctx.fillRect(0,0,W,H);
-
-    const STEM = {r:55,g:155,b:92};
-    const STEM2= {r:35,g:120,b:72};
-
-    // tallos + hojas
-    for(const f of bouquet){
-      const sway = CONFIG.reduceMotion ? 0 : Math.sin(t*0.001*(0.9) + f.phase) * 0.22 * CONFIG.sway;
-      const angle = sway + (f.x - W*0.5) * 0.0006;
-
-      const baseX = f.x;
-      const baseY = f.baseY;
-      const topY  = baseY - f.height;
-
-      const bloomX = baseX + Math.sin(angle) * 12 * f.scale;
-      const bloomY = topY + Math.cos(angle) * 5 * f.scale;
-
-      const cp1x = baseX + Math.sin(f.phase)*10*f.scale;
-      const cp1y = baseY - f.height*0.40;
-      const cp2x = baseX + Math.cos(f.phase*1.7)*16*f.scale;
-      const cp2y = baseY - f.height*0.76;
-
-      // hojas
-      ctx.save();
-      drawTulipLeaf(baseX, baseY - f.height*0.50, angle, f.scale*1.05, -1);
-      drawTulipLeaf(baseX, baseY - f.height*0.70, angle, f.scale*0.92,  1);
-      ctx.restore();
-
-      // tallo
-      ctx.save();
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      const sg = ctx.createLinearGradient(baseX, baseY, bloomX, bloomY);
-      sg.addColorStop(0, rgba(STEM2.r, STEM2.g, STEM2.b, 0.95));
-      sg.addColorStop(1, rgba(STEM.r, STEM.g, STEM.b, 0.95));
-      ctx.strokeStyle = sg;
-      ctx.lineWidth = 6.0 * f.scale;
-      ctx.beginPath();
-      ctx.moveTo(baseX, baseY);
-      ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, bloomX, bloomY);
-      ctx.stroke();
-      ctx.restore();
-
-      f.bloomX = bloomX;
-      f.bloomY = bloomY;
-      f.angle = angle + f.twist;
-    }
-
-    // flores (por encima)
-    for(const f of bouquet){
-      ctx.save();
-      ctx.translate(f.bloomX, f.bloomY);
-      ctx.rotate(f.angle);
-
-      // glow suave (usa el color real de la flor)
-      ctx.shadowColor = `rgba(${f.col.r},${f.col.g},${f.col.b},0.20)`;
-      ctx.shadowBlur = 16 + 16*f.scale;
-
-      drawTulipBloom(f.bw, f.bh, f.col);
-      ctx.restore();
-    }
-
-    // base del ramo (nudo)
-    const knotX = W*0.5, knotY = H*0.935;
-    ctx.fillStyle = 'rgba(0,0,0,0.18)';
-    ctx.beginPath();
-    ctx.ellipse(knotX, knotY, Math.min(110, W*0.20), 26, 0, 0, TAU);
-    ctx.fill();
-  }
-
-  // init
-  seedStars();
-  resize();
-
-  // Render loop
-  function frame(t){
-    requestAnimationFrame(frame);
-    drawSky(t);
-    drawBouquet(t);
-  }
-  requestAnimationFrame(frame);
-})();
-</script>
-</body>
+<body class="container">
+    <div class="night"></div>
+    <div class="flowers">
+      <div class="flower flower--1">
+        <div class="flower__leafs flower__leafs--1">
+          <div class="flower__leaf flower__leaf--1"></div>
+          <div class="flower__leaf flower__leaf--2"></div>
+          <div class="flower__leaf flower__leaf--3"></div>
+          <div class="flower__leaf flower__leaf--4"></div>
+          <div class="flower__white-circle"></div>
+  
+          <div class="flower__light flower__light--1"></div>
+          <div class="flower__light flower__light--2"></div>
+          <div class="flower__light flower__light--3"></div>
+          <div class="flower__light flower__light--4"></div>
+          <div class="flower__light flower__light--5"></div>
+          <div class="flower__light flower__light--6"></div>
+          <div class="flower__light flower__light--7"></div>
+          <div class="flower__light flower__light--8"></div>
+  
+        </div>
+        <div class="flower__line">
+          <div class="flower__line__leaf flower__line__leaf--1"></div>
+          <div class="flower__line__leaf flower__line__leaf--2"></div>
+          <div class="flower__line__leaf flower__line__leaf--3"></div>
+          <div class="flower__line__leaf flower__line__leaf--4"></div>
+          <div class="flower__line__leaf flower__line__leaf--5"></div>
+          <div class="flower__line__leaf flower__line__leaf--6"></div>
+        </div>
+      </div>
+  
+      <div class="flower flower--2">
+        <div class="flower__leafs flower__leafs--2">
+          <div class="flower__leaf flower__leaf--1"></div>
+          <div class="flower__leaf flower__leaf--2"></div>
+          <div class="flower__leaf flower__leaf--3"></div>
+          <div class="flower__leaf flower__leaf--4"></div>
+          <div class="flower__white-circle"></div>
+  
+          <div class="flower__light flower__light--1"></div>
+          <div class="flower__light flower__light--2"></div>
+          <div class="flower__light flower__light--3"></div>
+          <div class="flower__light flower__light--4"></div>
+          <div class="flower__light flower__light--5"></div>
+          <div class="flower__light flower__light--6"></div>
+          <div class="flower__light flower__light--7"></div>
+          <div class="flower__light flower__light--8"></div>
+  
+        </div>
+        <div class="flower__line">
+          <div class="flower__line__leaf flower__line__leaf--1"></div>
+          <div class="flower__line__leaf flower__line__leaf--2"></div>
+          <div class="flower__line__leaf flower__line__leaf--3"></div>
+          <div class="flower__line__leaf flower__line__leaf--4"></div>
+        </div>
+      </div>
+  
+      <div class="flower flower--3">
+        <div class="flower__leafs flower__leafs--3">
+          <div class="flower__leaf flower__leaf--1"></div>
+          <div class="flower__leaf flower__leaf--2"></div>
+          <div class="flower__leaf flower__leaf--3"></div>
+          <div class="flower__leaf flower__leaf--4"></div>
+          <div class="flower__white-circle"></div>
+  
+          <div class="flower__light flower__light--1"></div>
+          <div class="flower__light flower__light--2"></div>
+          <div class="flower__light flower__light--3"></div>
+          <div class="flower__light flower__light--4"></div>
+          <div class="flower__light flower__light--5"></div>
+          <div class="flower__light flower__light--6"></div>
+          <div class="flower__light flower__light--7"></div>
+          <div class="flower__light flower__light--8"></div>
+  
+        </div>
+        <div class="flower__line">
+          <div class="flower__line__leaf flower__line__leaf--1"></div>
+          <div class="flower__line__leaf flower__line__leaf--2"></div>
+          <div class="flower__line__leaf flower__line__leaf--3"></div>
+          <div class="flower__line__leaf flower__line__leaf--4"></div>
+        </div>
+      </div>
+  
+      <div class="grow-ans" style="--d:1.2s">
+        <div class="flower__g-long">
+          <div class="flower__g-long__top"></div>
+          <div class="flower__g-long__bottom"></div>
+        </div>
+      </div>
+  
+      <div class="growing-grass">
+        <div class="flower__grass flower__grass--1">
+          <div class="flower__grass--top"></div>
+          <div class="flower__grass--bottom"></div>
+          <div class="flower__grass__leaf flower__grass__leaf--1"></div>
+          <div class="flower__grass__leaf flower__grass__leaf--2"></div>
+          <div class="flower__grass__leaf flower__grass__leaf--3"></div>
+          <div class="flower__grass__leaf flower__grass__leaf--4"></div>
+          <div class="flower__grass__leaf flower__grass__leaf--5"></div>
+          <div class="flower__grass__leaf flower__grass__leaf--6"></div>
+          <div class="flower__grass__leaf flower__grass__leaf--7"></div>
+          <div class="flower__grass__leaf flower__grass__leaf--8"></div>
+          <div class="flower__grass__overlay"></div>
+        </div>
+      </div>
+  
+      <div class="growing-grass">
+        <div class="flower__grass flower__grass--2">
+          <div class="flower__grass--top"></div>
+          <div class="flower__grass--bottom"></div>
+          <div class="flower__grass__leaf flower__grass__leaf--1"></div>
+          <div class="flower__grass__leaf flower__grass__leaf--2"></div>
+          <div class="flower__grass__leaf flower__grass__leaf--3"></div>
+          <div class="flower__grass__leaf flower__grass__leaf--4"></div>
+          <div class="flower__grass__leaf flower__grass__leaf--5"></div>
+          <div class="flower__grass__leaf flower__grass__leaf--6"></div>
+          <div class="flower__grass__leaf flower__grass__leaf--7"></div>
+          <div class="flower__grass__leaf flower__grass__leaf--8"></div>
+          <div class="flower__grass__overlay"></div>
+        </div>
+      </div>
+  
+      <div class="grow-ans" style="--d:2.4s">
+        <div class="flower__g-right flower__g-right--1">
+          <div class="leaf"></div>
+        </div>
+      </div>
+  
+      <div class="grow-ans" style="--d:2.8s">
+        <div class="flower__g-right flower__g-right--2">
+          <div class="leaf"></div>
+        </div>
+      </div>
+  
+      <div class="grow-ans" style="--d:2.8s">
+        <div class="flower__g-front">
+          <div class="flower__g-front__leaf-wrapper flower__g-front__leaf-wrapper--1">
+            <div class="flower__g-front__leaf"></div>
+          </div>
+          <div class="flower__g-front__leaf-wrapper flower__g-front__leaf-wrapper--2">
+            <div class="flower__g-front__leaf"></div>
+          </div>
+          <div class="flower__g-front__leaf-wrapper flower__g-front__leaf-wrapper--3">
+            <div class="flower__g-front__leaf"></div>
+          </div>
+          <div class="flower__g-front__leaf-wrapper flower__g-front__leaf-wrapper--4">
+            <div class="flower__g-front__leaf"></div>
+          </div>
+          <div class="flower__g-front__leaf-wrapper flower__g-front__leaf-wrapper--5">
+            <div class="flower__g-front__leaf"></div>
+          </div>
+          <div class="flower__g-front__leaf-wrapper flower__g-front__leaf-wrapper--6">
+            <div class="flower__g-front__leaf"></div>
+          </div>
+          <div class="flower__g-front__leaf-wrapper flower__g-front__leaf-wrapper--7">
+            <div class="flower__g-front__leaf"></div>
+          </div>
+          <div class="flower__g-front__leaf-wrapper flower__g-front__leaf-wrapper--8">
+            <div class="flower__g-front__leaf"></div>
+          </div>
+          <div class="flower__g-front__line"></div>
+        </div>
+      </div>
+  
+      <div class="grow-ans" style="--d:3.2s">
+        <div class="flower__g-fr">
+          <div class="leaf"></div>
+          <div class="flower__g-fr__leaf flower__g-fr__leaf--1"></div>
+          <div class="flower__g-fr__leaf flower__g-fr__leaf--2"></div>
+          <div class="flower__g-fr__leaf flower__g-fr__leaf--3"></div>
+          <div class="flower__g-fr__leaf flower__g-fr__leaf--4"></div>
+          <div class="flower__g-fr__leaf flower__g-fr__leaf--5"></div>
+          <div class="flower__g-fr__leaf flower__g-fr__leaf--6"></div>
+          <div class="flower__g-fr__leaf flower__g-fr__leaf--7"></div>
+          <div class="flower__g-fr__leaf flower__g-fr__leaf--8"></div>
+        </div>
+      </div>
+  
+      <div class="long-g long-g--0">
+        <div class="grow-ans" style="--d:3s">
+          <div class="leaf leaf--0"></div>
+        </div>
+        <div class="grow-ans" style="--d:2.2s">
+          <div class="leaf leaf--1"></div>
+        </div>
+        <div class="grow-ans" style="--d:3.4s">
+          <div class="leaf leaf--2"></div>
+        </div>
+        <div class="grow-ans" style="--d:3.6s">
+          <div class="leaf leaf--3"></div>
+        </div>
+      </div>
+  
+      <div class="long-g long-g--1">
+        <div class="grow-ans" style="--d:3.6s">
+          <div class="leaf leaf--0"></div>
+        </div>
+        <div class="grow-ans" style="--d:3.8s">
+          <div class="leaf leaf--1"></div>
+        </div>
+        <div class="grow-ans" style="--d:4s">
+          <div class="leaf leaf--2"></div>
+        </div>
+        <div class="grow-ans" style="--d:4.2s">
+          <div class="leaf leaf--3"></div>
+        </div>
+      </div>
+  
+      <div class="long-g long-g--2">
+        <div class="grow-ans" style="--d:4s">
+          <div class="leaf leaf--0"></div>
+        </div>
+        <div class="grow-ans" style="--d:4.2s">
+          <div class="leaf leaf--1"></div>
+        </div>
+        <div class="grow-ans" style="--d:4.4s">
+          <div class="leaf leaf--2"></div>
+        </div>
+        <div class="grow-ans" style="--d:4.6s">
+          <div class="leaf leaf--3"></div>
+        </div>
+      </div>
+  
+      <div class="long-g long-g--3">
+        <div class="grow-ans" style="--d:4s">
+          <div class="leaf leaf--0"></div>
+        </div>
+        <div class="grow-ans" style="--d:4.2s">
+          <div class="leaf leaf--1"></div>
+        </div>
+        <div class="grow-ans" style="--d:3s">
+          <div class="leaf leaf--2"></div>
+        </div>
+        <div class="grow-ans" style="--d:3.6s">
+          <div class="leaf leaf--3"></div>
+        </div>
+      </div>
+  
+      <div class="long-g long-g--4">
+        <div class="grow-ans" style="--d:4s">
+          <div class="leaf leaf--0"></div>
+        </div>
+        <div class="grow-ans" style="--d:4.2s">
+          <div class="leaf leaf--1"></div>
+        </div>
+        <div class="grow-ans" style="--d:3s">
+          <div class="leaf leaf--2"></div>
+        </div>
+        <div class="grow-ans" style="--d:3.6s">
+          <div class="leaf leaf--3"></div>
+        </div>
+      </div>
+  
+      <div class="long-g long-g--5">
+        <div class="grow-ans" style="--d:4s">
+          <div class="leaf leaf--0"></div>
+        </div>
+        <div class="grow-ans" style="--d:4.2s">
+          <div class="leaf leaf--1"></div>
+        </div>
+        <div class="grow-ans" style="--d:3s">
+          <div class="leaf leaf--2"></div>
+        </div>
+        <div class="grow-ans" style="--d:3.6s">
+          <div class="leaf leaf--3"></div>
+        </div>
+      </div>
+  
+      <div class="long-g long-g--6">
+        <div class="grow-ans" style="--d:4.2s">
+          <div class="leaf leaf--0"></div>
+        </div>
+        <div class="grow-ans" style="--d:4.4s">
+          <div class="leaf leaf--1"></div>
+        </div>
+        <div class="grow-ans" style="--d:4.6s">
+          <div class="leaf leaf--2"></div>
+        </div>
+        <div class="grow-ans" style="--d:4.8s">
+          <div class="leaf leaf--3"></div>
+        </div>
+      </div>
+  
+      <div class="long-g long-g--7">
+        <div class="grow-ans" style="--d:3s">
+          <div class="leaf leaf--0"></div>
+        </div>
+        <div class="grow-ans" style="--d:3.2s">
+          <div class="leaf leaf--1"></div>
+        </div>
+        <div class="grow-ans" style="--d:3.5s">
+          <div class="leaf leaf--2"></div>
+        </div>
+        <div class="grow-ans" style="--d:3.6s">
+          <div class="leaf leaf--3"></div>
+        </div>
+      </div>
+    </div>
+    
+    <script src="main.js"></script>
+  </body>
 </html>
