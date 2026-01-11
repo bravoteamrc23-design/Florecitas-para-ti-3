@@ -140,6 +140,8 @@
     // mini checks (no interrumpen)
     console.assert(W>0 && H>0, 'Canvas size inválido');
     console.assert(bouquet.length === DESCS.length, 'Bouquet no se generó correctamente');
+    console.assert(stars.length > 0, 'Stars no inicializadas');
+    console.assert(grass.length > 0, 'Grass no inicializado');
   }
   window.addEventListener('resize', resize);
 
@@ -232,66 +234,168 @@
 
   // ===== Hojas (suaves) =====
   function drawTulipLeaf(attachX, attachY, angle, scale, side){
-    const len = 200 * scale;
-    const wid = 42 * scale;
-    const leafAngle = angle + side * 0.16;
+    // Hoja tipo tulipán (realista): larga, delgada, con pliegue central.
+    // Ajustada para que NO quede enorme vs el tallo.
 
-    const tipX = attachX + Math.cos(leafAngle) * len;
-    const tipY = attachY - Math.sin(leafAngle) * len;
+    // variación estable mini
+    const id = ((attachX * 97) ^ (attachY * 193) ^ (side * 911)) | 0;
+    const j = (Math.sin(id) * 0.5 + 0.5);
 
-    const LEAF  = {r:78,g:188,b:122};
-    const LEAF2 = {r:44,g:138,b:86};
+    // tamaño (más chico y delgado)
+    const len = (95 + j*10) * scale;
+    const baseWid = (7.5 + j*1.2) * scale;
 
-    const g = ctx.createLinearGradient(attachX, attachY, tipX, tipY);
-    g.addColorStop(0, rgba(LEAF.r, LEAF.g, LEAF.b, 0.70));
-    g.addColorStop(0.55, rgba(LEAF.r, LEAF.g, LEAF.b, 0.48));
-    g.addColorStop(1, rgba(LEAF2.r, LEAF2.g, LEAF2.b, 0.78));
+    // 0 rad = derecha; para hojas erguidas usamos PI/2
+    const baseDir = Math.PI/2 + angle;
+    // un poquito menos abierto, con un twist natural
+    const leafAngle = baseDir + side * (0.16 + j*0.03);
+
+    const p0x = attachX, p0y = attachY;
+    const p3x = attachX + Math.cos(leafAngle) * len;
+    const p3y = attachY - Math.sin(leafAngle) * len;
+
+    // curva pegada al tallo (sin abrirse en abanico)
+    const p1x = attachX + side * baseWid * (0.34 + j*0.08);
+    const p1y = attachY - len * (0.35 + j*0.05);
+
+    const p2x = attachX + side * baseWid * (0.14 + j*0.06);
+    const p2y = attachY - len * (0.82 + j*0.06);
+
+    const bez = (t, a,b,c,d) => {
+      const u = 1 - t;
+      return u*u*u*a + 3*u*u*t*b + 3*u*t*t*c + t*t*t*d;
+    };
+
+    const G0 = {r:28,g:88,b:56};
+    const G1 = {r:52,g:140,b:88};
+    const G2 = {r:96,g:190,b:130};
+
+    const grad = ctx.createLinearGradient(p0x, p0y, p3x, p3y);
+    grad.addColorStop(0, rgba(G0.r,G0.g,G0.b, 0.92));
+    grad.addColorStop(0.55, rgba(G1.r,G1.g,G1.b, 0.84));
+    grad.addColorStop(1, rgba(G2.r,G2.g,G2.b, 0.70));
+
+    const steps = 14;
+    const L = [], R = [], C = [];
+
+    for(let i=0;i<=steps;i++){
+      const t = i/steps;
+      const x = bez(t, p0x,p1x,p2x,p3x);
+      const y = bez(t, p0y,p1y,p2y,p3y);
+      C.push({x,y});
+
+      const t2 = Math.min(1, t + 0.015);
+      const x2 = bez(t2, p0x,p1x,p2x,p3x);
+      const y2 = bez(t2, p0y,p1y,p2y,p3y);
+      const dx = x2-x, dy=y2-y;
+      const inv = 1 / Math.max(1e-5, Math.hypot(dx,dy));
+      const nx = -dy*inv, ny = dx*inv;
+
+      const taper = Math.pow(1 - t, 1.55);
+      const w = baseWid * (0.04 + 0.50*taper);
+
+      L.push({x: x + nx*w, y: y + ny*w});
+      R.push({x: x - nx*w, y: y - ny*w});
+    }
 
     ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.14)';
+    ctx.shadowBlur = 4 * scale;
 
-    const midX = (attachX + tipX)*0.5 + side * 10*scale;
-    const midY = (attachY + tipY)*0.5 - 18*scale;
-
-    ctx.shadowColor = 'rgba(0,0,0,0.18)';
-    ctx.shadowBlur = 10 * scale;
-
-    ctx.fillStyle = g;
-    ctx.strokeStyle = 'rgba(255,255,255,0.025)';
+    ctx.fillStyle = grad;
+    ctx.strokeStyle = 'rgba(255,255,255,0.012)';
     ctx.lineWidth = 1;
 
     ctx.beginPath();
-    ctx.moveTo(attachX, attachY);
-    ctx.quadraticCurveTo(midX, midY, tipX, tipY);
-    ctx.quadraticCurveTo(tipX - side*wid*0.12, tipY + wid*0.10, tipX - side*wid*0.18, tipY + wid*0.18);
-
-    const innerMidX = midX - side*wid*0.28;
-    const innerMidY = midY + wid*0.42;
-    ctx.quadraticCurveTo(innerMidX, innerMidY, attachX, attachY);
-
+    ctx.moveTo(L[0].x, L[0].y);
+    for(const p of L) ctx.lineTo(p.x, p.y);
+    for(let i=R.length-1;i>=0;i--) ctx.lineTo(R[i].x, R[i].y);
     ctx.closePath();
     ctx.fill();
+
     ctx.shadowBlur = 0;
     ctx.stroke();
 
-    // nervadura sutil
-    ctx.globalAlpha = 0.12;
-    ctx.strokeStyle = 'rgba(255,255,255,0.18)';
-    ctx.lineWidth = Math.max(1, 1.0*scale);
+    // pliegue central sutil
+    ctx.globalAlpha = 0.14;
+    ctx.strokeStyle = 'rgba(0,0,0,0.14)';
+    ctx.lineWidth = Math.max(1, 1.15*scale);
     ctx.beginPath();
-    ctx.moveTo(attachX + side*1.5*scale, attachY);
-    ctx.quadraticCurveTo(midX + side*1.0*scale, midY, tipX - side*0.5*scale, tipY);
+    for(let i=0;i<C.length;i++){
+      const p = C[i];
+      if(i===0) ctx.moveTo(p.x, p.y);
+      else ctx.lineTo(p.x, p.y);
+    }
     ctx.stroke();
+
+    // highlight lateral (da volumen)
+    ctx.globalAlpha = 0.10;
+    const edge = side < 0 ? L : R;
+    ctx.strokeStyle = 'rgba(180,255,210,0.14)';
+    ctx.lineWidth = Math.max(1, 0.9*scale);
+    ctx.beginPath();
+    for(let i=0;i<edge.length;i++){
+      const p = edge[i];
+      if(i===0) ctx.moveTo(p.x, p.y);
+      else ctx.lineTo(p.x, p.y);
+    }
+    ctx.stroke();
+
     ctx.globalAlpha = 1;
 
-    // brillo difuso
-    ctx.globalAlpha = 0.10;
-    ctx.strokeStyle = 'rgba(255,255,255,0.22)';
-    ctx.lineWidth = Math.max(1, 1.2*scale);
+    ctx.restore();
+  }
+
+  // ----- Patrón extra de hojas (líneas) -----
+  // Son hojas delgadas tipo contorno para dar sensación de más follaje, como tu trazo blanco.
+  function drawLeafSprig(x, y, angle, scale, side){
+    // Patrón extra de hojas (líneas) como tu dibujo, pero en VERDE suave (no blanco).
+    const baseDir = Math.PI/2 + angle;
+    const a = baseDir + side*(0.30);
+
+    const len = 72 * scale;
+    const spread = 14 * scale;
+
+    const tipX = x + Math.cos(a) * len;
+    const tipY = y - Math.sin(a) * len;
+
+    const cX = x + side * spread;
+    const cY = y - len * 0.55;
+
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    const lg = ctx.createLinearGradient(x, y, tipX, tipY);
+    lg.addColorStop(0, 'rgba(8,20,12,0.10)');
+    lg.addColorStop(0.55, 'rgba(70,200,130,0.08)');
+    lg.addColorStop(1, 'rgba(90,240,160,0.12)');
+
+    ctx.strokeStyle = lg;
+    ctx.lineWidth = Math.max(1, 0.9 * scale);
+
+    // borde 1
+    ctx.globalAlpha = 0.55;
     ctx.beginPath();
-    ctx.moveTo(attachX + side*2*scale, attachY);
-    ctx.quadraticCurveTo(midX + side*3*scale, midY - 3*scale, tipX + side*1*scale, tipY - 1*scale);
+    ctx.moveTo(x, y);
+    ctx.quadraticCurveTo(cX, cY, tipX, tipY);
     ctx.stroke();
-    ctx.globalAlpha = 1;
+
+    // borde 2
+    ctx.globalAlpha = 0.45;
+    ctx.beginPath();
+    ctx.moveTo(x + side*2.0*scale, y + 1.3*scale);
+    ctx.quadraticCurveTo(cX - side*spread*0.55, cY + len*0.12, tipX - side*3.0*scale, tipY + 1.2*scale);
+    ctx.stroke();
+
+    // nervadura central
+    ctx.globalAlpha = 0.18;
+    ctx.strokeStyle = 'rgba(120,255,180,0.08)';
+    ctx.lineWidth = Math.max(1, 0.8 * scale);
+    ctx.beginPath();
+    ctx.moveTo(x + side*0.8*scale, y);
+    ctx.quadraticCurveTo((x+tipX)*0.5, (y+tipY)*0.5, tipX, tipY);
+    ctx.stroke();
 
     ctx.restore();
   }
@@ -461,12 +565,13 @@
   ];
 
   const COLORS = [
-    {r:225,g: 55,b: 85},  // rojo
-    {r:255,g:110,b:198},  // rosa
-    {r:162,g: 92,b:255},  // morado
-    {r: 70,g:170,b:255},  // azul
-    {r:255,g:170,b: 55},  // naranja
-    {r:255,g:220,b: 80},  // amarillo
+    // Paleta más natural (variada pero menos "neón")
+    {r:220,g: 55,b: 75},  // rojo tulipán
+    {r:245,g:120,b:175},  // rosa
+    {r:168,g: 96,b:230},  // lila
+    {r: 95,g:175,b:245},  // azul cielo
+    {r:255,g:168,b: 70},  // naranja
+    {r:245,g:215,b: 95},  // amarillo suave
     {r:245,g:245,b:245},  // blanco
   ];
 
@@ -489,7 +594,7 @@
         x: cx + p.dx*spread,
         baseY,
         scale,
-        height: (265 * scaleBase) * p.hf,
+        height: (235 * scaleBase) * p.hf,
         phase: i*0.85,
         bw, bh,
         twist,
@@ -539,10 +644,16 @@
       const cp2x = baseX + Math.cos(f.phase*1.7)*16*f.scale;
       const cp2y = baseY - f.height*0.76;
 
-      // hojas
+      // hojas: proporción realista y nacen aprox. a la mitad del tallo
+      const leafMid1 = baseY - f.height*0.52;
+      const leafMid2 = baseY - f.height*0.60;
       ctx.save();
-      drawTulipLeaf(baseX, baseY - f.height*0.50, angle, f.scale*1.05, -1);
-      drawTulipLeaf(baseX, baseY - f.height*0.70, angle, f.scale*0.92,  1);
+      drawTulipLeaf(baseX, leafMid1, angle, f.scale*0.56, -1);
+      drawTulipLeaf(baseX, leafMid2, angle, f.scale*0.50,  1);
+
+      // patrón sutil (sin blanco): 2 sprigs máximo para no ensuciar
+      drawLeafSprig(baseX, baseY - f.height*0.56, angle, f.scale*0.52, -1);
+      drawLeafSprig(baseX, baseY - f.height*0.64, angle, f.scale*0.46,  1);
       ctx.restore();
 
       // tallo
@@ -553,7 +664,7 @@
       sg.addColorStop(0, rgba(STEM2.r, STEM2.g, STEM2.b, 0.95));
       sg.addColorStop(1, rgba(STEM.r, STEM.g, STEM.b, 0.95));
       ctx.strokeStyle = sg;
-      ctx.lineWidth = 6.0 * f.scale;
+      ctx.lineWidth = 7.0 * f.scale;
       ctx.beginPath();
       ctx.moveTo(baseX, baseY);
       ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, bloomX, bloomY);
