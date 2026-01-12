@@ -17,6 +17,7 @@
       overflow:hidden;
       background: radial-gradient(900px 650px at 50% 10%, var(--bg3), var(--bg2), var(--bg1));
       touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
     }
     canvas{position:fixed; inset:0; width:100vw; height:100vh; display:block;}
   </style>
@@ -26,235 +27,680 @@
 
 <script>
 (() => {
+  'use strict';
+
   const canvas = document.getElementById('c');
   const ctx = canvas.getContext('2d', { alpha:true });
 
-  let W=0, H=0, DPR=1;
+  let W = 0, H = 0, DPR = 1;
 
-  const TAU = Math.PI*2;
+  const TAU = Math.PI * 2;
   const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
   const lerp  = (a,b,t)=>a+(b-a)*t;
   const rgba  = (r,g,b,a)=>`rgba(${r},${g},${b},${a})`;
 
-  const CONFIG = {
-    tulips: 7,
-    stars: 90,
-    twinkle: 0.7,
-    sway: 0.28,
-    reduceMotion: false
+  // Fisher-Yates (evita sesgos al seleccionar muestras)
+  const shuffleInPlace = (arr) => {
+    for(let i=arr.length-1;i>0;i--){
+      const j = (Math.random()*(i+1))|0;
+      const tmp = arr[i];
+      arr[i] = arr[j];
+      arr[j] = tmp;
+    }
+    return arr;
   };
+
+  const CONFIG = {
+    // Cielo más rico, sin saturarlo
+    stars: 160,
+    twinkle: 0.85,
+    sway: 0.28,
+    reduceMotion: false,
+    shootingStars: 1,
+  };
+
+  // respeta prefers-reduced-motion
+  try{
+    const m = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)');
+    if(m && m.matches) CONFIG.reduceMotion = true;
+  }catch(_){/* nada */}
 
   // ===== Stars =====
   const stars = [];
+
+  // shooting star discreta
+  const shooting = {
+    active:false,
+    t0:0,
+    dur:0,
+    x0:0,y0:0,
+    x1:0,y1:0,
+  };
+
   function seedStars(){
     stars.length = 0;
+
+    // Distribución con cúmulos (más natural que uniforme puro)
+    const clusters = [
+      {cx: 0.30, cy: 0.22, r: 0.18},
+      {cx: 0.72, cy: 0.18, r: 0.20},
+    ];
+
+    const pick = () => {
+      if(Math.random() < 0.70){
+        return {x: Math.random(), y: Math.random()};
+      }
+      const c = clusters[(Math.random()*clusters.length)|0];
+      const a = Math.random()*TAU;
+      const rr = Math.sqrt(Math.random()) * c.r;
+      return {
+        x: clamp(c.cx + Math.cos(a)*rr, 0, 1),
+        y: clamp(c.cy + Math.sin(a)*rr, 0, 1)
+      };
+    };
+
     for(let i=0;i<CONFIG.stars;i++){
+      const p = pick();
+      const yBias = Math.pow(1 - p.y, 1.6); // más densidad arriba
+      const bigChance = 0.06 + 0.07*yBias;
+      const big = Math.random() < bigChance;
+
       stars.push({
-        x: Math.random(),
-        y: Math.random(),
-        r: (0.9 + Math.random()*1.6),
-        a: (0.10 + Math.random()*0.26),
+        x: p.x,
+        y: p.y,
+        r: big ? (1.9 + Math.random()*2.8) : (0.7 + Math.random()*1.7),
+        a: big ? (0.18 + Math.random()*0.30) : (0.08 + Math.random()*0.24),
         p: Math.random()*TAU,
-        s: (0.25 + Math.random()*0.8)
+        s: (0.25 + Math.random()*0.95),
+        hue: big ? (200 + Math.random()*60) : 0,
+        flare: big ? (0.55 + Math.random()*0.45) : 0,
+      });
+    }
+
+    shooting.active = false;
+    shooting.t0 = 0;
+    shooting.dur = 0;
+  }
+
+  function maybeStartShootingStar(t){
+    if(CONFIG.reduceMotion || !CONFIG.shootingStars) return;
+    if(shooting.active) return;
+
+    // probabilidad baja: aprox 1 cada 10-25s
+    if(Math.random() < 0.0022){
+      shooting.active = true;
+      shooting.t0 = t;
+      shooting.dur = 900 + Math.random()*900;
+
+      const startX = Math.random()*W*0.90;
+      const startY = Math.random()*H*0.35;
+      const dx = (120 + Math.random()*220);
+      const dy = (40 + Math.random()*120);
+
+      shooting.x0 = startX;
+      shooting.y0 = startY;
+      shooting.x1 = startX + dx;
+      shooting.y1 = startY + dy;
+    }
+  }
+
+  function drawShootingStar(t){
+    if(!shooting.active) return;
+
+    const u = clamp((t - shooting.t0) / shooting.dur, 0, 1);
+    const ease = u*u*(3-2*u);
+
+    const x = lerp(shooting.x0, shooting.x1, ease);
+    const y = lerp(shooting.y0, shooting.y1, ease);
+
+    const tail = 120;
+    const ang = Math.atan2(shooting.y1 - shooting.y0, shooting.x1 - shooting.x0);
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = (1-u) * 0.85;
+
+    const tx = x - Math.cos(ang)*tail;
+    const ty = y - Math.sin(ang)*tail;
+
+    const g = ctx.createLinearGradient(tx, ty, x, y);
+    g.addColorStop(0, 'rgba(255,255,255,0)');
+    g.addColorStop(0.55, 'rgba(255,255,255,0.14)');
+    g.addColorStop(1, 'rgba(255,255,255,0.85)');
+
+    ctx.strokeStyle = g;
+    ctx.lineWidth = 2.0;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(tx, ty);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+
+    // cabeza
+    ctx.globalAlpha = (1-u) * 0.95;
+    ctx.shadowColor = 'rgba(255,255,255,0.8)';
+    ctx.shadowBlur = 18;
+    ctx.fillStyle = 'white';
+    ctx.beginPath();
+    ctx.arc(x,y, 1.8, 0, TAU);
+    ctx.fill();
+
+    ctx.restore();
+
+    if(u >= 1) shooting.active = false;
+  }
+
+  // ===== Césped (campo denso + cache) =====
+  const grass = [];
+  const soil = [];
+  // animamos solo una muestra para que se vea denso en TODO el ancho sin matar el rendimiento
+  const grassAnim1 = []; // capa media (delgada)
+  const grassAnim2 = []; // capa frontal (gruesa)
+
+  let groundCache = null;
+  let skyCache = null;
+  const bloomCache = new Map();
+
+  function seedSoil(){
+    soil.length = 0;
+    const gy = H * 0.74;
+    const groundH = H - gy;
+
+    const blobs = clamp(Math.floor(W / 160), 6, 12);
+    for(let i=0;i<blobs;i++){
+      soil.push({
+        x: W*(0.05 + Math.random()*0.90),
+        y: gy + groundH*(0.25 + Math.random()*0.75),
+        r: (90 + Math.random()*220),
+        a: (0.08 + Math.random()*0.12)
       });
     }
   }
 
-  // ===== Césped =====
-  const grass = [];
   function seedGrass(){
     grass.length = 0;
-    // densidad moderada: se ve bien en móvil sin pesar
-    const count = Math.min(200, Math.floor(W * 0.34));
-    for(let i=0;i<count;i++){
-      grass.push({
-        x: Math.random() * W,
-        y: H * (0.84 + Math.random()*0.16),
-        h: 18 + Math.random()*44,
-        w: 0.8 + Math.random()*1.4,
-        p: Math.random()*TAU,
-        s: 0.6 + Math.random()*1.2,
-        a: 0.10 + Math.random()*0.22
-      });
+
+    const gy = H * 0.74;
+    const groundH = H - gy;
+
+    const tufts = clamp(Math.floor(W / 14), 42, 110);
+    const bladesBase = 10;
+    const bladesExtra = 10;
+
+    for(let t=0;t<tufts;t++){
+      const tx = (t + Math.random()*0.85) * (W / tufts);
+      const tuftSeed = Math.random()*TAU;
+      const count = bladesBase + Math.floor(Math.random()*bladesExtra);
+
+      for(let i=0;i<count;i++){
+        const r = Math.random();
+        const layer = (r < 0.52) ? 0 : (r < 0.86 ? 1 : 2);
+
+        const baseBand = layer===2 ? 0.72 : (layer===1 ? 0.64 : 0.56);
+        const ty = gy + groundH*(baseBand + Math.random()*(1-baseBand));
+
+        const jitterX = (Math.random()-0.5) * (12 + layer*22);
+        const jitterY = (Math.random()-0.5) * (6 + layer*10);
+
+        const hBase = layer===2 ? 84 : (layer===1 ? 62 : 44);
+        const hVar  = layer===2 ? 98 : (layer===1 ? 72 : 54);
+
+        const curlAmp = layer===2 ? 0.65 : (layer===1 ? 0.55 : 0.45);
+
+        grass.push({
+          layer,
+          x: tx + jitterX,
+          y: ty + jitterY,
+          h: hBase + Math.random()*hVar,
+          w: (layer===2 ? 1.55 : (layer===1 ? 1.05 : 0.78)) + Math.random()*(layer===2 ? 1.55 : (layer===1 ? 1.10 : 0.90)),
+          p: tuftSeed + i*0.52 + Math.random()*0.85,
+          s: (layer===2 ? 0.72 : (layer===1 ? 0.90 : 0.66)) + Math.random()*(layer===2 ? 1.05 : (layer===1 ? 1.05 : 1.00)),
+          a: (layer===2 ? 0.18 : (layer===1 ? 0.14 : 0.11)) + Math.random()*(layer===2 ? 0.22 : (layer===1 ? 0.18 : 0.14)),
+          bend: (layer===2 ? 1.35 : (layer===1 ? 1.10 : 0.95)) + Math.random()*0.35,
+          curl: (Math.random()-0.5) * curlAmp,
+          thick: layer===2 ? (0.55 + Math.random()*0.85) : 0,
+          tip: 0.75 + Math.random()*0.9
+        });
+      }
     }
+
+    // Selección equilibrada para animación (cubre todo el ancho)
+    grassAnim1.length = 0;
+    grassAnim2.length = 0;
+
+    const g1 = [];
+    const g2 = [];
+    for(const b of grass){
+      if(b.layer === 1) g1.push(b);
+      else if(b.layer === 2) g2.push(b);
+    }
+
+    shuffleInPlace(g1);
+    shuffleInPlace(g2);
+
+    const max1 = clamp(Math.floor(W * 0.55), 200, 650);
+    const max2 = clamp(Math.floor(W * 0.40), 160, 520);
+
+    grassAnim1.push(...g1.slice(0, max1));
+    grassAnim2.push(...g2.slice(0, max2));
+  }
+
+  function rebuildGroundCache(){
+    const off = document.createElement('canvas');
+    off.width = Math.floor(W * DPR);
+    off.height = Math.floor(H * DPR);
+
+    const g = off.getContext('2d', {alpha:true});
+    g.setTransform(DPR,0,0,DPR,0,0);
+
+    const gy = H * 0.74;
+    const groundH = H - gy;
+
+    const gg = g.createLinearGradient(0, gy, 0, H);
+    gg.addColorStop(0, 'rgba(8,14,10,0.05)');
+    gg.addColorStop(0.22, 'rgba(16,44,28,0.28)');
+    gg.addColorStop(0.66, 'rgba(8,22,16,0.60)');
+    gg.addColorStop(1, 'rgba(0,0,0,0.78)');
+    g.fillStyle = gg;
+    g.fillRect(0, gy, W, groundH);
+
+    for(const b of soil){
+      const rg = g.createRadialGradient(b.x, b.y, 8, b.x, b.y, b.r);
+      rg.addColorStop(0, `rgba(25,85,48,${b.a})`);
+      rg.addColorStop(0.55, `rgba(12,40,24,${b.a*0.55})`);
+      rg.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = rg;
+      g.fillRect(0,0,W,H);
+    }
+
+    // puntitos (textura)
+    g.save();
+    g.globalAlpha = 0.10;
+    g.fillStyle = 'rgba(255,255,255,0.08)';
+    const dots = clamp(Math.floor(W * groundH / 1800), 180, 420);
+    for(let i=0;i<dots;i++){
+      const x = Math.random()*W;
+      const y = gy + Math.random()*groundH;
+      const r = 0.6 + Math.random()*1.4;
+      g.beginPath();
+      g.arc(x,y,r,0,TAU);
+      g.fill();
+    }
+    g.restore();
+
+    const drawStaticBlade = (b, front) => {
+      const x0 = b.x, y0 = b.y;
+      const len = b.h;
+      const tilt = b.curl*0.18;
+
+      const x1 = x0 + tilt * (10 + b.bend*5);
+      const y1 = y0 - len;
+
+      const cx = x0 + tilt * (7 + b.bend*4);
+      const cy = y0 - len*(0.58 + (front ? 0.05 : 0));
+
+      g.strokeStyle = front ? 'rgba(24,105,62,1)' : 'rgba(16,75,44,1)';
+      g.lineWidth = b.w * (front ? 1.10 : 1.0);
+      g.beginPath();
+      g.moveTo(x0, y0);
+      g.quadraticCurveTo(cx, cy, x1, y1);
+      g.stroke();
+
+      const old = g.globalAlpha;
+      g.globalAlpha = old * (front ? 0.22 : 0.16);
+      g.strokeStyle = 'rgba(190,255,220,1)';
+      g.lineWidth = Math.max(0.7, b.w*0.30);
+      g.beginPath();
+      g.moveTo(x0 + 0.7, y0);
+      g.quadraticCurveTo(cx + 0.5, cy, x1 + 0.3, y1);
+      g.stroke();
+      g.globalAlpha = old;
+    };
+
+    g.save();
+    for(const b of grass){
+      if(b.layer !== 0) continue;
+      g.globalAlpha = 0.18 + b.a*0.90;
+      drawStaticBlade(b, false);
+    }
+    g.restore();
+
+    g.save();
+    for(const b of grass){
+      if(b.layer !== 1) continue;
+      if(b.h > 90) continue;
+      g.globalAlpha = 0.16 + b.a*0.80;
+      drawStaticBlade(b, true);
+    }
+    g.restore();
+
+    // fog del suelo
+    const fogTop = gy + groundH*0.18;
+    const fog = g.createLinearGradient(0, fogTop, 0, H);
+    fog.addColorStop(0, 'rgba(0,0,0,0)');
+    fog.addColorStop(1, 'rgba(0,0,0,0.34)');
+    g.fillStyle = fog;
+    g.fillRect(0, fogTop, W, H - fogTop);
+
+    groundCache = off;
   }
 
   function drawGrass(t){
-    const groundH = H * 0.22;
-    const gy = H - groundH;
+    if(groundCache){
+      ctx.drawImage(groundCache, 0, 0, groundCache.width / DPR, groundCache.height / DPR);
+    }
 
-    // base del suelo
-    const gg = ctx.createLinearGradient(0, gy, 0, H);
-    gg.addColorStop(0, 'rgba(10,18,12,0.10)');
-    gg.addColorStop(0.35, 'rgba(18,40,26,0.28)');
-    gg.addColorStop(1, 'rgba(0,0,0,0.58)');
-    ctx.fillStyle = gg;
-    ctx.fillRect(0, gy, W, groundH);
+    const gy = H * 0.74;
+    const groundH = H - gy;
 
-    // briznas
-    ctx.save();
-    for(const b of grass){
-      const sway = CONFIG.reduceMotion ? 0 : Math.sin(t*0.001*b.s + b.p) * 0.35;
+    const wind = CONFIG.reduceMotion ? 0 : Math.sin(t*0.00065) * 0.75;
+
+    const drawBlade = (b, front) => {
+      const sway = CONFIG.reduceMotion ? 0 : Math.sin(t*0.001*b.s + b.p) * (front ? 0.40 : 0.26);
+      const sway2 = CONFIG.reduceMotion ? 0 : Math.sin(t*0.00135*b.s + b.p*0.7) * 0.08;
+
       const x0 = b.x;
       const y0 = b.y;
-      const x1 = x0 + sway * 8;
-      const y1 = y0 - b.h;
-      const cx = (x0 + x1)*0.5 + sway * 6;
-      const cy = y0 - b.h*0.55;
+      const len = b.h;
 
-      const blade = ctx.createLinearGradient(x0, y0, x1, y1);
-      blade.addColorStop(0, `rgba(40,120,70,${b.a})`);
-      blade.addColorStop(1, `rgba(140,220,160,${b.a*0.55})`);
+      const tilt = (sway + wind + b.curl*0.22);
+      const x1 = x0 + tilt * (9 + b.bend*6);
+      const y1 = y0 - len;
 
-      ctx.strokeStyle = blade;
-      ctx.lineWidth = b.w;
+      const cx = x0 + (tilt + sway2) * (7 + b.bend*4);
+      const cy = y0 - len*(0.58 + (front ? 0.05 : 0));
+
+      if(front){
+        const old = ctx.globalAlpha;
+        ctx.globalAlpha = old * 0.18;
+        ctx.fillStyle = 'rgba(0,0,0,0.28)';
+        ctx.beginPath();
+        ctx.ellipse(x0, y0+1.2, 3.2 + b.w, 1.2 + b.w*0.34, 0, 0, TAU);
+        ctx.fill();
+        ctx.globalAlpha = old;
+      }
+
+      // hojas más gorditas (solo capa 2)
+      if(b.layer === 2){
+        const w0 = b.w * (1.00 + b.thick);
+        const w1 = Math.max(0.8, w0 * 0.16);
+
+        const t0x = x0, t0y = y0;
+        const t1x = cx, t1y = cy;
+        const t2x = x1, t2y = y1;
+
+        const dx = t2x - t0x;
+        const dy = t2y - t0y;
+        const inv = 1 / Math.max(1e-5, Math.hypot(dx,dy));
+        const px = -dy * inv;
+        const py =  dx * inv;
+
+        const lg = ctx.createLinearGradient(x0, y0, x1, y1);
+        lg.addColorStop(0, 'rgba(10,55,32,0.88)');
+        lg.addColorStop(0.55, 'rgba(28,118,68,0.78)');
+        lg.addColorStop(1, 'rgba(115,220,150,0.56)');
+
+        ctx.save();
+        ctx.fillStyle = lg;
+
+        ctx.beginPath();
+        ctx.moveTo(t0x + px*w0, t0y + py*w0);
+        ctx.quadraticCurveTo(t1x + px*(w0*0.60), t1y + py*(w0*0.60), t2x + px*w1, t2y + py*w1);
+        ctx.lineTo(t2x - px*w1, t2y - py*w1);
+        ctx.quadraticCurveTo(t1x - px*(w0*0.52), t1y - py*(w0*0.52), t0x - px*w0, t0y - py*w0);
+        ctx.closePath();
+        ctx.fill();
+
+        const old = ctx.globalAlpha;
+        ctx.globalAlpha = old * 0.24;
+        ctx.strokeStyle = 'rgba(215,255,235,0.32)';
+        ctx.lineWidth = Math.max(0.8, b.w*0.34);
+        ctx.beginPath();
+        ctx.moveTo(x0 + px*0.4, y0 + py*0.4);
+        ctx.quadraticCurveTo(cx + px*0.2, cy + py*0.2, x1 + px*0.10, y1 + py*0.10);
+        ctx.stroke();
+        ctx.globalAlpha = old;
+
+        ctx.restore();
+      }
+
+      ctx.strokeStyle = front ? 'rgba(22,98,58,1)' : 'rgba(18,72,42,1)';
+      ctx.lineWidth = b.w * (front ? 1.12 : 1.0);
       ctx.beginPath();
       ctx.moveTo(x0, y0);
       ctx.quadraticCurveTo(cx, cy, x1, y1);
       ctx.stroke();
+
+      const old = ctx.globalAlpha;
+      ctx.globalAlpha = old * (front ? 0.22 : 0.16);
+      ctx.strokeStyle = 'rgba(190,255,220,1)';
+      ctx.lineWidth = Math.max(0.7, b.w*0.30);
+      ctx.beginPath();
+      ctx.moveTo(x0 + 0.8, y0);
+      ctx.quadraticCurveTo(cx + 0.55, cy, x1 + 0.35, y1);
+      ctx.stroke();
+      ctx.globalAlpha = old;
+    };
+
+    ctx.save();
+    for(const b of grassAnim1){
+      ctx.globalAlpha = 0.16 + b.a*0.92;
+      drawBlade(b, false);
     }
     ctx.restore();
 
-    // niebla baja para suavizar y evitar bordes duros
-    const fg = ctx.createLinearGradient(0, H*0.78, 0, H);
-    fg.addColorStop(0, 'rgba(0,0,0,0)');
-    fg.addColorStop(1, 'rgba(0,0,0,0.28)');
-    ctx.fillStyle = fg;
-    ctx.fillRect(0, H*0.78, W, H*0.22);
+    ctx.save();
+    for(const b of grassAnim2){
+      ctx.globalAlpha = 0.22 + b.a*0.98;
+      drawBlade(b, true);
+    }
+    ctx.restore();
+
+    // oscuridad abajo
+    ctx.save();
+    const thatchTop = gy + groundH*0.74;
+    const tg = ctx.createLinearGradient(0, thatchTop, 0, H);
+    tg.addColorStop(0, 'rgba(0,0,0,0)');
+    tg.addColorStop(1, 'rgba(0,0,0,0.35)');
+    ctx.fillStyle = tg;
+    ctx.fillRect(0, thatchTop, W, H - thatchTop);
+    ctx.restore();
+
+    // chispitas (sutil)
+    if(!CONFIG.reduceMotion){
+      ctx.save();
+      ctx.globalAlpha = 0.05;
+      ctx.fillStyle = 'rgba(220,255,240,0.18)';
+      const drops = 16;
+      for(let i=0;i<drops;i++){
+        const x = W*(0.18 + Math.random()*0.64);
+        const y = (gy + groundH*0.25) + Math.random()*(groundH*0.70);
+        ctx.beginPath();
+        ctx.arc(x,y, 0.9 + Math.random()*1.2, 0, TAU);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
   }
 
-  function resize(){
-    DPR = Math.min(1.8, window.devicePixelRatio || 1);
-    W = Math.floor(window.innerWidth);
-    H = Math.floor(window.innerHeight);
+  // ===== Cielo (cache) =====
+  function rebuildSkyCache(){
+    const off = document.createElement('canvas');
+    off.width  = Math.floor(W * DPR);
+    off.height = Math.floor(H * DPR);
 
-    canvas.width  = Math.floor(W * DPR);
-    canvas.height = Math.floor(H * DPR);
-    canvas.style.width = W + 'px';
-    canvas.style.height = H + 'px';
-    ctx.setTransform(DPR,0,0,DPR,0,0);
+    const g = off.getContext('2d', {alpha:true});
+    g.setTransform(DPR,0,0,DPR,0,0);
 
-    seedBouquet();
-    seedGrass();
-
-    // mini checks (no interrumpen)
-    console.assert(W>0 && H>0, 'Canvas size inválido');
-    console.assert(bouquet.length === DESCS.length, 'Bouquet no se generó correctamente');
-    console.assert(stars.length > 0, 'Stars no inicializadas');
-    console.assert(grass.length > 0, 'Grass no inicializado');
-  }
-  window.addEventListener('resize', resize);
-
-  // ===== Cielo =====
-  function drawSky(t){
-    ctx.clearRect(0,0,W,H);
-
-    const sky = ctx.createLinearGradient(0, 0, 0, H);
+    // base night gradient
+    const sky = g.createLinearGradient(0, 0, 0, H);
     sky.addColorStop(0, 'rgba(10,12,38,1)');
     sky.addColorStop(0.45, 'rgba(6,8,20,1)');
     sky.addColorStop(1, 'rgba(3,3,10,1)');
-    ctx.fillStyle = sky;
-    ctx.fillRect(0,0,W,H);
+    g.fillStyle = sky;
+    g.fillRect(0,0,W,H);
 
-    const neb = (x,y,r, a) => {
-      const g = ctx.createRadialGradient(x,y, 10, x,y, r);
-      g.addColorStop(0, `rgba(120,140,255,${a})`);
-      g.addColorStop(0.55, `rgba(120,140,255,${a*0.28})`);
-      g.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = g;
-      ctx.fillRect(0,0,W,H);
+    // nebulas suaves
+    const neb = (x,y,r, a, cr,cg,cb) => {
+      const gg = g.createRadialGradient(x,y, 10, x,y, r);
+      gg.addColorStop(0, rgba(cr,cg,cb,a));
+      gg.addColorStop(0.55, rgba(cr,cg,cb,a*0.26));
+      gg.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = gg;
+      g.fillRect(0,0,W,H);
     };
-    neb(W*0.20, H*0.18, Math.max(W,H)*0.55, 0.07);
-    neb(W*0.78, H*0.22, Math.max(W,H)*0.52, 0.06);
+    neb(W*0.18, H*0.16, Math.max(W,H)*0.62, 0.08, 120,150,255);
+    neb(W*0.80, H*0.22, Math.max(W,H)*0.56, 0.07, 150,120,255);
+    neb(W*0.55, H*0.10, Math.max(W,H)*0.50, 0.05, 90,170,255);
 
-    // vía láctea
-    ctx.save();
-    ctx.translate(W*0.55, H*0.35);
-    ctx.rotate(-0.35);
-    const mw = Math.max(W,H)*1.2;
-    const mh = Math.max(W,H)*0.22;
-    const mg = ctx.createRadialGradient(0,0, mh*0.05, 0,0, mh);
-    mg.addColorStop(0, 'rgba(255,255,255,0.07)');
-    mg.addColorStop(0.55, 'rgba(190,210,255,0.028)');
+    // Vía Láctea: banda + polvo
+    g.save();
+    g.translate(W*0.56, H*0.34);
+    g.rotate(-0.36);
+    const mw = Math.max(W,H)*1.25;
+    const mh = Math.max(W,H)*0.24;
+
+    const mg = g.createRadialGradient(0,0, mh*0.03, 0,0, mh);
+    mg.addColorStop(0, 'rgba(255,255,255,0.085)');
+    mg.addColorStop(0.55, 'rgba(190,210,255,0.035)');
     mg.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = mg;
-    ctx.beginPath();
-    ctx.ellipse(0,0, mw*0.55, mh, 0, 0, TAU);
-    ctx.fill();
-    ctx.restore();
+    g.fillStyle = mg;
+    g.beginPath();
+    g.ellipse(0,0, mw*0.56, mh, 0, 0, TAU);
+    g.fill();
 
-    // estrellas (más marcadas)
+    g.globalCompositeOperation = 'screen';
+    g.globalAlpha = 0.35;
+    const dust = clamp(Math.floor((W*H)/9000), 120, 360);
+    for(let i=0;i<dust;i++){
+      const dx = (Math.random()-0.5) * mw*0.85;
+      const dy = (Math.random()-0.5) * mh*0.55;
+      const rr = 0.6 + Math.random()*1.7;
+      g.fillStyle = 'rgba(255,255,255,0.10)';
+      g.beginPath();
+      g.arc(dx, dy, rr, 0, TAU);
+      g.fill();
+    }
+    g.restore();
+
+    // glow superior
+    const gx = W*0.52, gy = H*0.16;
+    const glow = g.createRadialGradient(gx, gy, 10, gx, gy, Math.max(W,H)*0.62);
+    glow.addColorStop(0, 'rgba(255,255,255,0.085)');
+    glow.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = glow;
+    g.fillRect(0,0,W,H);
+
+    // grano sutil
+    g.save();
+    g.globalAlpha = 0.05;
+    g.fillStyle = 'rgba(255,255,255,0.06)';
+    const n = clamp(Math.floor((W*H)/14000), 220, 520);
+    for(let i=0;i<n;i++){
+      const x = Math.random()*W;
+      const y = Math.random()*H*0.70;
+      g.fillRect(x,y,1,1);
+    }
+    g.restore();
+
+    // viñeta
+    const vg = g.createRadialGradient(W*0.5, H*0.55, Math.min(W,H)*0.18, W*0.5, H*0.55, Math.max(W,H)*0.98);
+    vg.addColorStop(0, 'rgba(0,0,0,0)');
+    vg.addColorStop(1, 'rgba(0,0,0,0.62)');
+    g.fillStyle = vg;
+    g.fillRect(0,0,W,H);
+
+    skyCache = off;
+  }
+
+  function drawSky(t){
+    ctx.clearRect(0,0,W,H);
+
+    if(skyCache){
+      ctx.drawImage(skyCache, 0, 0, skyCache.width / DPR, skyCache.height / DPR);
+    }else{
+      const sky = ctx.createLinearGradient(0, 0, 0, H);
+      sky.addColorStop(0, 'rgba(10,12,38,1)');
+      sky.addColorStop(0.45, 'rgba(6,8,20,1)');
+      sky.addColorStop(1, 'rgba(3,3,10,1)');
+      ctx.fillStyle = sky;
+      ctx.fillRect(0,0,W,H);
+    }
+
+    // estrellas
+    ctx.save();
     for(const st of stars){
       const tw = CONFIG.reduceMotion ? 1 : (0.55 + 0.45*Math.sin(t*0.001*st.s + st.p) * CONFIG.twinkle);
-      const alpha = st.a * (0.85 + 0.70*tw);
+      const alpha = st.a * (0.78 + 0.82*tw);
 
-      // glow
+      const x = st.x*W;
+      const y = st.y*H;
+
       ctx.globalAlpha = alpha;
       ctx.shadowColor = 'rgba(255,255,255,0.55)';
       ctx.shadowBlur = 10 + st.r*3;
+
+      if(st.hue){
+        ctx.fillStyle = `hsla(${st.hue}, 85%, 88%, 1)`;
+      }else{
+        ctx.fillStyle = 'white';
+      }
+
       ctx.beginPath();
-      ctx.arc(st.x*W, st.y*H, st.r, 0, TAU);
-      ctx.fillStyle = 'white';
+      ctx.arc(x, y, st.r, 0, TAU);
       ctx.fill();
 
-      // chispa (solo algunas)
-      if(st.r > 1.8 && st.a > 0.22){
+      // flare para grandes
+      if(st.flare){
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = alpha * 0.55 * st.flare;
         ctx.shadowBlur = 0;
-        ctx.globalAlpha = alpha * 0.55;
-        ctx.strokeStyle = 'rgba(255,255,255,0.65)';
-        ctx.lineWidth = 1;
-        const x = st.x*W, y = st.y*H;
-        const k = 3.5 + st.r*1.2;
+        const rg = ctx.createRadialGradient(x,y, 0, x,y, 22 + st.r*10);
+        rg.addColorStop(0, 'rgba(255,255,255,0.22)');
+        rg.addColorStop(0.45, 'rgba(255,255,255,0.08)');
+        rg.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = rg;
         ctx.beginPath();
-        ctx.moveTo(x-k, y);
-        ctx.lineTo(x+k, y);
-        ctx.moveTo(x, y-k);
-        ctx.lineTo(x, y+k);
+        ctx.arc(x,y, 24 + st.r*10, 0, TAU);
+        ctx.fill();
+
+        ctx.globalAlpha = alpha * 0.40 * st.flare;
+        ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+        ctx.lineWidth = 1;
+        const k = 4.0 + st.r*1.6;
+        ctx.beginPath();
+        ctx.moveTo(x-k, y); ctx.lineTo(x+k, y);
+        ctx.moveTo(x, y-k); ctx.lineTo(x, y+k);
         ctx.stroke();
+        ctx.restore();
       }
     }
+    ctx.restore();
+
     ctx.shadowBlur = 0;
     ctx.globalAlpha = 1;
 
-    // brillo leve arriba
-    const gx = W*0.52, gy = H*0.16;
-    const g = ctx.createRadialGradient(gx, gy, 10, gx, gy, Math.max(W,H)*0.60);
-    g.addColorStop(0, 'rgba(255,255,255,0.085)');
-    g.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = g;
-    ctx.fillRect(0,0,W,H);
-
-    // viñeta
-    const vg = ctx.createRadialGradient(W*0.5, H*0.55, Math.min(W,H)*0.18, W*0.5, H*0.55, Math.max(W,H)*0.98);
-    vg.addColorStop(0, 'rgba(0,0,0,0)');
-    vg.addColorStop(1, 'rgba(0,0,0,0.62)');
-    ctx.fillStyle = vg;
-    ctx.fillRect(0,0,W,H);
+    // shooting star ocasional
+    maybeStartShootingStar(t);
+    drawShootingStar(t);
   }
 
   // ===== Hojas (suaves) =====
   function drawTulipLeaf(attachX, attachY, angle, scale, side){
-    // Hoja tipo tulipán (realista): larga, delgada, con pliegue central.
-    // Ajustada para que NO quede enorme vs el tallo.
-
-    // variación estable mini
     const id = ((attachX * 97) ^ (attachY * 193) ^ (side * 911)) | 0;
     const j = (Math.sin(id) * 0.5 + 0.5);
 
-    // tamaño (más chico y delgado)
     const len = (95 + j*10) * scale;
     const baseWid = (7.5 + j*1.2) * scale;
 
-    // 0 rad = derecha; para hojas erguidas usamos PI/2
     const baseDir = Math.PI/2 + angle;
-    // un poquito menos abierto, con un twist natural
     const leafAngle = baseDir + side * (0.16 + j*0.03);
 
     const p0x = attachX, p0y = attachY;
     const p3x = attachX + Math.cos(leafAngle) * len;
     const p3y = attachY - Math.sin(leafAngle) * len;
 
-    // curva pegada al tallo (sin abrirse en abanico)
     const p1x = attachX + side * baseWid * (0.34 + j*0.08);
     const p1y = attachY - len * (0.35 + j*0.05);
 
@@ -316,7 +762,6 @@
     ctx.shadowBlur = 0;
     ctx.stroke();
 
-    // pliegue central sutil
     ctx.globalAlpha = 0.14;
     ctx.strokeStyle = 'rgba(0,0,0,0.14)';
     ctx.lineWidth = Math.max(1, 1.15*scale);
@@ -328,7 +773,6 @@
     }
     ctx.stroke();
 
-    // highlight lateral (da volumen)
     ctx.globalAlpha = 0.10;
     const edge = side < 0 ? L : R;
     ctx.strokeStyle = 'rgba(180,255,210,0.14)';
@@ -342,14 +786,10 @@
     ctx.stroke();
 
     ctx.globalAlpha = 1;
-
     ctx.restore();
   }
 
-  // ----- Patrón extra de hojas (líneas) -----
-  // Son hojas delgadas tipo contorno para dar sensación de más follaje, como tu trazo blanco.
   function drawLeafSprig(x, y, angle, scale, side){
-    // Patrón extra de hojas (líneas) como tu dibujo, pero en VERDE suave (no blanco).
     const baseDir = Math.PI/2 + angle;
     const a = baseDir + side*(0.30);
 
@@ -374,21 +814,18 @@
     ctx.strokeStyle = lg;
     ctx.lineWidth = Math.max(1, 0.9 * scale);
 
-    // borde 1
     ctx.globalAlpha = 0.55;
     ctx.beginPath();
     ctx.moveTo(x, y);
     ctx.quadraticCurveTo(cX, cY, tipX, tipY);
     ctx.stroke();
 
-    // borde 2
     ctx.globalAlpha = 0.45;
     ctx.beginPath();
     ctx.moveTo(x + side*2.0*scale, y + 1.3*scale);
     ctx.quadraticCurveTo(cX - side*spread*0.55, cY + len*0.12, tipX - side*3.0*scale, tipY + 1.2*scale);
     ctx.stroke();
 
-    // nervadura central
     ctx.globalAlpha = 0.18;
     ctx.strokeStyle = 'rgba(120,255,180,0.08)';
     ctx.lineWidth = Math.max(1, 0.8 * scale);
@@ -400,8 +837,35 @@
     ctx.restore();
   }
 
-  // ===== Pétalos realistas =====
-  function drawTulipBloom(w, h, col, seed, open){
+  // ===== Pétalos (sprite cacheado) =====
+  function getBloomSprite(w, h, col, seed, open){
+    const key = `${Math.round(w)}x${Math.round(h)}_${col.r},${col.g},${col.b}_${seed}_${Math.round((open||1)*100)}`;
+    const cached = bloomCache.get(key);
+    if(cached) return cached;
+
+    const ss = 2;
+    const cw = Math.ceil(w * 2.8);
+    const ch = Math.ceil(h * 2.4 + w * 0.35);
+
+    const ax = Math.ceil(cw * 0.50);
+    const ay = Math.ceil(h  * 1.55);
+
+    const off = document.createElement('canvas');
+    off.width  = cw * ss;
+    off.height = ch * ss;
+
+    const c2 = off.getContext('2d', { alpha:true });
+    c2.setTransform(ss,0,0,ss,0,0);
+    c2.translate(ax, ay);
+
+    renderTulipBloomSprite(c2, w, h, col, seed, open);
+
+    const obj = { canvas: off, ox: ax, oy: ay, ss };
+    bloomCache.set(key, obj);
+    return obj;
+  }
+
+  function renderTulipBloomSprite(c2, w, h, col, seed, open){
     let s = (seed >>> 0) || 1;
     const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0, s / 4294967296);
 
@@ -411,146 +875,225 @@
       b: Math.round(lerp(a.b,b.b,t))
     });
 
-    const dark  = mix(col, {r:18,g:6,b:28}, 0.42);
-    const deep  = mix(col, {r: 8,g:3,b:14}, 0.65);
-    const light = mix(col, {r:255,g:255,b:255}, 0.30);
+    const dark  = mix(col, {r:18,g:6,b:28}, 0.46);
+    const deep  = mix(col, {r: 6,g:2,b:10}, 0.72);
+    const lite  = mix(col, {r:255,g:255,b:255}, 0.36);
+    const warm  = mix(col, {r:255,g:240,b:220}, 0.22);
 
-    const o = open || 1;
+    const op = clamp(((open||1) - 0.88) / 0.22, 0, 1);
+    const spread = lerp(0.10, 0.22, op);
 
-    ctx.shadowColor = rgba(col.r, col.g, col.b, 0.16);
-    ctx.shadowBlur = Math.max(10, w*0.32);
+    // halo suave
+    c2.save();
+    c2.globalCompositeOperation = 'lighter';
+    c2.globalAlpha = 0.16;
+    const gg = c2.createRadialGradient(0, -h*0.55, 10, 0, -h*0.40, w*1.55);
+    gg.addColorStop(0, rgba(col.r,col.g,col.b,0.32));
+    gg.addColorStop(1, rgba(col.r,col.g,col.b,0));
+    c2.fillStyle = gg;
+    c2.beginPath();
+    c2.ellipse(0, -h*0.40, w*1.20, h*1.10, 0, 0, TAU);
+    c2.fill();
+    c2.restore();
 
-    const drawPetal = (zFront, idx) => {
-      const v1 = (rnd()-0.5);
-      const v2 = (rnd()-0.5);
-      const v3 = (rnd()-0.5);
+    const petalPath = (petW, petH, notch, wave, lip) => {
+      const topY = -petH * (1.02 + lip);
+      const leftTopX  = -petW * (0.08 + wave*0.02);
+      const rightTopX =  petW * (0.08 + wave*0.02);
 
-      const petW = w * (zFront ? 0.66 : 0.60) * (1 + v1*0.06);
-      const petH = h * (zFront ? 1.03 : 0.96) * o * (1 + v2*0.05);
-      const tipNotch = 0.10 + rnd()*0.10;
-      const belly = 0.20 + rnd()*0.10;
+      c2.beginPath();
+      c2.moveTo(-petW*0.44, 0);
 
-      const pg = ctx.createLinearGradient(0, -petH, 0, petH*0.30);
-      pg.addColorStop(0, rgba(light.r, light.g, light.b, zFront ? 0.42 : 0.28));
-      pg.addColorStop(0.28, rgba(col.r, col.g, col.b, zFront ? 0.98 : 0.88));
-      pg.addColorStop(1, rgba(dark.r, dark.g, dark.b, 0.98));
+      c2.bezierCurveTo(
+        -petW*0.66, -petH*0.26,
+        -petW*0.48, -petH*0.84,
+        leftTopX,   -petH*(0.96 - notch)
+      );
 
-      ctx.fillStyle = pg;
-      ctx.strokeStyle = rgba(255,255,255, zFront ? 0.11 : 0.07);
-      ctx.lineWidth = 1;
+      c2.quadraticCurveTo(0, topY, rightTopX, -petH*(0.96 - notch));
 
-      const tipX = v3 * petW * 0.08;
-      const tipY = -petH;
+      c2.bezierCurveTo(
+        petW*0.48, -petH*0.84,
+        petW*0.66, -petH*0.26,
+        petW*0.44, 0
+      );
 
-      ctx.beginPath();
-      ctx.moveTo(-petW*0.46, 0);
-      ctx.bezierCurveTo(-petW*0.72, -petH*0.30, -petW*0.50, -petH*0.90, tipX - petW*0.10, tipY + petH*tipNotch);
-      ctx.quadraticCurveTo(tipX, tipY - petH*0.04, tipX + petW*0.10, tipY + petH*tipNotch);
-      ctx.bezierCurveTo(petW*0.50, -petH*0.90, petW*0.72, -petH*0.30, petW*0.46, 0);
-      ctx.quadraticCurveTo(0, petH*belly, -petW*0.46, 0);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-
-      // translucencia en la punta
-      ctx.shadowBlur = 0;
-      const tg = ctx.createRadialGradient(tipX, tipY + petH*0.10, petW*0.04, tipX, tipY + petH*0.10, petW*0.55);
-      tg.addColorStop(0, rgba(255,255,255, zFront ? 0.10 : 0.07));
-      tg.addColorStop(1, rgba(255,255,255, 0));
-      ctx.fillStyle = tg;
-      ctx.beginPath();
-      ctx.ellipse(tipX, tipY + petH*0.18, petW*0.45, petH*0.30, 0, 0, TAU);
-      ctx.fill();
-
-      // sombra de pliegue
-      ctx.globalAlpha = zFront ? 0.18 : 0.14;
-      ctx.fillStyle = rgba(deep.r, deep.g, deep.b, 0.35);
-      ctx.beginPath();
-      ctx.ellipse(-petW*0.10, -petH*0.40, petW*0.22, petH*0.30, 0.2, 0, TAU);
-      ctx.fill();
-      ctx.globalAlpha = 1;
-
-      // venas sutiles
-      ctx.globalAlpha = zFront ? 0.14 : 0.10;
-      ctx.strokeStyle = rgba(255,255,255,0.18);
-      ctx.lineWidth = 1;
-      const veins = 2 + (idx % 2);
-      for(let i=-veins;i<=veins;i++){
-        ctx.beginPath();
-        ctx.moveTo(i*petW*0.12, tipY + petH*0.06);
-        ctx.quadraticCurveTo(i*petW*0.08, -petH*0.55, i*petW*0.03, -petH*0.12);
-        ctx.stroke();
-      }
-      ctx.globalAlpha = 1;
-
-      // rim light
-      ctx.globalAlpha = zFront ? 0.20 : 0.14;
-      ctx.strokeStyle = rgba(255,255,255,0.22);
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(tipX - petW*0.18, tipY + petH*0.10);
-      ctx.quadraticCurveTo(tipX, tipY - petH*0.02, tipX + petW*0.18, tipY + petH*0.10);
-      ctx.stroke();
-      ctx.globalAlpha = 1;
+      c2.quadraticCurveTo(0, petH*0.14, -petW*0.44, 0);
+      c2.closePath();
     };
 
-    // traseros
+    const fillPetal = (front, idx) => {
+      const v1 = (rnd()-0.5);
+      const v2 = (rnd()-0.5);
+
+      const petW = w * (front ? 0.62 : 0.56) * (1 + v1*0.05);
+      const petH = h * (front ? 1.18 : 1.10) * (0.94 + op*0.10) * (1 + v2*0.035);
+      const notch = 0.035 + rnd()*0.045;
+      const wave  = (rnd()-0.5) * 0.55;
+
+      const vg = c2.createLinearGradient(0, -petH, 0, petH*0.24);
+      vg.addColorStop(0, rgba(lite.r,lite.g,lite.b, front ? 0.44 : 0.30));
+      vg.addColorStop(0.22, rgba(warm.r,warm.g,warm.b, front ? 0.22 : 0.16));
+      vg.addColorStop(0.38, rgba(col.r,col.g,col.b, front ? 0.98 : 0.88));
+      vg.addColorStop(1, rgba(dark.r,dark.g,dark.b, 0.98));
+
+      const hg = c2.createLinearGradient(-petW, -petH*0.35, petW, -petH*0.15);
+      hg.addColorStop(0, rgba(0,0,0,0.18));
+      hg.addColorStop(0.42, rgba(0,0,0,0));
+      hg.addColorStop(1, rgba(0,0,0,0.22));
+
+      const rim = c2.createRadialGradient(0, -petH*0.96, petW*0.02, 0, -petH*0.86, petW*0.95);
+      rim.addColorStop(0, rgba(255,255,255, front ? 0.16 : 0.12));
+      rim.addColorStop(0.55, rgba(255,255,255,0.05));
+      rim.addColorStop(1, rgba(255,255,255,0));
+
+      c2.save();
+      c2.shadowColor = rgba(col.r,col.g,col.b, 0.10);
+      c2.shadowBlur = Math.max(10, w*0.30);
+      const lip = 0.03 + op*0.05;
+      petalPath(petW, petH, notch, wave, lip);
+      c2.fillStyle = vg;
+      c2.fill();
+
+      c2.shadowBlur = 0;
+      c2.globalAlpha = front ? 0.07 : 0.05;
+      c2.strokeStyle = rgba(255,255,255,0.22);
+      c2.lineWidth = 1;
+      c2.stroke();
+      c2.globalAlpha = 1;
+
+      c2.save();
+      c2.globalCompositeOperation = 'multiply';
+      c2.globalAlpha = front ? 0.22 : 0.18;
+      c2.fillStyle = hg;
+      c2.fill();
+      c2.restore();
+
+      c2.save();
+      c2.globalCompositeOperation = 'screen';
+      c2.globalAlpha = front ? 0.24 : 0.18;
+      c2.fillStyle = rim;
+      c2.fill();
+      c2.restore();
+
+      c2.save();
+      c2.clip();
+
+      c2.globalAlpha = front ? 0.12 : 0.09;
+      c2.strokeStyle = rgba(255,255,255,0.16);
+      c2.lineWidth = 1;
+      const veins = 3 + (idx % 2);
+      for(let i=-veins;i<=veins;i++){
+        c2.beginPath();
+        c2.moveTo(i*petW*0.10, -petH*0.96);
+        c2.quadraticCurveTo(i*petW*0.08, -petH*0.55, i*petW*0.03, -petH*0.10);
+        c2.stroke();
+      }
+
+      c2.globalAlpha = front ? 0.06 : 0.045;
+      for(let k=0;k<14;k++){
+        const px = (rnd()-0.5) * petW * 0.82;
+        const py = -petH*(0.18 + rnd()*0.70);
+        const pr = 0.6 + rnd()*1.0;
+        c2.fillStyle = rgba(255,255,255, 0.10);
+        c2.beginPath();
+        c2.arc(px, py, pr, 0, TAU);
+        c2.fill();
+      }
+
+      c2.globalCompositeOperation = 'multiply';
+      c2.globalAlpha = front ? 0.18 : 0.14;
+      const fg = c2.createRadialGradient(0, -petH*0.42, petW*0.08, 0, -petH*0.42, petW*0.70);
+      fg.addColorStop(0, rgba(deep.r,deep.g,deep.b,0.34));
+      fg.addColorStop(1, rgba(0,0,0,0));
+      c2.fillStyle = fg;
+      c2.beginPath();
+      c2.ellipse(0, -petH*0.42, petW*0.50, petH*0.34, 0, 0, TAU);
+      c2.fill();
+
+      c2.restore();
+      c2.restore();
+    };
+
+    // pétalos traseros
     for(let i=0;i<3;i++){
-      ctx.save();
-      const a = (-0.36 + i*0.36) + (rnd()-0.5)*0.03;
-      ctx.rotate(a);
-      ctx.translate(0, h*0.04);
-      drawPetal(false, i);
-      ctx.restore();
+      c2.save();
+      const a = (-spread + i*spread) + (rnd()-0.5)*0.018;
+      c2.rotate(a);
+      c2.translate(0, h*0.06);
+      c2.scale(1, 1.02 - op*0.05);
+      fillPetal(false, i);
+      c2.restore();
     }
 
     // sombra interior
-    const ig = ctx.createRadialGradient(0, -h*0.30, w*0.05, 0, -h*0.22, w*0.95);
+    c2.save();
+    c2.globalCompositeOperation = 'multiply';
+    const ig = c2.createRadialGradient(0, -h*0.30, w*0.06, 0, -h*0.22, w*1.05);
     ig.addColorStop(0, rgba(0,0,0,0));
-    ig.addColorStop(1, rgba(0,0,0,0.30));
-    ctx.fillStyle = ig;
-    ctx.beginPath();
-    ctx.ellipse(0, -h*0.30, w*0.50, h*0.56, 0, 0, TAU);
-    ctx.fill();
+    ig.addColorStop(1, rgba(0,0,0,0.36));
+    c2.fillStyle = ig;
+    c2.beginPath();
+    c2.ellipse(0, -h*0.30, w*0.55, h*0.60, 0, 0, TAU);
+    c2.fill();
+    c2.restore();
 
-    // frontales
+    // pétalos frontales
     for(let i=0;i<3;i++){
-      ctx.save();
-      const a = (-0.40 + i*0.40) + (rnd()-0.5)*0.03;
-      ctx.rotate(a);
-      drawPetal(true, 3+i);
-      ctx.restore();
+      c2.save();
+      const a = (-(spread+0.08) + i*(spread+0.08)) + (rnd()-0.5)*0.018;
+      c2.rotate(a);
+      c2.translate((i-1)*w*0.018*op, -h*0.01);
+      c2.scale(1, 1.04);
+      fillPetal(true, 3+i);
+      c2.restore();
     }
 
     // sépalos
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = rgba(50,170,105,0.92);
-    ctx.strokeStyle = rgba(255,255,255,0.06);
-    ctx.lineWidth = 1;
+    c2.save();
+    c2.globalAlpha = 0.95;
+    c2.fillStyle = rgba(50,170,105,0.92);
+    c2.strokeStyle = rgba(255,255,255,0.06);
+    c2.lineWidth = 1;
     for(let i=0;i<3;i++){
-      const a = (-0.55 + i*0.55);
-      ctx.save();
-      ctx.rotate(a);
-      ctx.beginPath();
-      ctx.moveTo(-w*0.10, h*0.02);
-      ctx.quadraticCurveTo(0, -h*0.10, w*0.10, h*0.02);
-      ctx.quadraticCurveTo(0, h*0.15, -w*0.10, h*0.02);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-      ctx.restore();
+      const a = (-0.56 + i*0.56);
+      c2.save();
+      c2.rotate(a);
+      c2.beginPath();
+      c2.moveTo(-w*0.11, h*0.02);
+      c2.quadraticCurveTo(0, -h*0.12, w*0.11, h*0.02);
+      c2.quadraticCurveTo(0, h*0.16, -w*0.11, h*0.02);
+      c2.closePath();
+      c2.fill();
+      c2.stroke();
+      c2.restore();
     }
+    c2.restore();
 
-    // base cap
-    ctx.fillStyle = rgba(40,140,85,0.50);
-    ctx.beginPath();
-    ctx.ellipse(0, 0, w*0.18, h*0.10, 0, 0, TAU);
-    ctx.fill();
+    // base
+    c2.fillStyle = rgba(40,140,85,0.52);
+    c2.beginPath();
+    c2.ellipse(0, 0, w*0.18, h*0.10, 0, 0, TAU);
+    c2.fill();
 
-    ctx.fillStyle = rgba(deep.r, deep.g, deep.b, 0.10);
-    ctx.beginPath();
-    ctx.ellipse(0, -h*0.04, w*0.34, h*0.18, 0, 0, TAU);
-    ctx.fill();
+    c2.save();
+    c2.globalAlpha = 0.28;
+    c2.fillStyle = rgba(0,0,0,0.18);
+    c2.beginPath();
+    c2.ellipse(0, h*0.02, w*0.26, h*0.10, 0, 0, TAU);
+    c2.fill();
+    c2.restore();
+  }
+
+  function drawTulipBloom(w, h, col, seed, open){
+    const spr = getBloomSprite(w, h, col, seed, open);
+    ctx.drawImage(
+      spr.canvas,
+      -spr.ox,
+      -spr.oy,
+      spr.canvas.width / spr.ss,
+      spr.canvas.height / spr.ss
+    );
   }
 
   // ===== Bouquet =====
@@ -565,14 +1108,15 @@
   ];
 
   const COLORS = [
-    // Paleta más natural (variada pero menos "neón")
-    {r:220,g: 55,b: 75},  // rojo tulipán
-    {r:245,g:120,b:175},  // rosa
-    {r:168,g: 96,b:230},  // lila
-    {r: 95,g:175,b:245},  // azul cielo
-    {r:255,g:168,b: 70},  // naranja
-    {r:245,g:215,b: 95},  // amarillo suave
-    {r:245,g:245,b:245},  // blanco
+    // Paleta más "tulipán" (saturada pero natural)
+    {r:215,g: 46,b: 62},   // rojo carmín
+    {r:255,g:122,b: 64},   // coral/naranja
+    {r:255,g:204,b: 64},   // amarillo tulipán
+    {r:245,g:245,b:245},   // blanco
+    {r:255,g:152,b:186},   // rosa
+    {r:165,g: 92,b:230},   // morado
+    {r: 92,g:170,b:245},   // azul suave
+    {r:255,g: 92,b:160},   // magenta
   ];
 
   let bouquet = [];
@@ -606,10 +1150,9 @@
   }
 
   function drawBouquet(t){
-    // césped primero (para que el ramo quede encima)
     drawGrass(t);
 
-    // haze detrás del ramo
+    // sombra suave arriba del césped
     const hx = W*0.5, hy = H*0.78;
     const hg = ctx.createRadialGradient(hx, hy, 10, hx, hy, Math.max(W,H)*0.40);
     hg.addColorStop(0, 'rgba(0,0,0,0)');
@@ -617,7 +1160,6 @@
     ctx.fillStyle = hg;
     ctx.fillRect(0,0,W,H);
 
-    // masa verde sutil en la base
     const bush = ctx.createRadialGradient(W*0.5, H*0.95, 10, W*0.5, H*0.95, Math.min(W,H)*0.45);
     bush.addColorStop(0, 'rgba(65,150,95,0.16)');
     bush.addColorStop(1, 'rgba(0,0,0,0)');
@@ -644,31 +1186,52 @@
       const cp2x = baseX + Math.cos(f.phase*1.7)*16*f.scale;
       const cp2y = baseY - f.height*0.76;
 
-      // hojas: proporción realista y nacen aprox. a la mitad del tallo
       const leafMid1 = baseY - f.height*0.52;
       const leafMid2 = baseY - f.height*0.60;
       ctx.save();
       drawTulipLeaf(baseX, leafMid1, angle, f.scale*0.56, -1);
       drawTulipLeaf(baseX, leafMid2, angle, f.scale*0.50,  1);
-
-      // patrón sutil (sin blanco): 2 sprigs máximo para no ensuciar
       drawLeafSprig(baseX, baseY - f.height*0.56, angle, f.scale*0.52, -1);
       drawLeafSprig(baseX, baseY - f.height*0.64, angle, f.scale*0.46,  1);
       ctx.restore();
 
-      // tallo
       ctx.save();
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
+
+      const stemW = 7.0 * f.scale;
+
+      // Tallos: más transparentes en la base (se mezclan con el césped)
       const sg = ctx.createLinearGradient(baseX, baseY, bloomX, bloomY);
-      sg.addColorStop(0, rgba(STEM2.r, STEM2.g, STEM2.b, 0.95));
-      sg.addColorStop(1, rgba(STEM.r, STEM.g, STEM.b, 0.95));
+      sg.addColorStop(0.00, rgba(STEM2.r, STEM2.g, STEM2.b, 0.10));
+      sg.addColorStop(0.10, rgba(STEM2.r, STEM2.g, STEM2.b, 0.45));
+      sg.addColorStop(0.32, rgba(STEM.r,  STEM.g,  STEM.b,  0.95));
+      sg.addColorStop(1.00, rgba(STEM.r,  STEM.g,  STEM.b,  0.95));
+
       ctx.strokeStyle = sg;
-      ctx.lineWidth = 7.0 * f.scale;
+      ctx.lineWidth = stemW;
+
       ctx.beginPath();
       ctx.moveTo(baseX, baseY);
       ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, bloomX, bloomY);
       ctx.stroke();
+
+      // borrado suave en la parte baja del tallo (deja que el césped lo tape)
+      const fadeH = 92 * f.scale;
+      ctx.save();
+      ctx.globalCompositeOperation = 'destination-out';
+      const fg = ctx.createLinearGradient(0, baseY + 2, 0, baseY - fadeH);
+      fg.addColorStop(0.00, 'rgba(0,0,0,0.90)');
+      fg.addColorStop(0.55, 'rgba(0,0,0,0.22)');
+      fg.addColorStop(1.00, 'rgba(0,0,0,0.00)');
+      ctx.strokeStyle = fg;
+      ctx.lineWidth = stemW + 5.0 * f.scale;
+      ctx.beginPath();
+      ctx.moveTo(baseX, baseY);
+      ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, bloomX, bloomY);
+      ctx.stroke();
+      ctx.restore();
+
       ctx.restore();
 
       f.bloomX = bloomX;
@@ -676,20 +1239,18 @@
       f.angle = angle + f.twist;
     }
 
-    // flores
+    // flores arriba
     for(const f of bouquet){
       ctx.save();
       ctx.translate(f.bloomX, f.bloomY);
       ctx.rotate(f.angle);
-
-      ctx.shadowColor = `rgba(${f.col.r},${f.col.g},${f.col.b},0.20)`;
-      ctx.shadowBlur = 16 + 16*f.scale;
-
+      ctx.shadowColor = `rgba(${f.col.r},${f.col.g},${f.col.b},0.16)`;
+      ctx.shadowBlur = 10 + 12*f.scale;
       drawTulipBloom(f.bw, f.bh, f.col, f.seed, f.open);
       ctx.restore();
     }
 
-    // base del ramo
+    // sombra base
     const knotX = W*0.5, knotY = H*0.935;
     ctx.fillStyle = 'rgba(0,0,0,0.18)';
     ctx.beginPath();
@@ -697,11 +1258,56 @@
     ctx.fill();
   }
 
-  // init
+  function resize(){
+    DPR = Math.min(1.8, window.devicePixelRatio || 1);
+    W = Math.floor(window.innerWidth);
+    H = Math.floor(window.innerHeight);
+
+    canvas.width  = Math.floor(W * DPR);
+    canvas.height = Math.floor(H * DPR);
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+
+    bloomCache.clear();
+
+    // IMPORTANTe: construir skyCache aquí (si no, el cielo queda en fallback)
+    rebuildSkyCache();
+
+    seedBouquet();
+    seedSoil();
+    seedGrass();
+    rebuildGroundCache();
+
+    // precalienta sprites
+    for(const f of bouquet){
+      getBloomSprite(f.bw, f.bh, f.col, f.seed, f.open);
+    }
+
+    selfTest();
+  }
+  window.addEventListener('resize', resize);
+
+  function selfTest(){
+    console.assert(!!canvas && !!ctx, 'Canvas/ctx no disponibles');
+    console.assert(Number.isFinite(W) && W>0 && Number.isFinite(H) && H>0, 'Canvas size invalido');
+    console.assert(Array.isArray(stars) && stars.length>0, 'Stars no inicializadas');
+    console.assert(Array.isArray(grass) && grass.length>0, 'Grass no inicializado');
+    console.assert(grassAnim1.length>0 && grassAnim2.length>0, 'Grass anim no inicializado');
+    console.assert(Array.isArray(soil) && soil.length>0, 'Soil no inicializado');
+    console.assert(!!groundCache && groundCache.width>0, 'Ground cache no generado');
+    console.assert(!!skyCache && skyCache.width>0, 'Sky cache no generado');
+    console.assert(Array.isArray(bouquet) && bouquet.length===DESCS.length, 'Bouquet no se genero correctamente');
+    console.assert(bloomCache.size >= bouquet.length, 'Bloom cache no precalentado');
+
+    // test extra: sprite mínimo
+    const spr = getBloomSprite(60, 100, {r:200,g:90,b:120}, 42, 0.95);
+    console.assert(spr && spr.canvas && spr.ss === 2, 'Sprite invalido');
+  }
+
   seedStars();
   resize();
 
-  // loop
   function frame(t){
     requestAnimationFrame(frame);
     drawSky(t);
