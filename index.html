@@ -839,16 +839,19 @@
 
   // ===== Pétalos (sprite cacheado) =====
   function getBloomSprite(w, h, col, seed, open){
+    // OJO: si el sprite es chico, los picos se "cortan" y se ve feo.
+    // Le di más aire arriba y a los lados.
     const key = `${Math.round(w)}x${Math.round(h)}_${col.r},${col.g},${col.b}_${seed}_${Math.round((open||1)*100)}`;
     const cached = bloomCache.get(key);
     if(cached) return cached;
 
     const ss = 2;
-    const cw = Math.ceil(w * 2.8);
-    const ch = Math.ceil(h * 2.4 + w * 0.35);
+
+    const cw = Math.ceil(w * 3.25);
+    const ch = Math.ceil(h * 2.75 + w * 0.55);
 
     const ax = Math.ceil(cw * 0.50);
-    const ay = Math.ceil(h  * 1.55);
+    const ay = Math.ceil(h  * 1.75);
 
     const off = document.createElement('canvas');
     off.width  = cw * ss;
@@ -865,7 +868,11 @@
     return obj;
   }
 
+  // ======= BLOOM: aquí está la cirugía estética real =======
   function renderTulipBloomSprite(c2, w, h, col, seed, open){
+    // Querías que deje de verse "genérico".
+    // Esto es: silueta (corona con picos), barriga, capas y oclusión.
+
     let s = (seed >>> 0) || 1;
     const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0, s / 4294967296);
 
@@ -875,93 +882,137 @@
       b: Math.round(lerp(a.b,b.b,t))
     });
 
-    const dark  = mix(col, {r:18,g:6,b:28}, 0.46);
-    const deep  = mix(col, {r: 6,g:2,b:10}, 0.72);
-    const lite  = mix(col, {r:255,g:255,b:255}, 0.36);
+    const dark  = mix(col, {r:18,g:6,b:28}, 0.48);
+    const deep  = mix(col, {r: 6,g:2,b:10}, 0.76);
+    const lite  = mix(col, {r:255,g:255,b:255}, 0.40);
     const warm  = mix(col, {r:255,g:240,b:220}, 0.22);
 
-    const op = clamp(((open||1) - 0.88) / 0.22, 0, 1);
-    const spread = lerp(0.10, 0.22, op);
+    const op = clamp(((open||1) - 0.86) / 0.26, 0, 1);
+    const spread = lerp(0.10, 0.28, op);
 
     // halo suave
     c2.save();
     c2.globalCompositeOperation = 'lighter';
-    c2.globalAlpha = 0.16;
-    const gg = c2.createRadialGradient(0, -h*0.55, 10, 0, -h*0.40, w*1.55);
-    gg.addColorStop(0, rgba(col.r,col.g,col.b,0.32));
+    c2.globalAlpha = 0.18;
+    const gg = c2.createRadialGradient(0, -h*0.56, 10, 0, -h*0.40, w*1.85);
+    gg.addColorStop(0, rgba(col.r,col.g,col.b,0.34));
+    gg.addColorStop(0.55, rgba(col.r,col.g,col.b,0.10));
     gg.addColorStop(1, rgba(col.r,col.g,col.b,0));
     c2.fillStyle = gg;
     c2.beginPath();
-    c2.ellipse(0, -h*0.40, w*1.20, h*1.10, 0, 0, TAU);
+    c2.ellipse(0, -h*0.42, w*1.25, h*1.12, 0, 0, TAU);
     c2.fill();
     c2.restore();
 
-    const petalPath = (petW, petH, notch, wave, lip) => {
-      const topY = -petH * (1.02 + lip);
-      const leftTopX  = -petW * (0.08 + wave*0.02);
-      const rightTopX =  petW * (0.08 + wave*0.02);
+    // Pétalo con "corona" de tulipán: 3 picos + 2 valles.
+    // Importante: los picos son *marcados*, pero no parecen dientes de sierra.
+    const petalPath = (petW, petH, notch, wave, lip, asym, crown) => {
+      const belly = 0.10 + crown*0.06; // más barriga = menos vaso genérico
+
+      const baseL = -petW*0.44;
+      const baseR =  petW*0.44;
+
+      const leftShoulderX  = -petW*(0.70 - belly*0.10);
+      const rightShoulderX =  petW*(0.70 - belly*0.10);
+
+      const shoulderY = -petH*(0.24 + belly*0.10);
+
+      const topBaseY = -petH*(0.96 - notch*0.58);
+      const crownY   = -petH*(1.06 + lip*0.18);
+
+      const waveX = wave * petW * 0.07;
+
+      // picos y valles
+      const peakSide = petH * (0.10 * crown);
+      const peakMid  = petH * (0.14 * crown);
+      const valley   = petH * (0.04 + 0.03*crown);
+
+      const pL  = {x: -petW*0.16 + asym + waveX, y: topBaseY};
+      const pR  = {x:  petW*0.16 + asym*0.25 + waveX, y: topBaseY};
+
+      const p1  = {x: -petW*0.18 + asym*0.10 + waveX, y: crownY - peakSide};
+      const v1  = {x: -petW*0.06 + asym*0.10 + waveX, y: crownY + valley};
+      const pC  = {x:  0 + asym*0.06 + waveX,          y: crownY - peakMid};
+      const v2  = {x:  petW*0.06 + asym*0.04 + waveX,  y: crownY + valley};
+      const p2  = {x:  petW*0.18 + asym*0.02 + waveX,  y: crownY - peakSide};
 
       c2.beginPath();
-      c2.moveTo(-petW*0.44, 0);
+      c2.moveTo(baseL, 0);
 
+      // lado izquierdo con barriga
       c2.bezierCurveTo(
-        -petW*0.66, -petH*0.26,
-        -petW*0.48, -petH*0.84,
-        leftTopX,   -petH*(0.96 - notch)
+        leftShoulderX, shoulderY,
+        -petW*0.56, -petH*0.84,
+        pL.x, pL.y
       );
 
-      c2.quadraticCurveTo(0, topY, rightTopX, -petH*(0.96 - notch));
+      // corona con picos: controlados con quad para suavizar entre puntos
+      c2.quadraticCurveTo(p1.x*0.92, (pL.y+p1.y)*0.55, p1.x, p1.y);
+      c2.quadraticCurveTo(v1.x, v1.y, v1.x, v1.y);
+      c2.quadraticCurveTo(pC.x, pC.y, pC.x, pC.y);
+      c2.quadraticCurveTo(v2.x, v2.y, v2.x, v2.y);
+      c2.quadraticCurveTo(p2.x, p2.y, p2.x, p2.y);
+      c2.quadraticCurveTo(pR.x*0.98, (pR.y+p2.y)*0.55, pR.x, pR.y);
 
+      // lado derecho
       c2.bezierCurveTo(
-        petW*0.48, -petH*0.84,
-        petW*0.66, -petH*0.26,
-        petW*0.44, 0
+        petW*0.56, -petH*0.84,
+        rightShoulderX, shoulderY,
+        baseR, 0
       );
 
-      c2.quadraticCurveTo(0, petH*0.14, -petW*0.44, 0);
+      // base
+      c2.quadraticCurveTo(0, petH*0.14, baseL, 0);
       c2.closePath();
     };
 
-    const fillPetal = (front, idx) => {
+    const fillPetal = (front, idx, sizeMul) => {
       const v1 = (rnd()-0.5);
       const v2 = (rnd()-0.5);
 
-      const petW = w * (front ? 0.62 : 0.56) * (1 + v1*0.05);
-      const petH = h * (front ? 1.18 : 1.10) * (0.94 + op*0.10) * (1 + v2*0.035);
-      const notch = 0.035 + rnd()*0.045;
-      const wave  = (rnd()-0.5) * 0.55;
+      // más altos y con barriga = se lee tulipán real
+      const petW = w * (front ? 0.70 : 0.64) * sizeMul * (1 + v1*0.05);
+      const petH = h * (front ? 1.34 : 1.22) * sizeMul * (0.92 + op*0.18) * (1 + v2*0.03);
 
-      const vg = c2.createLinearGradient(0, -petH, 0, petH*0.24);
-      vg.addColorStop(0, rgba(lite.r,lite.g,lite.b, front ? 0.44 : 0.30));
-      vg.addColorStop(0.22, rgba(warm.r,warm.g,warm.b, front ? 0.22 : 0.16));
-      vg.addColorStop(0.38, rgba(col.r,col.g,col.b, front ? 0.98 : 0.88));
+      const notch = 0.040 + rnd()*0.060;
+      const wave  = (rnd()-0.5) * 0.70;
+      const lip   = 0.050 + op*0.070;
+      const asym  = (rnd()-0.5) * petW * 0.08;
+      const crown = 0.82 + rnd()*0.55; // identidad arriba
+
+      const vg = c2.createLinearGradient(0, -petH, 0, petH*0.30);
+      vg.addColorStop(0, rgba(lite.r,lite.g,lite.b, front ? 0.56 : 0.40));
+      vg.addColorStop(0.18, rgba(warm.r,warm.g,warm.b, front ? 0.24 : 0.18));
+      vg.addColorStop(0.45, rgba(col.r,col.g,col.b, front ? 1.00 : 0.92));
       vg.addColorStop(1, rgba(dark.r,dark.g,dark.b, 0.98));
 
-      const hg = c2.createLinearGradient(-petW, -petH*0.35, petW, -petH*0.15);
-      hg.addColorStop(0, rgba(0,0,0,0.18));
-      hg.addColorStop(0.42, rgba(0,0,0,0));
-      hg.addColorStop(1, rgba(0,0,0,0.22));
+      const hg = c2.createLinearGradient(-petW, -petH*0.35, petW, -petH*0.10);
+      hg.addColorStop(0, rgba(0,0,0,0.24));
+      hg.addColorStop(0.45, rgba(0,0,0,0.00));
+      hg.addColorStop(1, rgba(0,0,0,0.28));
 
-      const rim = c2.createRadialGradient(0, -petH*0.96, petW*0.02, 0, -petH*0.86, petW*0.95);
-      rim.addColorStop(0, rgba(255,255,255, front ? 0.16 : 0.12));
-      rim.addColorStop(0.55, rgba(255,255,255,0.05));
+      const rim = c2.createRadialGradient(0, -petH*0.95, petW*0.02, 0, -petH*0.88, petW*1.15);
+      rim.addColorStop(0, rgba(255,255,255, front ? 0.20 : 0.16));
+      rim.addColorStop(0.55, rgba(255,255,255,0.06));
       rim.addColorStop(1, rgba(255,255,255,0));
 
       c2.save();
       c2.shadowColor = rgba(col.r,col.g,col.b, 0.10);
-      c2.shadowBlur = Math.max(10, w*0.30);
-      const lip = 0.03 + op*0.05;
-      petalPath(petW, petH, notch, wave, lip);
+      c2.shadowBlur = Math.max(12, w*0.34);
+
+      petalPath(petW, petH, notch, wave, lip, asym, crown);
       c2.fillStyle = vg;
       c2.fill();
 
+      // contorno mínimo
       c2.shadowBlur = 0;
-      c2.globalAlpha = front ? 0.07 : 0.05;
+      c2.globalAlpha = front ? 0.08 : 0.06;
       c2.strokeStyle = rgba(255,255,255,0.22);
       c2.lineWidth = 1;
       c2.stroke();
       c2.globalAlpha = 1;
 
+      // sombreado lateral
       c2.save();
       c2.globalCompositeOperation = 'multiply';
       c2.globalAlpha = front ? 0.22 : 0.18;
@@ -969,83 +1020,98 @@
       c2.fill();
       c2.restore();
 
+      // rim light
       c2.save();
       c2.globalCompositeOperation = 'screen';
-      c2.globalAlpha = front ? 0.24 : 0.18;
+      c2.globalAlpha = front ? 0.26 : 0.20;
       c2.fillStyle = rim;
       c2.fill();
       c2.restore();
 
+      // textura y profundidad
       c2.save();
       c2.clip();
 
+      // venas (verticales)
+      c2.globalCompositeOperation = 'screen';
       c2.globalAlpha = front ? 0.12 : 0.09;
       c2.strokeStyle = rgba(255,255,255,0.16);
       c2.lineWidth = 1;
-      const veins = 3 + (idx % 2);
+      const veins = 4 + (idx % 2);
       for(let i=-veins;i<=veins;i++){
         c2.beginPath();
-        c2.moveTo(i*petW*0.10, -petH*0.96);
-        c2.quadraticCurveTo(i*petW*0.08, -petH*0.55, i*petW*0.03, -petH*0.10);
+        c2.moveTo(i*petW*0.10, -petH*0.97);
+        c2.quadraticCurveTo(i*petW*0.08, -petH*0.58, i*petW*0.03, -petH*0.08);
         c2.stroke();
       }
 
+      // micro speckles
       c2.globalAlpha = front ? 0.06 : 0.045;
-      for(let k=0;k<14;k++){
-        const px = (rnd()-0.5) * petW * 0.82;
-        const py = -petH*(0.18 + rnd()*0.70);
-        const pr = 0.6 + rnd()*1.0;
-        c2.fillStyle = rgba(255,255,255, 0.10);
+      c2.fillStyle = rgba(255,255,255, 0.10);
+      for(let k=0;k<18;k++){
+        const px = (rnd()-0.5) * petW * 0.86;
+        const py = -petH*(0.16 + rnd()*0.78);
+        const pr = 0.55 + rnd()*1.05;
         c2.beginPath();
         c2.arc(px, py, pr, 0, TAU);
         c2.fill();
       }
 
+      // oclusión central (para que no se vea plano)
       c2.globalCompositeOperation = 'multiply';
       c2.globalAlpha = front ? 0.18 : 0.14;
-      const fg = c2.createRadialGradient(0, -petH*0.42, petW*0.08, 0, -petH*0.42, petW*0.70);
+      const fg = c2.createRadialGradient(0, -petH*0.40, petW*0.06, 0, -petH*0.38, petW*0.86);
       fg.addColorStop(0, rgba(deep.r,deep.g,deep.b,0.34));
       fg.addColorStop(1, rgba(0,0,0,0));
       c2.fillStyle = fg;
       c2.beginPath();
-      c2.ellipse(0, -petH*0.42, petW*0.50, petH*0.34, 0, 0, TAU);
+      c2.ellipse(0, -petH*0.40, petW*0.60, petH*0.38, 0, 0, TAU);
+      c2.fill();
+
+      // brillo extra en la corona (solo arriba)
+      c2.globalCompositeOperation = 'screen';
+      c2.globalAlpha = front ? 0.10 : 0.08;
+      const topGlow = c2.createLinearGradient(0, -petH*1.06, 0, -petH*0.70);
+      topGlow.addColorStop(0, rgba(255,255,255,0.34));
+      topGlow.addColorStop(1, rgba(255,255,255,0.00));
+      c2.fillStyle = topGlow;
       c2.fill();
 
       c2.restore();
       c2.restore();
     };
 
-    // pétalos traseros
-    for(let i=0;i<3;i++){
+    // pétalos traseros (4 para volumen)
+    for(let i=0;i<4;i++){
       c2.save();
-      const a = (-spread + i*spread) + (rnd()-0.5)*0.018;
+      const a = (-(spread*1.25) + i*(spread*0.85)) + (rnd()-0.5)*0.020;
       c2.rotate(a);
-      c2.translate(0, h*0.06);
-      c2.scale(1, 1.02 - op*0.05);
-      fillPetal(false, i);
+      c2.translate((i-1.5)*w*0.012*op, h*(0.070 + 0.014*op));
+      c2.scale(1, 1.03 - op*0.06);
+      fillPetal(false, i, 0.98);
       c2.restore();
     }
 
     // sombra interior
     c2.save();
     c2.globalCompositeOperation = 'multiply';
-    const ig = c2.createRadialGradient(0, -h*0.30, w*0.06, 0, -h*0.22, w*1.05);
+    const ig = c2.createRadialGradient(0, -h*0.30, w*0.06, 0, -h*0.22, w*1.20);
     ig.addColorStop(0, rgba(0,0,0,0));
-    ig.addColorStop(1, rgba(0,0,0,0.36));
+    ig.addColorStop(1, rgba(0,0,0,0.42));
     c2.fillStyle = ig;
     c2.beginPath();
-    c2.ellipse(0, -h*0.30, w*0.55, h*0.60, 0, 0, TAU);
+    c2.ellipse(0, -h*0.30, w*0.62, h*0.74, 0, 0, TAU);
     c2.fill();
     c2.restore();
 
-    // pétalos frontales
-    for(let i=0;i<3;i++){
+    // pétalos frontales (4 para silueta clara)
+    for(let i=0;i<4;i++){
       c2.save();
-      const a = (-(spread+0.08) + i*(spread+0.08)) + (rnd()-0.5)*0.018;
+      const a = (-(spread*1.40) + i*(spread*0.95)) + (rnd()-0.5)*0.020;
       c2.rotate(a);
-      c2.translate((i-1)*w*0.018*op, -h*0.01);
-      c2.scale(1, 1.04);
-      fillPetal(true, 3+i);
+      c2.translate((i-1.5)*w*0.018*op, -h*(0.012 + 0.012*op));
+      c2.scale(1, 1.06);
+      fillPetal(true, 4+i, 1.00);
       c2.restore();
     }
 
@@ -1144,7 +1210,7 @@
         twist,
         col: COLORS[i] || COLORS[i % COLORS.length],
         seed: 1337 + i*101,
-        open: 0.92 + (i % 4) * 0.03
+        open: 0.90 + (i % 4) * 0.03
       };
     });
   }
@@ -1271,7 +1337,7 @@
 
     bloomCache.clear();
 
-    // IMPORTANTe: construir skyCache aquí (si no, el cielo queda en fallback)
+    // construir skyCache aquí
     rebuildSkyCache();
 
     seedBouquet();
@@ -1300,9 +1366,10 @@
     console.assert(Array.isArray(bouquet) && bouquet.length===DESCS.length, 'Bouquet no se genero correctamente');
     console.assert(bloomCache.size >= bouquet.length, 'Bloom cache no precalentado');
 
-    // test extra: sprite mínimo
+    // test extra: sprite mínimo (y que no se corte)
     const spr = getBloomSprite(60, 100, {r:200,g:90,b:120}, 42, 0.95);
     console.assert(spr && spr.canvas && spr.ss === 2, 'Sprite invalido');
+    console.assert(spr.canvas.width > 0 && spr.canvas.height > 0, 'Sprite sin tamaño');
   }
 
   seedStars();
