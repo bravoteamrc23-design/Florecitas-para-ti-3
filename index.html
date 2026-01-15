@@ -39,6 +39,7 @@
   const lerp  = (a,b,t)=>a+(b-a)*t;
   const rgba  = (r,g,b,a)=>`rgba(${r},${g},${b},${a})`;
 
+  // Fisher-Yates (evita sesgos al seleccionar muestras)
   const shuffleInPlace = (arr) => {
     for(let i=arr.length-1;i>0;i--){
       const j = (Math.random()*(i+1))|0;
@@ -50,49 +51,66 @@
   };
 
   const CONFIG = {
+    // Cielo más rico, sin saturarlo
     stars: 160,
     twinkle: 0.85,
     sway: 0.28,
     reduceMotion: false,
     shootingStars: 1,
 
-    // 0 = casi sin corona, 1 = corona marcada
-    crownStrength: 0.55,
+    // ↓↓↓ Control fino de picos en pétalos (0 = casi sin corona, 1 = corona marcada)
+    crownStrength: 0.10,
   };
 
+  // respeta prefers-reduced-motion
   try{
     const m = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)');
     if(m && m.matches) CONFIG.reduceMotion = true;
-  }catch(_){}
+  }catch(_){/* nada */}
 
   // ===== Stars =====
   const stars = [];
 
-  const shooting = { active:false, t0:0, dur:0, x0:0,y0:0, x1:0,y1:0 };
+  // shooting star discreta
+  const shooting = {
+    active:false,
+    t0:0,
+    dur:0,
+    x0:0,y0:0,
+    x1:0,y1:0,
+  };
 
   function seedStars(){
     stars.length = 0;
+
+    // Distribución con cúmulos (más natural que uniforme puro)
     const clusters = [
       {cx: 0.30, cy: 0.22, r: 0.18},
       {cx: 0.72, cy: 0.18, r: 0.20},
     ];
 
     const pick = () => {
-      if(Math.random() < 0.70) return {x: Math.random(), y: Math.random()};
+      if(Math.random() < 0.70){
+        return {x: Math.random(), y: Math.random()};
+      }
       const c = clusters[(Math.random()*clusters.length)|0];
       const a = Math.random()*TAU;
       const rr = Math.sqrt(Math.random()) * c.r;
-      return { x: clamp(c.cx + Math.cos(a)*rr, 0, 1), y: clamp(c.cy + Math.sin(a)*rr, 0, 1) };
+      return {
+        x: clamp(c.cx + Math.cos(a)*rr, 0, 1),
+        y: clamp(c.cy + Math.sin(a)*rr, 0, 1)
+      };
     };
 
     for(let i=0;i<CONFIG.stars;i++){
       const p = pick();
-      const yBias = Math.pow(1 - p.y, 1.6);
+      const yBias = Math.pow(1 - p.y, 1.6); // más densidad arriba
       const bigChance = 0.06 + 0.07*yBias;
       const big = Math.random() < bigChance;
 
       stars.push({
-        x: p.x, y: p.y,
+        x: p.x,
+        y: p.y,
         r: big ? (1.9 + Math.random()*2.8) : (0.7 + Math.random()*1.7),
         a: big ? (0.18 + Math.random()*0.30) : (0.08 + Math.random()*0.24),
         p: Math.random()*TAU,
@@ -111,6 +129,7 @@
     if(CONFIG.reduceMotion || !CONFIG.shootingStars) return;
     if(shooting.active) return;
 
+    // probabilidad baja: aprox 1 cada 10-25s
     if(Math.random() < 0.0022){
       shooting.active = true;
       shooting.t0 = t;
@@ -121,8 +140,10 @@
       const dx = (120 + Math.random()*220);
       const dy = (40 + Math.random()*120);
 
-      shooting.x0 = startX; shooting.y0 = startY;
-      shooting.x1 = startX + dx; shooting.y1 = startY + dy;
+      shooting.x0 = startX;
+      shooting.y0 = startY;
+      shooting.x1 = startX + dx;
+      shooting.y1 = startY + dy;
     }
   }
 
@@ -158,6 +179,7 @@
     ctx.lineTo(x, y);
     ctx.stroke();
 
+    // cabeza
     ctx.globalAlpha = (1-u) * 0.95;
     ctx.shadowColor = 'rgba(255,255,255,0.8)';
     ctx.shadowBlur = 18;
@@ -171,11 +193,11 @@
     if(u >= 1) shooting.active = false;
   }
 
-  // ===== Césped =====
+  // ===== Césped (campo denso + cache) =====
   const grass = [];
   const soil = [];
-  const grassAnim1 = [];
-  const grassAnim2 = [];
+  const grassAnim1 = []; // capa media (delgada)
+  const grassAnim2 = []; // capa frontal (gruesa)
 
   let groundCache = null;
   let skyCache = null;
@@ -244,6 +266,7 @@
       }
     }
 
+    // Selección equilibrada para animación (cubre todo el ancho)
     grassAnim1.length = 0;
     grassAnim2.length = 0;
 
@@ -292,6 +315,7 @@
       g.fillRect(0,0,W,H);
     }
 
+    // puntitos (textura)
     g.save();
     g.globalAlpha = 0.10;
     g.fillStyle = 'rgba(255,255,255,0.08)';
@@ -352,6 +376,7 @@
     }
     g.restore();
 
+    // fog del suelo
     const fogTop = gy + groundH*0.18;
     const fog = g.createLinearGradient(0, fogTop, 0, H);
     fog.addColorStop(0, 'rgba(0,0,0,0)');
@@ -397,6 +422,7 @@
         ctx.globalAlpha = old;
       }
 
+      // hojas más gorditas (solo capa 2)
       if(b.layer === 2){
         const w0 = b.w * (1.00 + b.thick);
         const w1 = Math.max(0.8, w0 * 0.16);
@@ -472,6 +498,7 @@
     }
     ctx.restore();
 
+    // oscuridad abajo
     ctx.save();
     const thatchTop = gy + groundH*0.74;
     const tg = ctx.createLinearGradient(0, thatchTop, 0, H);
@@ -481,6 +508,7 @@
     ctx.fillRect(0, thatchTop, W, H - thatchTop);
     ctx.restore();
 
+    // chispitas (sutil)
     if(!CONFIG.reduceMotion){
       ctx.save();
       ctx.globalAlpha = 0.05;
@@ -506,6 +534,7 @@
     const g = off.getContext('2d', {alpha:true});
     g.setTransform(DPR,0,0,DPR,0,0);
 
+    // base night gradient
     const sky = g.createLinearGradient(0, 0, 0, H);
     sky.addColorStop(0, 'rgba(10,12,38,1)');
     sky.addColorStop(0.45, 'rgba(6,8,20,1)');
@@ -513,6 +542,7 @@
     g.fillStyle = sky;
     g.fillRect(0,0,W,H);
 
+    // nebulas suaves
     const neb = (x,y,r, a, cr,cg,cb) => {
       const gg = g.createRadialGradient(x,y, 10, x,y, r);
       gg.addColorStop(0, rgba(cr,cg,cb,a));
@@ -525,6 +555,7 @@
     neb(W*0.80, H*0.22, Math.max(W,H)*0.56, 0.07, 150,120,255);
     neb(W*0.55, H*0.10, Math.max(W,H)*0.50, 0.05, 90,170,255);
 
+    // Vía Láctea: banda + polvo
     g.save();
     g.translate(W*0.56, H*0.34);
     g.rotate(-0.36);
@@ -554,6 +585,7 @@
     }
     g.restore();
 
+    // glow superior
     const gx = W*0.52, gy = H*0.16;
     const glow = g.createRadialGradient(gx, gy, 10, gx, gy, Math.max(W,H)*0.62);
     glow.addColorStop(0, 'rgba(255,255,255,0.085)');
@@ -561,6 +593,7 @@
     g.fillStyle = glow;
     g.fillRect(0,0,W,H);
 
+    // grano sutil
     g.save();
     g.globalAlpha = 0.05;
     g.fillStyle = 'rgba(255,255,255,0.06)';
@@ -572,6 +605,7 @@
     }
     g.restore();
 
+    // viñeta
     const vg = g.createRadialGradient(W*0.5, H*0.55, Math.min(W,H)*0.18, W*0.5, H*0.55, Math.max(W,H)*0.98);
     vg.addColorStop(0, 'rgba(0,0,0,0)');
     vg.addColorStop(1, 'rgba(0,0,0,0.62)');
@@ -595,6 +629,7 @@
       ctx.fillRect(0,0,W,H);
     }
 
+    // estrellas
     ctx.save();
     for(const st of stars){
       const tw = CONFIG.reduceMotion ? 1 : (0.55 + 0.45*Math.sin(t*0.001*st.s + st.p) * CONFIG.twinkle);
@@ -606,12 +641,14 @@
       ctx.globalAlpha = alpha;
       ctx.shadowColor = 'rgba(255,255,255,0.55)';
       ctx.shadowBlur = 10 + st.r*3;
+
       ctx.fillStyle = st.hue ? `hsla(${st.hue}, 85%, 88%, 1)` : 'white';
 
       ctx.beginPath();
       ctx.arc(x, y, st.r, 0, TAU);
       ctx.fill();
 
+      // flare para grandes
       if(st.flare){
         ctx.save();
         ctx.globalCompositeOperation = 'lighter';
@@ -642,11 +679,12 @@
     ctx.shadowBlur = 0;
     ctx.globalAlpha = 1;
 
+    // shooting star ocasional
     maybeStartShootingStar(t);
     drawShootingStar(t);
   }
 
-  // ===== Hojas =====
+  // ===== Hojas (suaves) =====
   function drawTulipLeaf(attachX, attachY, angle, scale, side){
     const id = ((attachX * 97) ^ (attachY * 193) ^ (side * 911)) | 0;
     const j = (Math.sin(id) * 0.5 + 0.5);
@@ -685,19 +723,19 @@
     const L = [], R = [], C = [];
 
     for(let i=0;i<=steps;i++){
-      const tt = i/steps;
-      const x = bez(tt, p0x,p1x,p2x,p3x);
-      const y = bez(tt, p0y,p1y,p2y,p3y);
+      const t = i/steps;
+      const x = bez(t, p0x,p1x,p2x,p3x);
+      const y = bez(t, p0y,p1y,p2y,p3y);
       C.push({x,y});
 
-      const tt2 = Math.min(1, tt + 0.015);
-      const x2 = bez(tt2, p0x,p1x,p2x,p3x);
-      const y2 = bez(tt2, p0y,p1y,p2y,p3y);
+      const t2 = Math.min(1, t + 0.015);
+      const x2 = bez(t2, p0x,p1x,p2x,p3x);
+      const y2 = bez(t2, p0y,p1y,p2y,p3y);
       const dx = x2-x, dy=y2-y;
       const inv = 1 / Math.max(1e-5, Math.hypot(dx,dy));
       const nx = -dy*inv, ny = dx*inv;
 
-      const taper = Math.pow(1 - tt, 1.55);
+      const taper = Math.pow(1 - t, 1.55);
       const w = baseWid * (0.04 + 0.50*taper);
 
       L.push({x: x + nx*w, y: y + ny*w});
@@ -797,8 +835,9 @@
     ctx.restore();
   }
 
-  // ===== Bloom sprite =====
+  // ===== Pétalos (sprite cacheado) =====
   function getBloomSprite(w, h, col, seed, open){
+    // Más aire arriba y a los lados para que la corona no se "corte".
     const key = `${Math.round(w)}x${Math.round(h)}_${col.r},${col.g},${col.b}_${seed}_${Math.round((open||1)*100)}_${Math.round(CONFIG.crownStrength*100)}`;
     const cached = bloomCache.get(key);
     if(cached) return cached;
@@ -843,6 +882,7 @@
     const op = clamp(((open||1) - 0.86) / 0.26, 0, 1);
     const spread = lerp(0.10, 0.28, op);
 
+    // halo suave
     c2.save();
     c2.globalCompositeOperation = 'lighter';
     c2.globalAlpha = 0.18;
@@ -856,6 +896,8 @@
     c2.fill();
     c2.restore();
 
+    // Corona tulipán: identidad sí, picos visibles no.
+    // (Esto es literalmente lo que pediste.)
     const petalPath = (petW, petH, notch, wave, lip, asym, crown) => {
       const baseL = -petW*0.44;
       const baseR =  petW*0.44;
@@ -868,36 +910,47 @@
       const crownY   = -petH*(1.010 + lip*0.10);
       const waveX = wave * petW * 0.05;
 
+      // ↓↓↓ aquí se baja la altura de picos y se suben valles
       const cs = clamp(crown * CONFIG.crownStrength, 0.10, 1.0);
-      const peakSide = petH * (0.015 + 0.012*cs);
-      const peakMid  = petH * (0.020 + 0.016*cs);
-      const valley   = petH * (0.006 + 0.006*cs);
+      const peakSide = petH * (0.008 + 0.008*cs);
+      const peakMid  = petH * (0.010 + 0.010*cs);
+      const valley   = petH * (0.003 + 0.003*cs);
 
       const pL  = {x: -petW*0.15 + asym + waveX,              y: topBaseY};
       const pR  = {x:  petW*0.15 + asym*0.25 + waveX,         y: topBaseY};
 
       const p1  = {x: -petW*0.17 + asym*0.10 + waveX,         y: crownY - peakSide};
       const v1  = {x: -petW*0.06 + asym*0.10 + waveX,         y: crownY + valley};
-      const pC  = {x:  0 + asym*0.06 + waveX,                 y: crownY - peakMid};
-      const v2  = {x:  petW*0.06 + asym*0.04 + waveX,         y: crownY + valley};
-      const p2  = {x:  petW*0.17 + asym*0.02 + waveX,         y: crownY - peakSide};
+      const pC  = {x:  0 + asym*0.06 + waveX,                  y: crownY - peakMid};
+      const v2  = {x:  petW*0.06 + asym*0.04 + waveX,          y: crownY + valley};
+      const p2  = {x:  petW*0.17 + asym*0.02 + waveX,          y: crownY - peakSide};
 
       const mid = (a,b)=>({x:(a.x+b.x)*0.5, y:(a.y+b.y)*0.5});
 
       c2.beginPath();
       c2.moveTo(baseL, 0);
 
-      c2.bezierCurveTo(leftShoulderX, shoulderY, -petW*0.56, -petH*0.84, pL.x, pL.y);
+      c2.bezierCurveTo(
+        leftShoulderX, shoulderY,
+        -petW*0.56, -petH*0.84,
+        pL.x, pL.y
+      );
 
+      // Corona redondeada (cuadráticas con puntos medios)
       const q = (toX, toY, cX, cY) => c2.quadraticCurveTo(cX, cY, toX, toY);
-      const m01 = mid(pL,p1); q(p1.x, p1.y, m01.x, m01.y);
-      const m12 = mid(p1,v1); q(v1.x, v1.y, m12.x, m12.y);
-      const m23 = mid(v1,pC); q(pC.x, pC.y, m23.x, m23.y);
-      const m34 = mid(pC,v2); q(v2.x, v2.y, m34.x, m34.y);
-      const m45 = mid(v2,p2); q(p2.x, p2.y, m45.x, m45.y);
-      const m56 = mid(p2,pR); q(pR.x, pR.y, m56.x, m56.y);
+      q(p1.x, p1.y, ...Object.values(mid(pL,p1)));
+      q(v1.x, v1.y, ...Object.values(mid(p1,v1)));
+      q(pC.x, pC.y, ...Object.values(mid(v1,pC)));
+      q(v2.x, v2.y, ...Object.values(mid(pC,v2)));
+      q(p2.x, p2.y, ...Object.values(mid(v2,p2)));
+      q(pR.x, pR.y, ...Object.values(mid(p2,pR)));
 
-      c2.bezierCurveTo(petW*0.56, -petH*0.84, rightShoulderX, shoulderY, baseR, 0);
+      c2.bezierCurveTo(
+        petW*0.56, -petH*0.84,
+        rightShoulderX, shoulderY,
+        baseR, 0
+      );
+
       c2.quadraticCurveTo(0, petH*0.14, baseL, 0);
       c2.closePath();
     };
@@ -913,7 +966,7 @@
       const wave  = (rnd()-0.5) * 0.55;
       const lip   = 0.050 + op*0.055;
       const asym  = (rnd()-0.5) * petW * 0.06;
-      const crown = 0.55 + rnd()*0.30;
+      const crown = 0.55 + rnd()*0.30; // menos agresivo que antes
 
       const vg = c2.createLinearGradient(0, -petH, 0, petH*0.30);
       vg.addColorStop(0, rgba(lite.r,lite.g,lite.b, front ? 0.56 : 0.40));
@@ -939,6 +992,7 @@
       c2.fillStyle = vg;
       c2.fill();
 
+      // suavizado extra SOLO en la franja superior (reduce lectura de "picos")
       c2.save();
       c2.clip();
       c2.globalCompositeOperation = 'source-atop';
@@ -951,6 +1005,7 @@
       c2.fillRect(-petW*1.25, -petH*1.10, petW*2.50, petH*0.46);
       c2.restore();
 
+      // contorno mínimo
       c2.shadowBlur = 0;
       c2.globalAlpha = front ? 0.07 : 0.05;
       c2.strokeStyle = rgba(255,255,255,0.22);
@@ -958,6 +1013,7 @@
       c2.stroke();
       c2.globalAlpha = 1;
 
+      // sombreado lateral
       c2.save();
       c2.globalCompositeOperation = 'multiply';
       c2.globalAlpha = front ? 0.22 : 0.18;
@@ -965,6 +1021,7 @@
       c2.fill();
       c2.restore();
 
+      // rim light
       c2.save();
       c2.globalCompositeOperation = 'screen';
       c2.globalAlpha = front ? 0.24 : 0.18;
@@ -972,9 +1029,11 @@
       c2.fill();
       c2.restore();
 
+      // textura y profundidad
       c2.save();
       c2.clip();
 
+      // venas (verticales)
       c2.globalCompositeOperation = 'screen';
       c2.globalAlpha = front ? 0.12 : 0.09;
       c2.strokeStyle = rgba(255,255,255,0.16);
@@ -987,6 +1046,7 @@
         c2.stroke();
       }
 
+      // micro speckles
       c2.globalAlpha = front ? 0.06 : 0.045;
       c2.fillStyle = rgba(255,255,255, 0.10);
       for(let k=0;k<18;k++){
@@ -998,6 +1058,7 @@
         c2.fill();
       }
 
+      // oclusión central (para que no se vea plano)
       c2.globalCompositeOperation = 'multiply';
       c2.globalAlpha = front ? 0.18 : 0.14;
       const fg = c2.createRadialGradient(0, -petH*0.40, petW*0.06, 0, -petH*0.38, petW*0.86);
@@ -1008,6 +1069,7 @@
       c2.ellipse(0, -petH*0.40, petW*0.60, petH*0.38, 0, 0, TAU);
       c2.fill();
 
+      // brillo extra en la corona (más sutil)
       c2.globalCompositeOperation = 'screen';
       c2.globalAlpha = front ? 0.06 : 0.045;
       const topGlow = c2.createLinearGradient(0, -petH*1.05, 0, -petH*0.70);
@@ -1020,6 +1082,7 @@
       c2.restore();
     };
 
+    // pétalos traseros (4 para volumen)
     for(let i=0;i<4;i++){
       c2.save();
       const a = (-(spread*1.25) + i*(spread*0.85)) + (rnd()-0.5)*0.020;
@@ -1030,6 +1093,7 @@
       c2.restore();
     }
 
+    // sombra interior
     c2.save();
     c2.globalCompositeOperation = 'multiply';
     const ig = c2.createRadialGradient(0, -h*0.30, w*0.06, 0, -h*0.22, w*1.20);
@@ -1041,6 +1105,7 @@
     c2.fill();
     c2.restore();
 
+    // pétalos frontales (4 para silueta clara)
     for(let i=0;i<4;i++){
       c2.save();
       const a = (-(spread*1.40) + i*(spread*0.95)) + (rnd()-0.5)*0.020;
@@ -1051,6 +1116,7 @@
       c2.restore();
     }
 
+    // sépalos
     c2.save();
     c2.globalAlpha = 0.95;
     c2.fillStyle = rgba(50,170,105,0.92);
@@ -1071,6 +1137,7 @@
     }
     c2.restore();
 
+    // base
     c2.fillStyle = rgba(40,140,85,0.52);
     c2.beginPath();
     c2.ellipse(0, 0, w*0.18, h*0.10, 0, 0, TAU);
@@ -1087,7 +1154,13 @@
 
   function drawTulipBloom(w, h, col, seed, open){
     const spr = getBloomSprite(w, h, col, seed, open);
-    ctx.drawImage(spr.canvas, -spr.ox, -spr.oy, spr.canvas.width / spr.ss, spr.canvas.height / spr.ss);
+    ctx.drawImage(
+      spr.canvas,
+      -spr.ox,
+      -spr.oy,
+      spr.canvas.width / spr.ss,
+      spr.canvas.height / spr.ss
+    );
   }
 
   // ===== Bouquet =====
@@ -1101,9 +1174,16 @@
     {dx: 0.00, hf:0.80, bs:0.90},
   ];
 
-  // TODOS azules (mismo color para todos)
-  const TULIP_BLUE = {r: 70, g: 150, b: 255};
-  const COLORS = [TULIP_BLUE];
+  const COLORS = [
+    // Todos rojos (misma familia, sin basura duplicada)
+    {r: 235,g:  55,b:  70}, // rojo vivo
+    {r: 210,g:  40,b:  55}, // rojo profundo
+    {r: 255,g:  85,b:  95}, // rojo claro
+    {r: 190,g:  35,b:  60}, // rojo vino
+    {r: 255,g: 120,b: 130}, // rojo suave
+    {r: 225,g:  65,b:  85}, // rojo tulipán
+    {r: 245,g:  95,b: 105}, // rojo medio
+  ];
 
   let bouquet = [];
 
@@ -1128,7 +1208,7 @@
         phase: i*0.85,
         bw, bh,
         twist,
-        col: TULIP_BLUE,
+        col: COLORS[i] || COLORS[i % COLORS.length],
         seed: 1337 + i*101,
         open: 0.90 + (i % 4) * 0.03
       };
@@ -1138,6 +1218,7 @@
   function drawBouquet(t){
     drawGrass(t);
 
+    // sombra suave arriba del césped
     const hx = W*0.5, hy = H*0.78;
     const hg = ctx.createRadialGradient(hx, hy, 10, hx, hy, Math.max(W,H)*0.40);
     hg.addColorStop(0, 'rgba(0,0,0,0)');
@@ -1154,6 +1235,7 @@
     const STEM = {r:55,g:155,b:92};
     const STEM2= {r:35,g:120,b:72};
 
+    // tallos + hojas
     for(const f of bouquet){
       const sway = CONFIG.reduceMotion ? 0 : Math.sin(t*0.001*(0.9) + f.phase) * 0.22 * CONFIG.sway;
       const angle = sway + (f.x - W*0.5) * 0.0006;
@@ -1170,6 +1252,7 @@
       const cp2x = baseX + Math.cos(f.phase*1.7)*16*f.scale;
       const cp2y = baseY - f.height*0.76;
 
+      // hojas desde la mitad del tallo
       const leafMid1 = baseY - f.height*0.52;
       const leafMid2 = baseY - f.height*0.60;
       ctx.save();
@@ -1185,6 +1268,7 @@
 
       const stemW = 7.0 * f.scale;
 
+      // Tallos: más transparentes en la base (se mezclan con el césped)
       const sg = ctx.createLinearGradient(baseX, baseY, bloomX, bloomY);
       sg.addColorStop(0.00, rgba(STEM2.r, STEM2.g, STEM2.b, 0.10));
       sg.addColorStop(0.10, rgba(STEM2.r, STEM2.g, STEM2.b, 0.45));
@@ -1199,6 +1283,7 @@
       ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, bloomX, bloomY);
       ctx.stroke();
 
+      // borrado suave en la parte baja del tallo (deja que el césped lo tape)
       const fadeH = 92 * f.scale;
       ctx.save();
       ctx.globalCompositeOperation = 'destination-out';
@@ -1221,7 +1306,7 @@
       f.angle = angle + f.twist;
     }
 
-    // flores arriba (ESTO ERA LO QUE TE FALTABA)
+    // flores arriba
     for(const f of bouquet){
       ctx.save();
       ctx.translate(f.bloomX, f.bloomY);
@@ -1232,6 +1317,7 @@
       ctx.restore();
     }
 
+    // sombra base
     const knotX = W*0.5, knotY = H*0.935;
     ctx.fillStyle = 'rgba(0,0,0,0.18)';
     ctx.beginPath();
@@ -1252,13 +1338,16 @@
 
     bloomCache.clear();
 
-    rebuildSkyCache();
+    // Re-seed para que el cielo/estrellas se vean bien al rotar el teléfono
     seedStars();
+    rebuildSkyCache();
+
     seedBouquet();
     seedSoil();
     seedGrass();
     rebuildGroundCache();
 
+    // precalienta sprites
     for(const f of bouquet){
       getBloomSprite(f.bw, f.bh, f.col, f.seed, f.open);
     }
@@ -1267,37 +1356,25 @@
   }
   window.addEventListener('resize', resize, {passive:true});
 
-  // error visible si algo truena
-  function ensureErr(){
-    let el = document.getElementById('err');
-    if(el) return el;
-    el = document.createElement('div');
-    el.id = 'err';
-    el.style.cssText = 'position:fixed;left:12px;right:12px;bottom:12px;padding:10px 12px;border-radius:12px;background:rgba(0,0,0,0.65);color:#fff;font:12px/1.35 system-ui,Segoe UI,Roboto,sans-serif;z-index:9;display:none;white-space:pre-wrap';
-    document.body.appendChild(el);
-    return el;
-  }
-  window.addEventListener('error', (e)=>{
-    const el = ensureErr();
-    el.style.display = 'block';
-    el.textContent = (e && (e.message || e.error)) ? String(e.message || e.error) : 'Error desconocido';
-  });
-
   function selfTest(){
     console.assert(!!canvas && !!ctx, 'Canvas/ctx no disponibles');
-    console.assert(Number.isFinite(W) && W>0 && Number.isFinite(H) && H>0, 'Canvas size invalido');
+    console.assert(Number.isFinite(W) && W>0 && Number.isFinite(H) && H>0, 'Canvas size inválido');
     console.assert(Array.isArray(stars) && stars.length>0, 'Stars no inicializadas');
     console.assert(Array.isArray(grass) && grass.length>0, 'Grass no inicializado');
     console.assert(grassAnim1.length>0 && grassAnim2.length>0, 'Grass anim no inicializado');
     console.assert(Array.isArray(soil) && soil.length>0, 'Soil no inicializado');
     console.assert(!!groundCache && groundCache.width>0, 'Ground cache no generado');
     console.assert(!!skyCache && skyCache.width>0, 'Sky cache no generado');
-    console.assert(Array.isArray(bouquet) && bouquet.length===DESCS.length, 'Bouquet no se genero correctamente');
+    console.assert(Array.isArray(bouquet) && bouquet.length===DESCS.length, 'Bouquet no se generó correctamente');
 
-    console.assert(Array.isArray(COLORS) && COLORS.length===1, 'COLORS debe ser 1 (azul único)');
-    console.assert(COLORS[0].b >= COLORS[0].r && COLORS[0].b >= COLORS[0].g, 'El color no parece azul');
+    // test extra: sprite mínimo + crown
+    console.assert(CONFIG.crownStrength >= 0 && CONFIG.crownStrength <= 1, 'crownStrength fuera de rango');
+    const spr = getBloomSprite(60, 100, {r:220,g:70,b:80}, 42, 0.95);
+    console.assert(spr && spr.canvas && spr.ss === 2 && spr.canvas.width>0, 'Sprite inválido');
   }
 
+  // init
+  seedStars();
   resize();
 
   function frame(t){
