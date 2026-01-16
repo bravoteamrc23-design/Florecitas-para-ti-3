@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>Ramo de tulipanes (noche)</title>
+  <title>Ramo de tulipanes rojos (noche estrellada)</title>
   <style>
     :root{
       --bg1:#070814;
@@ -39,7 +39,6 @@
   const lerp  = (a,b,t)=>a+(b-a)*t;
   const rgba  = (r,g,b,a)=>`rgba(${r},${g},${b},${a})`;
 
-  // Fisher-Yates (evita sesgos al seleccionar muestras)
   const shuffleInPlace = (arr) => {
     for(let i=arr.length-1;i>0;i--){
       const j = (Math.random()*(i+1))|0;
@@ -50,73 +49,96 @@
     return arr;
   };
 
+  const makePRNG = (seed) => {
+    let s = (seed >>> 0) || 1;
+    return () => (s = (s * 1664525 + 1013904223) >>> 0, s / 4294967296);
+  };
+
   const CONFIG = {
-    // Cielo más rico, sin saturarlo
-    stars: 160,
-    twinkle: 0.85,
+    stars: 240,
+    twinkle: 0.80,
     sway: 0.28,
     reduceMotion: false,
     shootingStars: 1,
 
-    // ↓↓↓ Control fino de picos en pétalos (0 = casi sin corona, 1 = corona marcada)
-    crownStrength: 0.10,
+    // 0..1: “corona/picos” (arriba del tulipán). 0 = casi lisa
+    crownStrength: 0.3,
+
+    // Texto “en estrellas”
+    starText: 'Para ti <3',
+    starTextStrength: 0.95
   };
 
-  // respeta prefers-reduced-motion
   try{
     const m = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)');
     if(m && m.matches) CONFIG.reduceMotion = true;
-  }catch(_){/* nada */}
+  }catch(_){}
 
   // ===== Stars =====
   const stars = [];
+  const textStars = [];
 
-  // shooting star discreta
-  const shooting = {
-    active:false,
-    t0:0,
-    dur:0,
-    x0:0,y0:0,
-    x1:0,y1:0,
-  };
+  const shooting = { active:false, t0:0, dur:0, x0:0,y0:0, x1:0,y1:0 };
 
   function seedStars(){
     stars.length = 0;
 
-    // Distribución con cúmulos (más natural que uniforme puro)
     const clusters = [
-      {cx: 0.30, cy: 0.22, r: 0.18},
-      {cx: 0.72, cy: 0.18, r: 0.20},
+      {cx: 0.28, cy: 0.20, r: 0.18},
+      {cx: 0.72, cy: 0.16, r: 0.20},
+      {cx: 0.52, cy: 0.30, r: 0.16},
     ];
 
+    const mwBand = () => {
+      const t = Math.random();
+      const x = lerp(0.14, 0.92, t);
+      const y = lerp(0.48, 0.20, t);
+      const off = (Math.random()-0.5) * 0.10;
+      return { x: clamp(x + off*0.90, 0, 1), y: clamp(y + off*(-0.55), 0, 1) };
+    };
+
     const pick = () => {
-      if(Math.random() < 0.70){
-        return {x: Math.random(), y: Math.random()};
+      const r = Math.random();
+      if(r < 0.62){
+        const x = Math.random();
+        const y = Math.pow(Math.random(), 1.55);
+        return {x, y};
       }
+      if(r < 0.78) return mwBand();
+
       const c = clusters[(Math.random()*clusters.length)|0];
       const a = Math.random()*TAU;
       const rr = Math.sqrt(Math.random()) * c.r;
-      return {
-        x: clamp(c.cx + Math.cos(a)*rr, 0, 1),
-        y: clamp(c.cy + Math.sin(a)*rr, 0, 1)
-      };
+      return { x: clamp(c.cx + Math.cos(a)*rr, 0, 1), y: clamp(c.cy + Math.sin(a)*rr, 0, 1) };
     };
 
     for(let i=0;i<CONFIG.stars;i++){
       const p = pick();
-      const yBias = Math.pow(1 - p.y, 1.6); // más densidad arriba
-      const bigChance = 0.06 + 0.07*yBias;
-      const big = Math.random() < bigChance;
+      const yBias = Math.pow(1 - p.y, 1.8);
+
+      const roll = Math.random();
+      const big = roll < (0.035 + 0.020*yBias);
+      const mid = !big && roll < (0.18 + 0.05*yBias);
+
+      const rBase = big ? (2.2 + Math.random()*3.0)
+                  : (mid ? (1.2 + Math.random()*1.4) : (0.55 + Math.random()*0.95));
+      const aBase = big ? (0.18 + Math.random()*0.28)
+                  : (mid ? (0.10 + Math.random()*0.16) : (0.05 + Math.random()*0.12));
+
+      let hue = 0;
+      const temp = Math.random();
+      if(temp < 0.10) hue = 205 + Math.random()*35;
+      else if(temp < 0.16) hue = 35 + Math.random()*18;
+      else if(big && temp < 0.45) hue = 200 + Math.random()*60;
 
       stars.push({
-        x: p.x,
-        y: p.y,
-        r: big ? (1.9 + Math.random()*2.8) : (0.7 + Math.random()*1.7),
-        a: big ? (0.18 + Math.random()*0.30) : (0.08 + Math.random()*0.24),
+        x: p.x, y: p.y,
+        r: rBase, a: aBase,
         p: Math.random()*TAU,
         s: (0.25 + Math.random()*0.95),
-        hue: big ? (200 + Math.random()*60) : 0,
-        flare: big ? (0.55 + Math.random()*0.45) : 0,
+        hue,
+        flare: big ? (0.55 + Math.random()*0.45) : (mid ? (0.18 + Math.random()*0.35) : 0),
+        tw: big ? (0.45 + Math.random()*0.40) : (mid ? (0.30 + Math.random()*0.30) : (0.18 + Math.random()*0.22))
       });
     }
 
@@ -129,7 +151,6 @@
     if(CONFIG.reduceMotion || !CONFIG.shootingStars) return;
     if(shooting.active) return;
 
-    // probabilidad baja: aprox 1 cada 10-25s
     if(Math.random() < 0.0022){
       shooting.active = true;
       shooting.t0 = t;
@@ -140,10 +161,8 @@
       const dx = (120 + Math.random()*220);
       const dy = (40 + Math.random()*120);
 
-      shooting.x0 = startX;
-      shooting.y0 = startY;
-      shooting.x1 = startX + dx;
-      shooting.y1 = startY + dy;
+      shooting.x0 = startX; shooting.y0 = startY;
+      shooting.x1 = startX + dx; shooting.y1 = startY + dy;
     }
   }
 
@@ -179,7 +198,6 @@
     ctx.lineTo(x, y);
     ctx.stroke();
 
-    // cabeza
     ctx.globalAlpha = (1-u) * 0.95;
     ctx.shadowColor = 'rgba(255,255,255,0.8)';
     ctx.shadowBlur = 18;
@@ -193,11 +211,11 @@
     if(u >= 1) shooting.active = false;
   }
 
-  // ===== Césped (campo denso + cache) =====
+  // ===== Césped =====
   const grass = [];
   const soil = [];
-  const grassAnim1 = []; // capa media (delgada)
-  const grassAnim2 = []; // capa frontal (gruesa)
+  const grassAnim1 = [];
+  const grassAnim2 = [];
 
   let groundCache = null;
   let skyCache = null;
@@ -266,7 +284,6 @@
       }
     }
 
-    // Selección equilibrada para animación (cubre todo el ancho)
     grassAnim1.length = 0;
     grassAnim2.length = 0;
 
@@ -315,7 +332,6 @@
       g.fillRect(0,0,W,H);
     }
 
-    // puntitos (textura)
     g.save();
     g.globalAlpha = 0.10;
     g.fillStyle = 'rgba(255,255,255,0.08)';
@@ -376,7 +392,6 @@
     }
     g.restore();
 
-    // fog del suelo
     const fogTop = gy + groundH*0.18;
     const fog = g.createLinearGradient(0, fogTop, 0, H);
     fog.addColorStop(0, 'rgba(0,0,0,0)');
@@ -422,7 +437,6 @@
         ctx.globalAlpha = old;
       }
 
-      // hojas más gorditas (solo capa 2)
       if(b.layer === 2){
         const w0 = b.w * (1.00 + b.thick);
         const w1 = Math.max(0.8, w0 * 0.16);
@@ -498,7 +512,6 @@
     }
     ctx.restore();
 
-    // oscuridad abajo
     ctx.save();
     const thatchTop = gy + groundH*0.74;
     const tg = ctx.createLinearGradient(0, thatchTop, 0, H);
@@ -508,7 +521,6 @@
     ctx.fillRect(0, thatchTop, W, H - thatchTop);
     ctx.restore();
 
-    // chispitas (sutil)
     if(!CONFIG.reduceMotion){
       ctx.save();
       ctx.globalAlpha = 0.05;
@@ -525,6 +537,129 @@
     }
   }
 
+  // ===== Texto hecho con estrellas =====
+  function buildStarText(){
+    textStars.length = 0;
+
+    const sMin = Math.min(W, H);
+    const fontSize = clamp(sMin * 0.09, 26, 58);
+
+    const tc = document.createElement('canvas');
+    tc.width = Math.floor(W);
+    tc.height = Math.floor(H);
+    const g = tc.getContext('2d', {alpha:true});
+
+    const x = tc.width * 0.5;
+    const y = tc.height * 0.28;
+
+    g.clearRect(0,0,tc.width,tc.height);
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.font = `700 ${Math.round(fontSize)}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`;
+    g.fillStyle = 'rgba(255,255,255,1)';
+    g.fillText(CONFIG.starText, x, y);
+
+    const img = g.getImageData(0,0,tc.width,tc.height).data;
+
+    const step = clamp(Math.round(fontSize / 7.2), 3, 7);
+    const maxPts = clamp(Math.floor((W*H)/1300), 700, 1700);
+
+    const pr = makePRNG((W*73856093) ^ (H*19349663) ^ 0xC0FFEE);
+
+    const minX = Math.max(0, Math.floor(x - tc.width*0.45));
+    const maxX = Math.min(tc.width-1, Math.floor(x + tc.width*0.45));
+    const minY = Math.max(0, Math.floor(y - fontSize*1.2));
+    const maxY = Math.min(tc.height-1, Math.floor(y + fontSize*1.0));
+
+    const candidates = [];
+    for(let yy=minY; yy<=maxY; yy+=step){
+      for(let xx=minX; xx<=maxX; xx+=step){
+        const idx = (yy*tc.width + xx)*4 + 3;
+        const a = img[idx];
+        if(a > 20){
+          candidates.push({x: xx/tc.width, y: yy/tc.height, a: a/255});
+        }
+      }
+    }
+
+    shuffleInPlace(candidates);
+    const chosen = candidates.slice(0, maxPts);
+
+    for(const p of chosen){
+      const sizeJ = pr();
+      const r = (0.65 + sizeJ*1.25) * (fontSize/46);
+      const alpha = (0.10 + p.a*0.35) * CONFIG.starTextStrength;
+
+      const temp = pr();
+      let hue = 0;
+      if(temp < 0.20) hue = 205 + pr()*30;
+      else if(temp < 0.28) hue = 35 + pr()*16;
+
+      textStars.push({
+        x: p.x, y: p.y,
+        r,
+        a: alpha,
+        p: pr()*TAU,
+        s: 0.55 + pr()*1.05,
+        hue,
+        flare: (pr() < 0.12) ? (0.15 + pr()*0.35) : 0
+      });
+    }
+  }
+
+  function drawStarText(t){
+    if(!textStars.length) return;
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+
+    const gx = W*0.5, gy = H*0.28;
+    const fontHint = clamp(Math.min(W,H)*0.09, 26, 58);
+    const glow = ctx.createRadialGradient(gx, gy, 10, gx, gy, fontHint*7.5);
+    glow.addColorStop(0, 'rgba(210,230,255,0.09)');
+    glow.addColorStop(1, 'rgba(210,230,255,0)');
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = glow;
+    ctx.fillRect(0,0,W,H);
+
+    for(const st of textStars){
+      const tw = CONFIG.reduceMotion ? 1 : (0.78 + 0.22*Math.sin(t*0.0012*st.s + st.p));
+      const alpha = st.a * (0.75 + 0.55*tw);
+
+      const x = st.x*W;
+      const y = st.y*H;
+
+      ctx.globalAlpha = alpha;
+      ctx.shadowColor = 'rgba(255,255,255,0.55)';
+      ctx.shadowBlur = 9 + st.r*6;
+
+      ctx.fillStyle = st.hue ? `hsla(${st.hue}, 75%, 92%, 1)` : 'rgba(255,255,255,1)';
+      ctx.beginPath();
+      ctx.arc(x, y, st.r, 0, TAU);
+      ctx.fill();
+
+      if(st.flare){
+        ctx.save();
+        ctx.shadowBlur = 0;
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = alpha * 0.40 * st.flare;
+        ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+        ctx.lineWidth = 1;
+        const k = 3.0 + st.r*2.0;
+        ctx.beginPath();
+        ctx.moveTo(x-k, y); ctx.lineTo(x+k, y);
+        ctx.moveTo(x, y-k); ctx.lineTo(x, y+k);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    ctx.restore();
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+  }
+
   // ===== Cielo (cache) =====
   function rebuildSkyCache(){
     const off = document.createElement('canvas');
@@ -534,15 +669,13 @@
     const g = off.getContext('2d', {alpha:true});
     g.setTransform(DPR,0,0,DPR,0,0);
 
-    // base night gradient
     const sky = g.createLinearGradient(0, 0, 0, H);
-    sky.addColorStop(0, 'rgba(10,12,38,1)');
-    sky.addColorStop(0.45, 'rgba(6,8,20,1)');
+    sky.addColorStop(0, 'rgba(12,14,46,1)');
+    sky.addColorStop(0.40, 'rgba(7,9,24,1)');
     sky.addColorStop(1, 'rgba(3,3,10,1)');
     g.fillStyle = sky;
     g.fillRect(0,0,W,H);
 
-    // nebulas suaves
     const neb = (x,y,r, a, cr,cg,cb) => {
       const gg = g.createRadialGradient(x,y, 10, x,y, r);
       gg.addColorStop(0, rgba(cr,cg,cb,a));
@@ -551,11 +684,10 @@
       g.fillStyle = gg;
       g.fillRect(0,0,W,H);
     };
-    neb(W*0.18, H*0.16, Math.max(W,H)*0.62, 0.08, 120,150,255);
-    neb(W*0.80, H*0.22, Math.max(W,H)*0.56, 0.07, 150,120,255);
-    neb(W*0.55, H*0.10, Math.max(W,H)*0.50, 0.05, 90,170,255);
+    neb(W*0.16, H*0.15, Math.max(W,H)*0.66, 0.09, 120,150,255);
+    neb(W*0.82, H*0.20, Math.max(W,H)*0.60, 0.08, 160,120,255);
+    neb(W*0.55, H*0.10, Math.max(W,H)*0.52, 0.06, 90,170,255);
 
-    // Vía Láctea: banda + polvo
     g.save();
     g.translate(W*0.56, H*0.34);
     g.rotate(-0.36);
@@ -563,8 +695,8 @@
     const mh = Math.max(W,H)*0.24;
 
     const mg = g.createRadialGradient(0,0, mh*0.03, 0,0, mh);
-    mg.addColorStop(0, 'rgba(255,255,255,0.085)');
-    mg.addColorStop(0.55, 'rgba(190,210,255,0.035)');
+    mg.addColorStop(0, 'rgba(255,255,255,0.095)');
+    mg.addColorStop(0.55, 'rgba(190,210,255,0.040)');
     mg.addColorStop(1, 'rgba(0,0,0,0)');
     g.fillStyle = mg;
     g.beginPath();
@@ -572,40 +704,78 @@
     g.fill();
 
     g.globalCompositeOperation = 'screen';
-    g.globalAlpha = 0.35;
-    const dust = clamp(Math.floor((W*H)/9000), 120, 360);
+    g.globalAlpha = 0.38;
+    const dust = clamp(Math.floor((W*H)/8500), 160, 460);
+    const prDust = makePRNG((W*2654435761) ^ (H*2246822519));
     for(let i=0;i<dust;i++){
-      const dx = (Math.random()-0.5) * mw*0.85;
-      const dy = (Math.random()-0.5) * mh*0.55;
-      const rr = 0.6 + Math.random()*1.7;
-      g.fillStyle = 'rgba(255,255,255,0.10)';
+      const dx = (prDust()-0.5) * mw*0.85;
+      const dy = (prDust()-0.5) * mh*0.55;
+      const rr = 0.6 + prDust()*1.9;
+      g.fillStyle = 'rgba(255,255,255,0.11)';
       g.beginPath();
       g.arc(dx, dy, rr, 0, TAU);
       g.fill();
     }
     g.restore();
 
-    // glow superior
-    const gx = W*0.52, gy = H*0.16;
-    const glow = g.createRadialGradient(gx, gy, 10, gx, gy, Math.max(W,H)*0.62);
-    glow.addColorStop(0, 'rgba(255,255,255,0.085)');
-    glow.addColorStop(1, 'rgba(0,0,0,0)');
-    g.fillStyle = glow;
+    g.save();
+    g.globalCompositeOperation = 'screen';
+    const pr = makePRNG((W*73856093) ^ (H*19349663) ^ 0xA53);
+    const count = clamp(Math.floor((W*H)/2600), 520, 1500);
+    for(let i=0;i<count;i++){
+      const x = pr()*W;
+      const y = Math.pow(pr(), 1.62) * (H*0.74);
+      const a = 0.025 + pr()*0.085;
+      const r = (pr()<0.90) ? (0.55 + pr()*0.85) : (0.95 + pr()*1.25);
+      const warm = pr() < 0.18;
+      g.fillStyle = warm ? `rgba(255,245,230,${a})` : `rgba(210,230,255,${a})`;
+      g.beginPath();
+      g.arc(x, y, r, 0, TAU);
+      g.fill();
+    }
+    g.restore();
+
+    const mx = W*0.80, my = H*0.14;
+    const moon = g.createRadialGradient(mx, my, 10, mx, my, Math.max(W,H)*0.55);
+    moon.addColorStop(0, 'rgba(245,250,255,0.12)');
+    moon.addColorStop(0.35, 'rgba(210,225,255,0.06)');
+    moon.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = moon;
     g.fillRect(0,0,W,H);
 
-    // grano sutil
+    const hz = g.createLinearGradient(0, H*0.56, 0, H*0.80);
+    hz.addColorStop(0, 'rgba(120,150,255,0)');
+    hz.addColorStop(1, 'rgba(90,120,210,0.06)');
+    g.fillStyle = hz;
+    g.fillRect(0,0,W,H);
+
+    // Glow difuminado detrás del texto
+    const sMin = Math.min(W, H);
+    const fontSize = clamp(sMin * 0.09, 26, 58);
     g.save();
-    g.globalAlpha = 0.05;
+    g.globalCompositeOperation = 'screen';
+    g.globalAlpha = 0.10;
+    g.shadowColor = 'rgba(210,230,255,0.45)';
+    g.shadowBlur = fontSize * 0.95;
+    g.fillStyle = 'rgba(210,230,255,0.10)';
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.font = `700 ${Math.round(fontSize)}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`;
+    g.fillText(CONFIG.starText, W*0.5, H*0.28);
+    g.restore();
+
+    g.save();
+    g.globalAlpha = 0.045;
     g.fillStyle = 'rgba(255,255,255,0.06)';
     const n = clamp(Math.floor((W*H)/14000), 220, 520);
+    const prG = makePRNG((W*1597334677) ^ (H*3812015801));
     for(let i=0;i<n;i++){
-      const x = Math.random()*W;
-      const y = Math.random()*H*0.70;
+      const x = prG()*W;
+      const y = prG()*(H*0.72);
       g.fillRect(x,y,1,1);
     }
     g.restore();
 
-    // viñeta
     const vg = g.createRadialGradient(W*0.5, H*0.55, Math.min(W,H)*0.18, W*0.5, H*0.55, Math.max(W,H)*0.98);
     vg.addColorStop(0, 'rgba(0,0,0,0)');
     vg.addColorStop(1, 'rgba(0,0,0,0.62)');
@@ -622,51 +792,57 @@
       ctx.drawImage(skyCache, 0, 0, skyCache.width / DPR, skyCache.height / DPR);
     }else{
       const sky = ctx.createLinearGradient(0, 0, 0, H);
-      sky.addColorStop(0, 'rgba(10,12,38,1)');
-      sky.addColorStop(0.45, 'rgba(6,8,20,1)');
+      sky.addColorStop(0, 'rgba(12,14,46,1)');
+      sky.addColorStop(0.40, 'rgba(7,9,24,1)');
       sky.addColorStop(1, 'rgba(3,3,10,1)');
       ctx.fillStyle = sky;
       ctx.fillRect(0,0,W,H);
     }
 
-    // estrellas
+    drawStarText(t);
+
     ctx.save();
+    ctx.globalCompositeOperation = 'screen';
     for(const st of stars){
-      const tw = CONFIG.reduceMotion ? 1 : (0.55 + 0.45*Math.sin(t*0.001*st.s + st.p) * CONFIG.twinkle);
-      const alpha = st.a * (0.78 + 0.82*tw);
+      const tw = CONFIG.reduceMotion ? 1 : (0.72 + 0.28*Math.sin(t*0.0011*st.s + st.p)) * (0.85 + st.tw*0.30);
+      const alpha = st.a * (0.72 + 0.58*tw) * CONFIG.twinkle;
 
       const x = st.x*W;
       const y = st.y*H;
 
       ctx.globalAlpha = alpha;
-      ctx.shadowColor = 'rgba(255,255,255,0.55)';
-      ctx.shadowBlur = 10 + st.r*3;
 
-      ctx.fillStyle = st.hue ? `hsla(${st.hue}, 85%, 88%, 1)` : 'white';
+      if(st.r < 1.15){
+        ctx.shadowBlur = 0;
+      }else{
+        ctx.shadowColor = 'rgba(255,255,255,0.55)';
+        ctx.shadowBlur = 8 + st.r*3.2;
+      }
 
+      ctx.fillStyle = st.hue ? `hsla(${st.hue}, 80%, 90%, 1)` : 'rgba(255,255,255,1)';
       ctx.beginPath();
       ctx.arc(x, y, st.r, 0, TAU);
       ctx.fill();
 
-      // flare para grandes
       if(st.flare){
         ctx.save();
         ctx.globalCompositeOperation = 'lighter';
-        ctx.globalAlpha = alpha * 0.55 * st.flare;
         ctx.shadowBlur = 0;
-        const rg = ctx.createRadialGradient(x,y, 0, x,y, 22 + st.r*10);
-        rg.addColorStop(0, 'rgba(255,255,255,0.22)');
-        rg.addColorStop(0.45, 'rgba(255,255,255,0.08)');
+
+        ctx.globalAlpha = alpha * 0.42 * st.flare;
+        const rg = ctx.createRadialGradient(x,y, 0, x,y, 18 + st.r*11);
+        rg.addColorStop(0, 'rgba(255,255,255,0.20)');
+        rg.addColorStop(0.45, 'rgba(255,255,255,0.07)');
         rg.addColorStop(1, 'rgba(255,255,255,0)');
         ctx.fillStyle = rg;
         ctx.beginPath();
-        ctx.arc(x,y, 24 + st.r*10, 0, TAU);
+        ctx.arc(x,y, 18 + st.r*11, 0, TAU);
         ctx.fill();
 
-        ctx.globalAlpha = alpha * 0.40 * st.flare;
+        ctx.globalAlpha = alpha * 0.28 * st.flare;
         ctx.strokeStyle = 'rgba(255,255,255,0.55)';
         ctx.lineWidth = 1;
-        const k = 4.0 + st.r*1.6;
+        const k = 3.6 + st.r*1.6;
         ctx.beginPath();
         ctx.moveTo(x-k, y); ctx.lineTo(x+k, y);
         ctx.moveTo(x, y-k); ctx.lineTo(x, y+k);
@@ -678,13 +854,13 @@
 
     ctx.shadowBlur = 0;
     ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
 
-    // shooting star ocasional
     maybeStartShootingStar(t);
     drawShootingStar(t);
   }
 
-  // ===== Hojas (suaves) =====
+  // ===== Hojas =====
   function drawTulipLeaf(attachX, attachY, angle, scale, side){
     const id = ((attachX * 97) ^ (attachY * 193) ^ (side * 911)) | 0;
     const j = (Math.sin(id) * 0.5 + 0.5);
@@ -835,19 +1011,18 @@
     ctx.restore();
   }
 
-  // ===== Pétalos (sprite cacheado) =====
+  // ===== Pétalos =====
   function getBloomSprite(w, h, col, seed, open){
-    // Más aire arriba y a los lados para que la corona no se "corte".
-    const key = `${Math.round(w)}x${Math.round(h)}_${col.r},${col.g},${col.b}_${seed}_${Math.round((open||1)*100)}_${Math.round(CONFIG.crownStrength*100)}`;
+    const key = `${Math.round(w)}x${Math.round(h)}_${col.r},${col.g},${col.b}_${seed}_${Math.round((open||1)*100)}`;
     const cached = bloomCache.get(key);
     if(cached) return cached;
 
     const ss = 2;
-    const cw = Math.ceil(w * 3.25);
-    const ch = Math.ceil(h * 2.75 + w * 0.55);
+    const cw = Math.ceil(w * 2.8);
+    const ch = Math.ceil(h * 2.4 + w * 0.35);
 
     const ax = Math.ceil(cw * 0.50);
-    const ay = Math.ceil(h  * 1.75);
+    const ay = Math.ceil(h  * 1.55);
 
     const off = document.createElement('canvas');
     off.width  = cw * ss;
@@ -874,249 +1049,203 @@
       b: Math.round(lerp(a.b,b.b,t))
     });
 
-    const dark  = mix(col, {r:18,g:6,b:28}, 0.48);
-    const deep  = mix(col, {r: 6,g:2,b:10}, 0.76);
-    const lite  = mix(col, {r:255,g:255,b:255}, 0.40);
+    const dark  = mix(col, {r:18,g:6,b:28}, 0.46);
+    const deep  = mix(col, {r: 6,g:2,b:10}, 0.72);
+    const lite  = mix(col, {r:255,g:255,b:255}, 0.36);
     const warm  = mix(col, {r:255,g:240,b:220}, 0.22);
 
-    const op = clamp(((open||1) - 0.86) / 0.26, 0, 1);
-    const spread = lerp(0.10, 0.28, op);
+    const op = clamp(((open||1) - 0.88) / 0.22, 0, 1);
+    const spread = lerp(0.10, 0.22, op);
 
-    // halo suave
     c2.save();
     c2.globalCompositeOperation = 'lighter';
-    c2.globalAlpha = 0.18;
-    const gg = c2.createRadialGradient(0, -h*0.56, 10, 0, -h*0.40, w*1.85);
-    gg.addColorStop(0, rgba(col.r,col.g,col.b,0.34));
-    gg.addColorStop(0.55, rgba(col.r,col.g,col.b,0.10));
+    c2.globalAlpha = 0.16;
+    const gg = c2.createRadialGradient(0, -h*0.55, 10, 0, -h*0.40, w*1.55);
+    gg.addColorStop(0, rgba(col.r,col.g,col.b,0.32));
     gg.addColorStop(1, rgba(col.r,col.g,col.b,0));
     c2.fillStyle = gg;
     c2.beginPath();
-    c2.ellipse(0, -h*0.42, w*1.25, h*1.12, 0, 0, TAU);
+    c2.ellipse(0, -h*0.40, w*1.20, h*1.10, 0, 0, TAU);
     c2.fill();
     c2.restore();
 
-    // Corona tulipán: identidad sí, picos visibles no.
-    // (Esto es literalmente lo que pediste.)
-    const petalPath = (petW, petH, notch, wave, lip, asym, crown) => {
-      const baseL = -petW*0.44;
-      const baseR =  petW*0.44;
+    const petalPath = (petW, petH, notch, wave, lip) => {
+      const cs = clamp(CONFIG.crownStrength, 0, 1);
 
-      const leftShoulderX  = -petW*0.70;
-      const rightShoulderX =  petW*0.70;
-      const shoulderY = -petH*0.24;
+      const topBaseY = -petH * (0.995 + lip*0.85);
+      const leftTop  = { x: -petW * (0.10 + wave*0.02), y: -petH*(0.965 - notch) };
+      const rightTop = { x:  petW * (0.10 + wave*0.02), y: -petH*(0.965 - notch) };
 
-      const topBaseY = -petH*(0.965 - notch*0.50);
-      const crownY   = -petH*(1.010 + lip*0.10);
-      const waveX = wave * petW * 0.05;
-
-      // ↓↓↓ aquí se baja la altura de picos y se suben valles
-      const cs = clamp(crown * CONFIG.crownStrength, 0.10, 1.0);
       const peakSide = petH * (0.008 + 0.008*cs);
       const peakMid  = petH * (0.010 + 0.010*cs);
       const valley   = petH * (0.003 + 0.003*cs);
 
-      const pL  = {x: -petW*0.15 + asym + waveX,              y: topBaseY};
-      const pR  = {x:  petW*0.15 + asym*0.25 + waveX,         y: topBaseY};
+      const peakL = { x: -petW*0.22, y: topBaseY - peakSide };
+      const peakM = { x:  0,        y: topBaseY - peakMid  };
+      const peakR = { x:  petW*0.22, y: topBaseY - peakSide };
 
-      const p1  = {x: -petW*0.17 + asym*0.10 + waveX,         y: crownY - peakSide};
-      const v1  = {x: -petW*0.06 + asym*0.10 + waveX,         y: crownY + valley};
-      const pC  = {x:  0 + asym*0.06 + waveX,                  y: crownY - peakMid};
-      const v2  = {x:  petW*0.06 + asym*0.04 + waveX,          y: crownY + valley};
-      const p2  = {x:  petW*0.17 + asym*0.02 + waveX,          y: crownY - peakSide};
-
-      const mid = (a,b)=>({x:(a.x+b.x)*0.5, y:(a.y+b.y)*0.5});
+      const valL  = { x: -petW*0.08, y: topBaseY + valley };
+      const valR  = { x:  petW*0.08, y: topBaseY + valley };
 
       c2.beginPath();
-      c2.moveTo(baseL, 0);
+      c2.moveTo(-petW*0.44, 0);
 
       c2.bezierCurveTo(
-        leftShoulderX, shoulderY,
-        -petW*0.56, -petH*0.84,
-        pL.x, pL.y
+        -petW*0.66, -petH*0.26,
+        -petW*0.48, -petH*0.84,
+        leftTop.x,  leftTop.y
       );
-
-      // Corona redondeada (cuadráticas con puntos medios)
-      const q = (toX, toY, cX, cY) => c2.quadraticCurveTo(cX, cY, toX, toY);
-      q(p1.x, p1.y, ...Object.values(mid(pL,p1)));
-      q(v1.x, v1.y, ...Object.values(mid(p1,v1)));
-      q(pC.x, pC.y, ...Object.values(mid(v1,pC)));
-      q(v2.x, v2.y, ...Object.values(mid(pC,v2)));
-      q(p2.x, p2.y, ...Object.values(mid(v2,p2)));
-      q(pR.x, pR.y, ...Object.values(mid(p2,pR)));
 
       c2.bezierCurveTo(
-        petW*0.56, -petH*0.84,
-        rightShoulderX, shoulderY,
-        baseR, 0
+        leftTop.x*0.55, leftTop.y - petH*0.04,
+        peakL.x, peakL.y,
+        valL.x,  valL.y
+      );
+      c2.bezierCurveTo(
+        valL.x*0.65, valL.y - petH*0.03,
+        peakM.x, peakM.y,
+        valR.x,  valR.y
+      );
+      c2.bezierCurveTo(
+        valR.x*0.65, valR.y - petH*0.03,
+        peakR.x, peakR.y,
+        rightTop.x, rightTop.y
       );
 
-      c2.quadraticCurveTo(0, petH*0.14, baseL, 0);
+      c2.bezierCurveTo(
+        petW*0.48, -petH*0.84,
+        petW*0.66, -petH*0.26,
+        petW*0.44, 0
+      );
+
+      c2.quadraticCurveTo(0, petH*0.14, -petW*0.44, 0);
       c2.closePath();
     };
 
-    const fillPetal = (front, idx, sizeMul) => {
+    const fillPetal = (front, idx) => {
       const v1 = (rnd()-0.5);
       const v2 = (rnd()-0.5);
 
-      const notch = 0.028 + rnd()*0.040;
-      const petW = w * (front ? 0.70 : 0.62) * sizeMul * (1 + v1*0.05);
-      const petH = h * (front ? 1.34 : 1.22) * sizeMul * (0.92 + op*0.18) * (1 + v2*0.035);
-
+      const petW = w * (front ? 0.62 : 0.56) * (1 + v1*0.05);
+      const petH = h * (front ? 1.18 : 1.10) * (0.94 + op*0.10) * (1 + v2*0.035);
+      const notch = 0.020 + rnd()*0.030;
       const wave  = (rnd()-0.5) * 0.55;
-      const lip   = 0.050 + op*0.055;
-      const asym  = (rnd()-0.5) * petW * 0.06;
-      const crown = 0.55 + rnd()*0.30; // menos agresivo que antes
 
-      const vg = c2.createLinearGradient(0, -petH, 0, petH*0.30);
-      vg.addColorStop(0, rgba(lite.r,lite.g,lite.b, front ? 0.56 : 0.40));
-      vg.addColorStop(0.18, rgba(warm.r,warm.g,warm.b, front ? 0.24 : 0.18));
-      vg.addColorStop(0.45, rgba(col.r,col.g,col.b, front ? 1.00 : 0.92));
+      const vg = c2.createLinearGradient(0, -petH, 0, petH*0.24);
+      vg.addColorStop(0, rgba(lite.r,lite.g,lite.b, front ? 0.44 : 0.30));
+      vg.addColorStop(0.22, rgba(warm.r,warm.g,warm.b, front ? 0.22 : 0.16));
+      vg.addColorStop(0.38, rgba(col.r,col.g,col.b, front ? 0.98 : 0.88));
       vg.addColorStop(1, rgba(dark.r,dark.g,dark.b, 0.98));
 
-      const hg = c2.createLinearGradient(-petW, -petH*0.35, petW, -petH*0.10);
-      hg.addColorStop(0, rgba(0,0,0,0.24));
-      hg.addColorStop(0.45, rgba(0,0,0,0.00));
-      hg.addColorStop(1, rgba(0,0,0,0.28));
+      const hg = c2.createLinearGradient(-petW, -petH*0.35, petW, -petH*0.15);
+      hg.addColorStop(0, rgba(0,0,0,0.18));
+      hg.addColorStop(0.42, rgba(0,0,0,0));
+      hg.addColorStop(1, rgba(0,0,0,0.22));
 
-      const rim = c2.createRadialGradient(0, -petH*0.95, petW*0.02, 0, -petH*0.88, petW*1.15);
-      rim.addColorStop(0, rgba(255,255,255, front ? 0.20 : 0.16));
-      rim.addColorStop(0.55, rgba(255,255,255,0.06));
+      const rim = c2.createRadialGradient(0, -petH*0.96, petW*0.02, 0, -petH*0.86, petW*0.95);
+      rim.addColorStop(0, rgba(255,255,255, front ? 0.14 : 0.10));
+      rim.addColorStop(0.55, rgba(255,255,255,0.04));
       rim.addColorStop(1, rgba(255,255,255,0));
 
       c2.save();
       c2.shadowColor = rgba(col.r,col.g,col.b, 0.10);
       c2.shadowBlur = Math.max(10, w*0.30);
-
-      petalPath(petW, petH, notch, wave, lip, asym, crown);
+      const lip = 0.02 + op*0.04;
+      petalPath(petW, petH, notch, wave, lip);
       c2.fillStyle = vg;
       c2.fill();
 
-      // suavizado extra SOLO en la franja superior (reduce lectura de "picos")
-      c2.save();
-      c2.clip();
-      c2.globalCompositeOperation = 'source-atop';
-      c2.globalAlpha = front ? 0.10 : 0.08;
-      const cap = c2.createLinearGradient(0, -petH*1.06, 0, -petH*0.74);
-      cap.addColorStop(0, rgba(255,255,255,0.22));
-      cap.addColorStop(0.55, rgba(255,255,255,0.10));
-      cap.addColorStop(1, rgba(255,255,255,0.00));
-      c2.fillStyle = cap;
-      c2.fillRect(-petW*1.25, -petH*1.10, petW*2.50, petH*0.46);
-      c2.restore();
-
-      // contorno mínimo
       c2.shadowBlur = 0;
-      c2.globalAlpha = front ? 0.07 : 0.05;
+      c2.globalAlpha = front ? 0.06 : 0.045;
       c2.strokeStyle = rgba(255,255,255,0.22);
       c2.lineWidth = 1;
       c2.stroke();
       c2.globalAlpha = 1;
 
-      // sombreado lateral
       c2.save();
       c2.globalCompositeOperation = 'multiply';
-      c2.globalAlpha = front ? 0.22 : 0.18;
+      c2.globalAlpha = front ? 0.20 : 0.16;
       c2.fillStyle = hg;
       c2.fill();
       c2.restore();
 
-      // rim light
       c2.save();
       c2.globalCompositeOperation = 'screen';
-      c2.globalAlpha = front ? 0.24 : 0.18;
+      c2.globalAlpha = front ? 0.22 : 0.16;
       c2.fillStyle = rim;
       c2.fill();
       c2.restore();
 
-      // textura y profundidad
       c2.save();
       c2.clip();
 
-      // venas (verticales)
-      c2.globalCompositeOperation = 'screen';
-      c2.globalAlpha = front ? 0.12 : 0.09;
-      c2.strokeStyle = rgba(255,255,255,0.16);
+      c2.globalAlpha = front ? 0.10 : 0.075;
+      c2.strokeStyle = rgba(255,255,255,0.14);
       c2.lineWidth = 1;
-      const veins = 4 + (idx % 2);
+      const veins = 3 + (idx % 2);
       for(let i=-veins;i<=veins;i++){
         c2.beginPath();
-        c2.moveTo(i*petW*0.10, -petH*0.97);
-        c2.quadraticCurveTo(i*petW*0.08, -petH*0.58, i*petW*0.03, -petH*0.08);
+        c2.moveTo(i*petW*0.10, -petH*0.96);
+        c2.quadraticCurveTo(i*petW*0.08, -petH*0.55, i*petW*0.03, -petH*0.10);
         c2.stroke();
       }
 
-      // micro speckles
-      c2.globalAlpha = front ? 0.06 : 0.045;
-      c2.fillStyle = rgba(255,255,255, 0.10);
-      for(let k=0;k<18;k++){
-        const px = (rnd()-0.5) * petW * 0.86;
-        const py = -petH*(0.16 + rnd()*0.78);
-        const pr = 0.55 + rnd()*1.05;
+      c2.globalAlpha = front ? 0.05 : 0.04;
+      for(let k=0;k<12;k++){
+        const px = (rnd()-0.5) * petW * 0.82;
+        const py = -petH*(0.18 + rnd()*0.70);
+        const pr = 0.6 + rnd()*1.0;
+        c2.fillStyle = rgba(255,255,255, 0.10);
         c2.beginPath();
         c2.arc(px, py, pr, 0, TAU);
         c2.fill();
       }
 
-      // oclusión central (para que no se vea plano)
       c2.globalCompositeOperation = 'multiply';
-      c2.globalAlpha = front ? 0.18 : 0.14;
-      const fg = c2.createRadialGradient(0, -petH*0.40, petW*0.06, 0, -petH*0.38, petW*0.86);
-      fg.addColorStop(0, rgba(deep.r,deep.g,deep.b,0.34));
+      c2.globalAlpha = front ? 0.16 : 0.12;
+      const fg = c2.createRadialGradient(0, -petH*0.42, petW*0.08, 0, -petH*0.42, petW*0.70);
+      fg.addColorStop(0, rgba(deep.r,deep.g,deep.b,0.30));
       fg.addColorStop(1, rgba(0,0,0,0));
       c2.fillStyle = fg;
       c2.beginPath();
-      c2.ellipse(0, -petH*0.40, petW*0.60, petH*0.38, 0, 0, TAU);
-      c2.fill();
-
-      // brillo extra en la corona (más sutil)
-      c2.globalCompositeOperation = 'screen';
-      c2.globalAlpha = front ? 0.06 : 0.045;
-      const topGlow = c2.createLinearGradient(0, -petH*1.05, 0, -petH*0.70);
-      topGlow.addColorStop(0, rgba(255,255,255,0.18));
-      topGlow.addColorStop(1, rgba(255,255,255,0.00));
-      c2.fillStyle = topGlow;
+      c2.ellipse(0, -petH*0.42, petW*0.50, petH*0.34, 0, 0, TAU);
       c2.fill();
 
       c2.restore();
       c2.restore();
     };
 
-    // pétalos traseros (4 para volumen)
-    for(let i=0;i<4;i++){
+    for(let i=0;i<3;i++){
       c2.save();
-      const a = (-(spread*1.25) + i*(spread*0.85)) + (rnd()-0.5)*0.020;
+      const a = (-spread + i*spread) + (rnd()-0.5)*0.018;
       c2.rotate(a);
-      c2.translate((i-1.5)*w*0.012*op, h*(0.070 + 0.014*op));
-      c2.scale(1, 1.03 - op*0.06);
-      fillPetal(false, i, 0.98);
+      c2.translate(0, h*0.06);
+      c2.scale(1, 1.02 - op*0.05);
+      fillPetal(false, i);
       c2.restore();
     }
 
-    // sombra interior
     c2.save();
     c2.globalCompositeOperation = 'multiply';
-    const ig = c2.createRadialGradient(0, -h*0.30, w*0.06, 0, -h*0.22, w*1.20);
+    const ig = c2.createRadialGradient(0, -h*0.30, w*0.06, 0, -h*0.22, w*1.05);
     ig.addColorStop(0, rgba(0,0,0,0));
-    ig.addColorStop(1, rgba(0,0,0,0.42));
+    ig.addColorStop(1, rgba(0,0,0,0.36));
     c2.fillStyle = ig;
     c2.beginPath();
-    c2.ellipse(0, -h*0.30, w*0.62, h*0.74, 0, 0, TAU);
+    c2.ellipse(0, -h*0.30, w*0.55, h*0.60, 0, 0, TAU);
     c2.fill();
     c2.restore();
 
-    // pétalos frontales (4 para silueta clara)
-    for(let i=0;i<4;i++){
+    for(let i=0;i<3;i++){
       c2.save();
-      const a = (-(spread*1.40) + i*(spread*0.95)) + (rnd()-0.5)*0.020;
+      const a = (-(spread+0.08) + i*(spread+0.08)) + (rnd()-0.5)*0.018;
       c2.rotate(a);
-      c2.translate((i-1.5)*w*0.018*op, -h*(0.012 + 0.012*op));
-      c2.scale(1, 1.06);
-      fillPetal(true, 4+i, 1.00);
+      c2.translate((i-1)*w*0.018*op, -h*0.01);
+      c2.scale(1, 1.04);
+      fillPetal(true, 3+i);
       c2.restore();
     }
 
-    // sépalos
     c2.save();
     c2.globalAlpha = 0.95;
     c2.fillStyle = rgba(50,170,105,0.92);
@@ -1137,7 +1266,6 @@
     }
     c2.restore();
 
-    // base
     c2.fillStyle = rgba(40,140,85,0.52);
     c2.beginPath();
     c2.ellipse(0, 0, w*0.18, h*0.10, 0, 0, TAU);
@@ -1174,16 +1302,7 @@
     {dx: 0.00, hf:0.80, bs:0.90},
   ];
 
-  const COLORS = [
-    // Todos rojos (misma familia, sin basura duplicada)
-    {r: 235,g:  55,b:  70}, // rojo vivo
-    {r: 210,g:  40,b:  55}, // rojo profundo
-    {r: 255,g:  85,b:  95}, // rojo claro
-    {r: 190,g:  35,b:  60}, // rojo vino
-    {r: 255,g: 120,b: 130}, // rojo suave
-    {r: 225,g:  65,b:  85}, // rojo tulipán
-    {r: 245,g:  95,b: 105}, // rojo medio
-  ];
+  const COLORS = [{ r: 235, g: 55, b: 70 }];
 
   let bouquet = [];
 
@@ -1208,9 +1327,9 @@
         phase: i*0.85,
         bw, bh,
         twist,
-        col: COLORS[i] || COLORS[i % COLORS.length],
+        col: COLORS[0],
         seed: 1337 + i*101,
-        open: 0.90 + (i % 4) * 0.03
+        open: 0.92 + (i % 4) * 0.03
       };
     });
   }
@@ -1218,7 +1337,6 @@
   function drawBouquet(t){
     drawGrass(t);
 
-    // sombra suave arriba del césped
     const hx = W*0.5, hy = H*0.78;
     const hg = ctx.createRadialGradient(hx, hy, 10, hx, hy, Math.max(W,H)*0.40);
     hg.addColorStop(0, 'rgba(0,0,0,0)');
@@ -1235,7 +1353,6 @@
     const STEM = {r:55,g:155,b:92};
     const STEM2= {r:35,g:120,b:72};
 
-    // tallos + hojas
     for(const f of bouquet){
       const sway = CONFIG.reduceMotion ? 0 : Math.sin(t*0.001*(0.9) + f.phase) * 0.22 * CONFIG.sway;
       const angle = sway + (f.x - W*0.5) * 0.0006;
@@ -1252,9 +1369,9 @@
       const cp2x = baseX + Math.cos(f.phase*1.7)*16*f.scale;
       const cp2y = baseY - f.height*0.76;
 
-      // hojas desde la mitad del tallo
       const leafMid1 = baseY - f.height*0.52;
       const leafMid2 = baseY - f.height*0.60;
+
       ctx.save();
       drawTulipLeaf(baseX, leafMid1, angle, f.scale*0.56, -1);
       drawTulipLeaf(baseX, leafMid2, angle, f.scale*0.50,  1);
@@ -1268,7 +1385,6 @@
 
       const stemW = 7.0 * f.scale;
 
-      // Tallos: más transparentes en la base (se mezclan con el césped)
       const sg = ctx.createLinearGradient(baseX, baseY, bloomX, bloomY);
       sg.addColorStop(0.00, rgba(STEM2.r, STEM2.g, STEM2.b, 0.10));
       sg.addColorStop(0.10, rgba(STEM2.r, STEM2.g, STEM2.b, 0.45));
@@ -1283,7 +1399,6 @@
       ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, bloomX, bloomY);
       ctx.stroke();
 
-      // borrado suave en la parte baja del tallo (deja que el césped lo tape)
       const fadeH = 92 * f.scale;
       ctx.save();
       ctx.globalCompositeOperation = 'destination-out';
@@ -1306,7 +1421,6 @@
       f.angle = angle + f.twist;
     }
 
-    // flores arriba
     for(const f of bouquet){
       ctx.save();
       ctx.translate(f.bloomX, f.bloomY);
@@ -1317,7 +1431,6 @@
       ctx.restore();
     }
 
-    // sombra base
     const knotX = W*0.5, knotY = H*0.935;
     ctx.fillStyle = 'rgba(0,0,0,0.18)';
     ctx.beginPath();
@@ -1338,8 +1451,8 @@
 
     bloomCache.clear();
 
-    // Re-seed para que el cielo/estrellas se vean bien al rotar el teléfono
     seedStars();
+    buildStarText();
     rebuildSkyCache();
 
     seedBouquet();
@@ -1347,7 +1460,6 @@
     seedGrass();
     rebuildGroundCache();
 
-    // precalienta sprites
     for(const f of bouquet){
       getBloomSprite(f.bw, f.bh, f.col, f.seed, f.open);
     }
@@ -1360,20 +1472,19 @@
     console.assert(!!canvas && !!ctx, 'Canvas/ctx no disponibles');
     console.assert(Number.isFinite(W) && W>0 && Number.isFinite(H) && H>0, 'Canvas size inválido');
     console.assert(Array.isArray(stars) && stars.length>0, 'Stars no inicializadas');
+    console.assert(Array.isArray(textStars) && textStars.length>200, 'Texto en estrellas no generado');
     console.assert(Array.isArray(grass) && grass.length>0, 'Grass no inicializado');
     console.assert(grassAnim1.length>0 && grassAnim2.length>0, 'Grass anim no inicializado');
     console.assert(Array.isArray(soil) && soil.length>0, 'Soil no inicializado');
     console.assert(!!groundCache && groundCache.width>0, 'Ground cache no generado');
     console.assert(!!skyCache && skyCache.width>0, 'Sky cache no generado');
     console.assert(Array.isArray(bouquet) && bouquet.length===DESCS.length, 'Bouquet no se generó correctamente');
-
-    // test extra: sprite mínimo + crown
     console.assert(CONFIG.crownStrength >= 0 && CONFIG.crownStrength <= 1, 'crownStrength fuera de rango');
-    const spr = getBloomSprite(60, 100, {r:220,g:70,b:80}, 42, 0.95);
+
+    const spr = getBloomSprite(60, 100, {r:235,g:55,b:70}, 42, 0.95);
     console.assert(spr && spr.canvas && spr.ss === 2 && spr.canvas.width>0, 'Sprite inválido');
   }
 
-  // init
   seedStars();
   resize();
 
