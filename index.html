@@ -41,6 +41,13 @@
   const lerp  = (a,b,t)=>a+(b-a)*t;
   const rgba  = (r,g,b,a)=>`rgba(${r},${g},${b},${a})`;
 
+  // Campo de viento global (compartido por pasto y tulipanes)
+  const windField = (t) => {
+    if(CONFIG.reduceMotion) return 0;
+    // combinación lenta (natural y suave)
+    return (Math.sin(t*0.00055)*0.78 + Math.sin(t*0.00023 + 1.7)*0.34);
+  };
+
   const shuffleInPlace = (arr) => {
     for(let i=arr.length-1;i>0;i--){
       const j = (Math.random()*(i+1))|0;
@@ -67,7 +74,7 @@
     crownStrength: 0.008,
 
     // Texto “en estrellas”
-    starText: 'Para ti <3',
+    starText: 'For you <3',
     starTextStrength: 0.95
   };
 
@@ -383,6 +390,19 @@
     g.fillStyle = gg;
     g.fillRect(0, gy, W, groundH);
 
+    // variación de tono (parches) para evitar banda plana
+    for(let i=0;i<8;i++){
+      const x = Math.random()*W;
+      const y = gy + Math.random()*groundH;
+      const r = 120 + Math.random()*260;
+      const pg = g.createRadialGradient(x,y, 10, x,y, r);
+      pg.addColorStop(0, `rgba(${18+Math.random()*10|0},${70+Math.random()*50|0},${40+Math.random()*30|0},0.10)`);
+      pg.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = pg;
+      g.fillRect(0, gy-20, W, groundH+40);
+    }
+
+
     for(const b of soil){
       const rg = g.createRadialGradient(b.x, b.y, 8, b.x, b.y, b.r);
       rg.addColorStop(0, `rgba(25,85,48,${b.a})`);
@@ -470,7 +490,7 @@
     const gy = H * 0.74;
     const groundH = H - gy;
 
-    const wind = CONFIG.reduceMotion ? 0 : Math.sin(t*0.00065) * 0.75;
+    const wind = windField(t) * 0.75;
 
     const drawBlade = (b, front) => {
       const xN = (b.x / W) - 0.5;
@@ -599,7 +619,6 @@
     ctx.fillStyle = tg;
     ctx.fillRect(0, thatchTop, W, H - thatchTop);
     ctx.restore();
-
     if(!CONFIG.reduceMotion){
       ctx.save();
       ctx.globalAlpha = 0.05;
@@ -1347,6 +1366,21 @@
       c2.save();
       c2.clip();
 
+
+      // subsurface scattering (falso): glow cálido en el borde superior
+      c2.save();
+      c2.globalCompositeOperation = 'screen';
+      c2.globalAlpha = front ? 0.20 : 0.14;
+      const sss = c2.createRadialGradient(0, -petH*0.98, petW*0.06, 0, -petH*0.98, petW*0.92);
+      sss.addColorStop(0, rgba(255,240,250,0.55));
+      sss.addColorStop(0.35, rgba(col.r,col.g,col.b,0.20));
+      sss.addColorStop(1, rgba(col.r,col.g,col.b,0));
+      c2.fillStyle = sss;
+      c2.beginPath();
+      c2.ellipse(0, -petH*0.92, petW*0.74, petH*0.34, 0, 0, TAU);
+      c2.fill();
+      c2.restore();
+
       
       // grano muy sutil para que el pétalo no se vea plano
       c2.globalAlpha = front ? 0.030 : 0.024;
@@ -1582,11 +1616,11 @@
     {dx: 0.00, hf:0.86, bs:0.98},
   ];
   const COLORS = [
-    { r: 255, g: 105, b: 180 }, // hot pink
-    { r: 255, g:  92, b: 160 }, // deep pink
-    { r: 255, g: 145, b: 190 }, // rose
-    { r: 255, g: 175, b: 210 }, // blush
-    { r: 235, g:  80, b: 155 }, // raspberry
+    { r: 155, g:  85, b: 245 }, // violet
+    { r: 128, g:  62, b: 220 }, // deep violet
+    { r: 198, g: 145, b: 255 }, // lavender
+    { r: 172, g:  98, b: 242 }, // orchid purple
+    { r: 112, g:  52, b: 190 }, // plum
   ];
 
   let bouquet = [];
@@ -1639,10 +1673,12 @@
     const STEM = {r:55,g:155,b:92};
     const STEM2= {r:35,g:120,b:72};
 
+    const gw = windField(t) * CONFIG.sway;
+
     const order = bouquet.slice().sort((a,b)=> (b.height - a.height) || (a.x - b.x));
 
     for(const f of order){
-      const sway = CONFIG.reduceMotion ? 0 : Math.sin(t*0.001*(0.9) + f.phase) * 0.22 * CONFIG.sway;
+      const sway = CONFIG.reduceMotion ? 0 : (gw*0.22 + Math.sin(t*0.001 + f.phase) * 0.08 * CONFIG.sway);
       const angle = sway + (f.x - W*0.5) * 0.0006;
 
       const baseX = f.x;
