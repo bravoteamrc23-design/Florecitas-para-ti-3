@@ -20,10 +20,41 @@
       -webkit-tap-highlight-color: transparent;
     }
     canvas{position:fixed; inset:0; width:100vw; height:100vh; display:block;}
+
+    #hud{
+      position:fixed;
+      left:12px; top:12px;
+      z-index:2;
+      padding:10px 12px;
+      border-radius:14px;
+      background: rgba(0,0,0,0.35);
+      color: rgba(255,255,255,0.88);
+      font: 12px/1.35 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      letter-spacing: 0.2px;
+      user-select:none;
+      -webkit-user-select:none;
+      max-width: min(340px, calc(100vw - 24px));
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    }
+    #hud.hidden{ opacity:0; pointer-events:none; }
+    #hud .title{ font-weight:600; margin-bottom:6px; }
+    #hud .row{ margin:2px 0; opacity:0.92; }
+    #hud kbd{
+      display:inline-block;
+      padding:1px 6px;
+      margin:0 2px;
+      border-radius:7px;
+      border:1px solid rgba(255,255,255,0.16);
+      background: rgba(255,255,255,0.10);
+      font: 11px/1.35 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    }
   </style>
 </head>
 <body>
   <canvas id="c" role="img" aria-label="Animación de un ramo de tulipanes naranjas bajo un cielo nocturno con estrellas, luna y la constelación de Capricornio"></canvas>
+  <div id="hud" aria-hidden="true"></div>
 
 <script>
 (() => {
@@ -31,6 +62,8 @@
 
   const canvas = document.getElementById('c');
   const ctx = canvas.getContext('2d', { alpha:true });
+
+  const hud = document.getElementById('hud');
 
   let HAS_FILTER = false; try{ ctx.filter = 'none'; HAS_FILTER = (typeof ctx.filter !== 'undefined'); }catch(_){ HAS_FILTER = false; }
 
@@ -40,6 +73,46 @@
   const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
   const lerp  = (a,b,t)=>a+(b-a)*t;
   const rgba  = (r,g,b,a)=>`rgba(${r},${g},${b},${a})`;
+
+
+// ===== Intro: generación del ramo al abrir =====
+// master: 0..1 controla el “construir” tallo -> hojas -> pétalos.
+const INTRO = { active: true, t0: performance.now(), dur: 5200 };
+
+const smoothstep = (a,b,x) => {
+  const t = clamp((x - a) / Math.max(1e-6, (b - a)), 0, 1);
+  return t*t*(3 - 2*t);
+};
+
+const cubic = (t, a,b,c,d) => {
+  const u = 1 - t;
+  return u*u*u*a + 3*u*u*t*b + 3*u*t*t*c + t*t*t*d;
+};
+
+function strokeCubicPartial(x0,y0,x1,y1,x2,y2,x3,y3,u, stepsMax=28){
+  const uu = clamp(u, 0, 1);
+  const steps = Math.max(2, Math.floor(stepsMax * uu));
+  ctx.beginPath();
+  ctx.moveTo(x0,y0);
+  for(let i=1;i<=steps;i++){
+    const tt = uu * (i/steps);
+    ctx.lineTo(
+      cubic(tt, x0,x1,x2,x3),
+      cubic(tt, y0,y1,y2,y3)
+    );
+  }
+  ctx.stroke();
+  return {
+    x: cubic(uu, x0,x1,x2,x3),
+    y: cubic(uu, y0,y1,y2,y3)
+  };
+}
+
+function restartIntro(){
+  INTRO.active = true;
+  INTRO.t0 = performance.now();
+}
+
 
   // Campo de viento global (compartido por pasto y tulipanes)
   const windField = (t) => {
@@ -82,7 +155,9 @@
     dprCap: 1.8,
     grassAnimFactor: 1.0,
     debug: false,
-    quality: 2
+    quality: 2,
+    hud: true,
+    autoQuality: true
 
   };
 
@@ -92,6 +167,66 @@
   }catch(_){}
 
 
+  // ===== Persistencia + HUD =====
+  const STORAGE_KEY = 'daily_flowers_settings_v1';
+
+  function loadSettings(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return;
+      const s = JSON.parse(raw);
+      if(!s || typeof s !== 'object') return;
+
+      if(typeof s.quality === 'number') CONFIG.quality = clamp(s.quality, 0, 2);
+      if(typeof s.reduceMotion === 'boolean') CONFIG.reduceMotion = s.reduceMotion;
+      if(typeof s.shootingStars === 'number') CONFIG.shootingStars = s.shootingStars ? 1 : 0;
+      if(typeof s.hud === 'boolean') CONFIG.hud = s.hud;
+      if(typeof s.autoQuality === 'boolean') CONFIG.autoQuality = s.autoQuality;
+    }catch(_){}
+  }
+
+  function saveSettings(){
+    try{
+      const s = {
+        quality: CONFIG.quality ?? 2,
+        reduceMotion: !!CONFIG.reduceMotion,
+        shootingStars: CONFIG.shootingStars ? 1 : 0,
+        hud: !!CONFIG.hud,
+        autoQuality: !!CONFIG.autoQuality
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+    }catch(_){}
+  }
+
+  function setHudVisible(v){
+    CONFIG.hud = !!v;
+    if(hud) hud.classList.toggle('hidden', !CONFIG.hud);
+    saveSettings();
+  }
+
+  function updateHUD(force){
+    if(!hud) return;
+    const now = performance.now();
+    if(!force && updateHUD._t && (now - updateHUD._t) < 250) return;
+    updateHUD._t = now;
+
+    hud.classList.toggle('hidden', !CONFIG.hud);
+
+    const qName = QUALITY_PRESETS?.[CONFIG.quality ?? 2]?.name ?? 'alta';
+    const rm = CONFIG.reduceMotion ? 'ON' : 'OFF';
+    const ss = CONFIG.shootingStars ? 'ON' : 'OFF';
+    const aq = CONFIG.autoQuality ? 'ON' : 'OFF';
+
+    hud.innerHTML =
+      '<div class="title">Daily flowers panel</div>' +
+      '<div class="row"><kbd>Q</kbd> calidad: <b>' + qName + '</b> | <kbd>A</kbd> auto: <b>' + aq + '</b></div>' +
+      '<div class="row"><kbd>M</kbd> motion: <b>' + rm + '</b> | <kbd>S</kbd> fugaces: <b>' + ss + '</b></div>' +
+      '<div class="row"><kbd>E</kbd> export PNG | <kbd>P</kbd> foto | <kbd>R</kbd> re-generar | <kbd>H</kbd> ocultar panel</div>';
+  }
+
+  loadSettings();
+
+
 // ===== Calidad rápida (Q) y atajos =====
 const QUALITY_PRESETS = [
   { name: 'baja',  dpr: 1.15, stars: 140, twinkle: 0.65, sway: 0.16, shoot: 0, grass: 0.55, fps: 40 },
@@ -99,7 +234,7 @@ const QUALITY_PRESETS = [
   { name: 'alta',  dpr: 1.80, stars: 240, twinkle: 0.80, sway: 0.28, shoot: 1, grass: 1.00, fps: 60 }
 ];
 
-function applyQuality(level){
+function applyQuality(level, doResize=true){
   const q = QUALITY_PRESETS[clamp(level,0,2)];
   CONFIG.quality = clamp(level,0,2);
   CONFIG.dprCap = q.dpr;
@@ -109,22 +244,97 @@ function applyQuality(level){
   CONFIG.shootingStars = q.shoot;
   CONFIG.grassAnimFactor = q.grass;
   CONFIG.maxFPS = q.fps;
-  requestResize();
+  if(doResize) requestResize();
+  saveSettings();
+  updateHUD(true);
 }
+
+// aplica preset guardado sin forzar resize inmediato
+applyQuality(CONFIG.quality ?? 2, false);
+setHudVisible(CONFIG.hud);
+updateHUD(true);
 
 function cycleQuality(){
   applyQuality((CONFIG.quality ?? 2) === 2 ? 1 : ((CONFIG.quality ?? 2) === 1 ? 0 : 2));
 }
 
+
+function exportPNG(filename){
+  const name = filename || 'daily_flowers.png';
+  try{
+    // Congela un frame limpio antes de exportar
+    const t = performance.now();
+    const prevRM = CONFIG.reduceMotion;
+    CONFIG.reduceMotion = true;
+
+    drawSky(t);
+    drawBouquet(t);
+    drawTapSparkles(t);
+
+    CONFIG.reduceMotion = prevRM;
+
+    const url = canvas.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }catch(_){
+    try{
+      const url = canvas.toDataURL('image/png');
+      window.open(url, '_blank');
+    }catch(__){}
+  }
+}
+
+function photoExport(){
+  // “Modo foto”: pausa movimiento, dibuja un frame y exporta.
+  // (No hace upscale agresivo para no freír la memoria del navegador.)
+  exportPNG('your_daily_flowers.png');
+}
+
 window.addEventListener('keydown', (e) => {
   const k = (e.key || '').toLowerCase();
+
   if(k === 'q'){ cycleQuality(); }
+
+  if(k === 'a'){
+    CONFIG.autoQuality = !CONFIG.autoQuality;
+    saveSettings();
+    updateHUD(true);
+  }
+
   if(k === 'm'){
     CONFIG.reduceMotion = !CONFIG.reduceMotion;
+    saveSettings();
+    requestResize(); // reconstruye caches (incluye cielo estático)
+    updateHUD(true);
   }
+
   if(k === 's'){
     CONFIG.shootingStars = CONFIG.shootingStars ? 0 : 1;
+    saveSettings();
+    updateHUD(true);
   }
+
+  if(k === 'h'){
+    setHudVisible(!CONFIG.hud);
+    updateHUD(true);
+  }
+
+  if(k === 'e'){
+    exportPNG();
+  }
+
+  if(k === 'p'){
+    photoExport();
+  }
+
+  if(k === 'r'){
+    restartIntro();
+  }
+
 }, {passive:true});
 
   // ===== Stars =====
@@ -330,6 +540,7 @@ window.addEventListener('keydown', (e) => {
 
   let groundCache = null;
   let skyCache = null;
+  let staticSkyOverlayCache = null;
   const bloomCache = new Map();
 
   function seedSoil(){
@@ -1219,6 +1430,151 @@ window.addEventListener('keydown', (e) => {
     skyCache = off;
   }
 
+
+  function rebuildStaticSkyOverlayCache(){
+    const off = document.createElement('canvas');
+    off.width  = Math.floor(W * DPR);
+    off.height = Math.floor(H * DPR);
+
+    const g = off.getContext('2d', {alpha:true});
+    g.setTransform(DPR,0,0,DPR,0,0);
+
+    // === Texto en estrellas (sin animación) ===
+    if(textStars.length){
+      g.save();
+      g.globalCompositeOperation = 'screen';
+
+      const gx = W*0.5, gy = H*0.28;
+      const fontHint = clamp(Math.min(W,H)*0.09, 26, 58);
+      const glow = g.createRadialGradient(gx, gy, 10, gx, gy, fontHint*7.5);
+      glow.addColorStop(0, 'rgba(210,230,255,0.09)');
+      glow.addColorStop(1, 'rgba(210,230,255,0)');
+      g.globalAlpha = 1;
+      g.fillStyle = glow;
+      g.fillRect(0,0,W,H);
+
+      for(const st of textStars){
+        const alpha = st.a * 1.30; // (0.75 + 0.55*1)
+        const x = st.x*W;
+        const y = st.y*H;
+
+        g.globalAlpha = alpha;
+        g.shadowColor = 'rgba(255,255,255,0.55)';
+        g.shadowBlur = 9 + st.r*6;
+
+        g.fillStyle = st.hue ? `hsla(${st.hue}, 75%, 92%, 1)` : 'rgba(255,255,255,1)';
+        g.beginPath();
+        g.arc(x, y, st.r, 0, TAU);
+        g.fill();
+
+        if(st.flare){
+          g.save();
+          g.shadowBlur = 0;
+          g.globalCompositeOperation = 'lighter';
+          g.globalAlpha = alpha * 0.40 * st.flare;
+          g.strokeStyle = 'rgba(255,255,255,0.55)';
+          g.lineWidth = 1;
+          const k = 3.0 + st.r*2.0;
+          g.beginPath();
+          g.moveTo(x-k, y); g.lineTo(x+k, y);
+          g.moveTo(x, y-k); g.lineTo(x, y+k);
+          g.stroke();
+          g.restore();
+        }
+      }
+
+      g.restore();
+      g.globalCompositeOperation = 'source-over';
+      g.shadowBlur = 0;
+      g.globalAlpha = 1;
+    }
+
+    // === Líneas de constelaciones generadas ===
+    if(starLinks.length){
+      g.save();
+      g.globalCompositeOperation = 'screen';
+      g.lineCap = 'round';
+      g.lineJoin = 'round';
+      g.strokeStyle = 'rgba(200,220,255,1)';
+      g.lineWidth = 1;
+
+      for(const L of starLinks){
+        const a = stars[L.i];
+        const b = stars[L.j];
+        const ax = a.x * W, ay = a.y * H;
+        const bx = b.x * W, by = b.y * H;
+        if(ay > H*0.62 || by > H*0.62) continue;
+
+        g.globalAlpha = L.a;
+        g.beginPath();
+        g.moveTo(ax, ay);
+        g.lineTo(bx, by);
+        g.stroke();
+      }
+      g.restore();
+    }
+
+    // === Estrellas (sin parallax ni twinkle) ===
+    if(stars.length){
+      g.save();
+      g.globalCompositeOperation = 'screen';
+
+      for(const st of stars){
+        const alpha = st.a * 1.30 * CONFIG.twinkle;
+        const x = st.x * W;
+        const y = st.y * H;
+
+        g.globalAlpha = alpha;
+
+        if(st.r < 1.15){
+          g.shadowBlur = 0;
+        }else{
+          g.shadowColor = 'rgba(255,255,255,0.55)';
+          g.shadowBlur = 8 + st.r*3.2;
+        }
+
+        g.fillStyle = st.hue ? `hsla(${st.hue}, 80%, 90%, 1)` : 'rgba(255,255,255,1)';
+        g.beginPath();
+        g.arc(x, y, st.r, 0, TAU);
+        g.fill();
+
+        if(st.flare){
+          g.save();
+          g.globalCompositeOperation = 'lighter';
+          g.shadowBlur = 0;
+
+          g.globalAlpha = alpha * 0.42 * st.flare;
+          const rg = g.createRadialGradient(x,y, 0, x,y, 18 + st.r*11);
+          rg.addColorStop(0, 'rgba(255,255,255,0.20)');
+          rg.addColorStop(0.45, 'rgba(255,255,255,0.07)');
+          rg.addColorStop(1, 'rgba(255,255,255,0)');
+          g.fillStyle = rg;
+          g.beginPath();
+          g.arc(x,y, 18 + st.r*11, 0, TAU);
+          g.fill();
+
+          g.globalAlpha = alpha * 0.28 * st.flare;
+          g.strokeStyle = 'rgba(255,255,255,0.55)';
+          g.lineWidth = 1;
+          const k = 3.6 + st.r*1.6;
+          g.beginPath();
+          g.moveTo(x-k, y); g.lineTo(x+k, y);
+          g.moveTo(x, y-k); g.lineTo(x, y+k);
+          g.stroke();
+          g.restore();
+        }
+      }
+
+      g.restore();
+      g.shadowBlur = 0;
+      g.globalAlpha = 1;
+      g.globalCompositeOperation = 'source-over';
+    }
+
+    staticSkyOverlayCache = off;
+  }
+
+
   function drawSky(t){
 
     if(skyCache){
@@ -1230,6 +1586,16 @@ window.addEventListener('keydown', (e) => {
       sky.addColorStop(1, 'rgba(3,3,10,1)');
       ctx.fillStyle = sky;
       ctx.fillRect(0,0,W,H);
+    }
+
+    if(CONFIG.reduceMotion && staticSkyOverlayCache){
+      ctx.drawImage(staticSkyOverlayCache, 0, 0, staticSkyOverlayCache.width / DPR, staticSkyOverlayCache.height / DPR);
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      // no arrancamos nuevas fugaces en reduce motion
+      if(shooting.active) drawShootingStar(t);
+      return;
     }
 
     drawStarText(t);
@@ -1449,8 +1815,10 @@ window.addEventListener('keydown', (e) => {
   }
 
   // ===== Pétalos =====
-  function getBloomSprite(w, h, col, seed, open){
-    const key = `${Math.round(w)}x${Math.round(h)}_${col.r},${col.g},${col.b}_${seed}_${Math.round((open||1)*100)}`;
+  function getBloomSprite(w, h, col, seed, open, petalsVisible){
+    const oQ = Math.round(((open||1) * 20));
+    const pv = clamp((petalsVisible==null?6:(petalsVisible|0)), 0, 6);
+    const key = `${Math.round(w)}x${Math.round(h)}_${col.r},${col.g},${col.b}_${seed}_o${oQ}_p${pv}`;
     const cached = bloomCache.get(key);
     if(cached) return cached;
 
@@ -1469,16 +1837,17 @@ window.addEventListener('keydown', (e) => {
     c2.setTransform(ss,0,0,ss,0,0);
     c2.translate(ax, ay);
 
-    renderTulipBloomSprite(c2, w, h, col, seed, open);
+    renderTulipBloomSprite(c2, w, h, col, seed, oQ/20, pv);
 
     const obj = { canvas: off, ox: ax, oy: ay, ss };
     bloomCache.set(key, obj);
     return obj;
   }
 
-  function renderTulipBloomSprite(c2, w, h, col, seed, open){
+  function renderTulipBloomSprite(c2, w, h, col, seed, open, petalsVisible){
     let s = (seed >>> 0) || 1;
     const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0, s / 4294967296);
+    const pv = clamp((petalsVisible==null?6:(petalsVisible|0)), 0, 6);
 
     const mix = (a,b,t)=>({
       r: Math.round(lerp(a.r,b.r,t)),
@@ -1664,6 +2033,7 @@ window.addEventListener('keydown', (e) => {
     };
 
     for(let i=0;i<3;i++){
+      if(pv <= i) continue;
       c2.save();
       const a = (-spread + i*spread) + (rnd()-0.5)*0.018;
       c2.rotate(a);
@@ -1685,6 +2055,7 @@ window.addEventListener('keydown', (e) => {
     c2.restore();
 
     for(let i=0;i<3;i++){
+      if(pv <= i) continue;
       c2.save();
       const a = (-(spread+0.08) + i*(spread+0.08)) + (rnd()-0.5)*0.018;
       c2.rotate(a);
@@ -1694,6 +2065,7 @@ window.addEventListener('keydown', (e) => {
       c2.restore();
     }
 
+    if(pv > 0){
     c2.save();
     c2.globalAlpha = 0.95;
     c2.fillStyle = rgba(50,170,105,0.92);
@@ -1713,6 +2085,7 @@ window.addEventListener('keydown', (e) => {
       c2.restore();
     }
     c2.restore();
+    }
 
     c2.fillStyle = rgba(40,140,85,0.52);
     c2.beginPath();
@@ -1728,8 +2101,8 @@ window.addEventListener('keydown', (e) => {
     c2.restore();
   }
 
-  function drawTulipBloom(w, h, col, seed, open){
-    const spr = getBloomSprite(w, h, col, seed, open);
+  function drawTulipBloom(w, h, col, seed, open, petalsVisible){
+    const spr = getBloomSprite(w, h, col, seed, open, petalsVisible);
     ctx.drawImage(
       spr.canvas,
       -spr.ox,
@@ -1913,7 +2286,23 @@ window.addEventListener('keydown', (e) => {
 
     const order = bouquet.slice().sort((a,b)=> (b.height - a.height) || (a.x - b.x));
 
+    const introActive = INTRO.active;
+    const master = introActive ? clamp((t - INTRO.t0) / INTRO.dur, 0, 1) : 1;
+    if(introActive && master >= 1) INTRO.active = false;
+
     for(const f of order){
+      let uGen=1, stemU=1, leafU=1, bloomU=1, petals=6;
+      if(introActive){
+        const start = f.i * 0.055;
+        const span  = 0.72;
+        uGen   = clamp((master - start) / span, 0, 1);
+        stemU  = smoothstep(0.00, 0.56, uGen);
+        leafU  = smoothstep(0.18, 0.78, uGen);
+        bloomU = smoothstep(0.56, 1.00, uGen);
+        const pU = smoothstep(0.60, 1.00, uGen);
+        petals = clamp(Math.floor(pU*6 + 0.001), 0, 6);
+      }
+
       const sway = CONFIG.reduceMotion ? 0 : (gw*0.22 + Math.sin(t*0.001 + f.phase) * 0.08 * CONFIG.sway);
       const angle = sway + (f.x - W*0.5) * 0.0006;
 
@@ -1921,23 +2310,32 @@ window.addEventListener('keydown', (e) => {
       const baseY = f.baseY;
       const topY  = baseY - f.height;
 
-      const bloomX = baseX + Math.sin(angle) * 12 * f.scale;
-      const bloomY = topY + Math.cos(angle) * 5 * f.scale;
+      const bloomXFull = baseX + Math.sin(angle) * 12 * f.scale;
+      const bloomYFull = topY + Math.cos(angle) * 5 * f.scale;
 
       const cp1x = baseX + Math.sin(f.phase)*10*f.scale;
       const cp1y = baseY - f.height*0.40;
       const cp2x = baseX + Math.cos(f.phase*1.7)*16*f.scale;
       const cp2y = baseY - f.height*0.76;
 
-      const leafMid1 = baseY - f.height*0.52;
-      const leafMid2 = baseY - f.height*0.60;
+      const endP = {
+        x: cubic(stemU, baseX, cp1x, cp2x, bloomXFull),
+        y: cubic(stemU, baseY, cp1y, cp2y, bloomYFull)
+      };
 
-      ctx.save();
-      drawTulipLeaf(baseX, leafMid1, angle, f.scale*0.56, -1);
-      drawTulipLeaf(baseX, leafMid2, angle, f.scale*0.50,  1);
-      drawLeafSprig(baseX, baseY - f.height*0.56, angle, f.scale*0.52, -1);
-      drawLeafSprig(baseX, baseY - f.height*0.64, angle, f.scale*0.46,  1);
-      ctx.restore();
+      const leafMid1 = baseY - f.height*(0.52*stemU);
+      const leafMid2 = baseY - f.height*(0.60*stemU);
+
+      if(leafU > 0.001){
+        ctx.save();
+        ctx.globalAlpha *= leafU;
+        const ls = f.scale * (0.18 + 0.82*leafU);
+        drawTulipLeaf(baseX, leafMid1, angle, ls*0.56, -1);
+        drawTulipLeaf(baseX, leafMid2, angle, ls*0.50,  1);
+        drawLeafSprig(baseX, baseY - f.height*(0.56*stemU), angle, ls*0.52, -1);
+        drawLeafSprig(baseX, baseY - f.height*(0.64*stemU), angle, ls*0.46,  1);
+        ctx.restore();
+      }
 
       ctx.save();
       ctx.lineCap = 'round';
@@ -1945,7 +2343,7 @@ window.addEventListener('keydown', (e) => {
 
       const stemW = 7.0 * f.scale;
 
-      const sg = ctx.createLinearGradient(baseX, baseY, bloomX, bloomY);
+      const sg = ctx.createLinearGradient(baseX, baseY, endP.x, endP.y);
       sg.addColorStop(0.00, rgba(STEM2.r, STEM2.g, STEM2.b, 0.10));
       sg.addColorStop(0.10, rgba(STEM2.r, STEM2.g, STEM2.b, 0.45));
       sg.addColorStop(0.32, rgba(STEM.r,  STEM.g,  STEM.b,  0.95));
@@ -1954,10 +2352,7 @@ window.addEventListener('keydown', (e) => {
       ctx.strokeStyle = sg;
       ctx.lineWidth = stemW;
 
-      ctx.beginPath();
-      ctx.moveTo(baseX, baseY);
-      ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, bloomX, bloomY);
-      ctx.stroke();
+      strokeCubicPartial(baseX, baseY, cp1x, cp1y, cp2x, cp2y, bloomXFull, bloomYFull, stemU);
 
 
       // volumen del tallo: sombra (lado opuesto a la luna) + brillo (lado de la luna)
@@ -1969,10 +2364,7 @@ window.addEventListener('keydown', (e) => {
       ctx.globalAlpha = 0.18;
       ctx.strokeStyle = 'rgba(0,0,0,0.28)';
       ctx.lineWidth = stemW * 0.55;
-      ctx.beginPath();
-      ctx.moveTo(baseX - offX, baseY - offY);
-      ctx.bezierCurveTo(cp1x - offX, cp1y - offY, cp2x - offX, cp2y - offY, bloomX - offX, bloomY - offY);
-      ctx.stroke();
+      strokeCubicPartial(baseX - offX, baseY - offY, cp1x - offX, cp1y - offY, cp2x - offX, cp2y - offY, bloomXFull - offX, bloomYFull - offY, stemU);
       ctx.restore();
 
       ctx.save();
@@ -1980,10 +2372,7 @@ window.addEventListener('keydown', (e) => {
       ctx.globalAlpha = 0.16;
       ctx.strokeStyle = 'rgba(210,255,230,0.55)';
       ctx.lineWidth = Math.max(1, stemW * 0.28);
-      ctx.beginPath();
-      ctx.moveTo(baseX + offX*0.75, baseY + offY*0.75);
-      ctx.bezierCurveTo(cp1x + offX*0.75, cp1y + offY*0.75, cp2x + offX*0.75, cp2y + offY*0.75, bloomX + offX*0.75, bloomY + offY*0.75);
-      ctx.stroke();
+      strokeCubicPartial(baseX + offX*0.75, baseY + offY*0.75, cp1x + offX*0.75, cp1y + offY*0.75, cp2x + offX*0.75, cp2y + offY*0.75, bloomXFull + offX*0.75, bloomYFull + offY*0.75, stemU);
       ctx.restore();
 
       const fadeH = 92 * f.scale;
@@ -1995,33 +2384,40 @@ window.addEventListener('keydown', (e) => {
       fg.addColorStop(1.00, 'rgba(0,0,0,0.00)');
       ctx.strokeStyle = fg;
       ctx.lineWidth = stemW + 5.0 * f.scale;
-      ctx.beginPath();
-      ctx.moveTo(baseX, baseY);
-      ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, bloomX, bloomY);
-      ctx.stroke();
+      strokeCubicPartial(baseX, baseY, cp1x, cp1y, cp2x, cp2y, bloomXFull, bloomYFull, stemU);
       ctx.restore();
 
       ctx.restore();
 
       // sombra de contacto bajo la flor (le da "peso" y profundidad)
-      ctx.save();
-      ctx.globalAlpha = 0.11;
-      ctx.fillStyle = 'rgba(0,0,0,0.28)';
-      ctx.beginPath();
-      ctx.ellipse(bloomX, bloomY + 6*f.scale, 10*f.scale, 4.2*f.scale, angle, 0, TAU);
-      ctx.fill();
-      ctx.restore();
+      if(bloomU > 0.02){
+        ctx.save();
+        ctx.globalAlpha = 0.11 * bloomU;
+        ctx.fillStyle = 'rgba(0,0,0,0.28)';
+        ctx.beginPath();
+        ctx.ellipse(endP.x, endP.y + 6*f.scale, 10*f.scale, 4.2*f.scale, angle, 0, TAU);
+        ctx.fill();
+        ctx.restore();
+      }
 
 
-      f.bloomX = bloomX;
-      f.bloomY = bloomY;
+      f.bloomX = endP.x;
+      f.bloomY = endP.y;
       f.angle = angle + f.twist;
+      f._bloomU = bloomU;
+      f._petals = petals;
+      f._bloomScale = introActive ? lerp(0.18, 1.0, bloomU) : 1;
+      f._openNow = introActive ? (Math.round(lerp(0.86, f.open, bloomU)*20)/20) : f.open;
     }
 
     
     // Envoltura + bruma para que el ramo no flote como sticker
     const wrapS = lerp(0.82, 1.10, clamp(Math.min(W,H)/820, 0, 1));
+    const wrapAlpha = introActive ? smoothstep(0.28, 0.78, master) : 1;
+    ctx.save();
+    ctx.globalAlpha *= wrapAlpha;
     drawBouquetWrap(W*0.5, H*0.935, wrapS);
+    ctx.restore();
 
     ctx.save();
     ctx.globalCompositeOperation = 'screen';
@@ -2037,8 +2433,14 @@ window.addEventListener('keydown', (e) => {
     const bloomOrder = order.slice().sort((a,b)=>a.bloomY - b.bloomY);
 
 for(const f of bloomOrder){
+      const bu = (f._bloomU ?? 1);
+      if(bu <= 0.001) continue;
+
       ctx.save();
       ctx.translate(f.bloomX, f.bloomY);
+      ctx.globalAlpha *= bu;
+      const bScale = (f._bloomScale ?? 1);
+      ctx.scale(bScale, bScale);
 
       // Depth of field barato pero efectivo: las flores del fondo se suavizan un poco
       const ny = f.bloomY / H;
@@ -2049,17 +2451,20 @@ for(const f of bloomOrder){
 
       ctx.rotate(f.angle);
       ctx.shadowColor = `rgba(${f.col.r},${f.col.g},${f.col.b},0.16)`;
-      ctx.shadowBlur = 10 + 12*f.scale;
-      drawTulipBloom(f.bw, f.bh, f.col, f.seed, f.open);
+      ctx.shadowBlur = (10 + 12*f.scale) * bScale;
+      drawTulipBloom(f.bw, f.bh, f.col, f.seed, (f._openNow ?? f.open), (f._petals ?? 6));
       if(HAS_FILTER) ctx.filter = 'none';
       ctx.restore();
     }
 
     const knotX = W*0.5, knotY = H*0.935;
+    ctx.save();
+    ctx.globalAlpha *= (introActive ? wrapAlpha : 1);
     ctx.fillStyle = 'rgba(0,0,0,0.18)';
     ctx.beginPath();
     ctx.ellipse(knotX, knotY, Math.min(110, W*0.20), 26, 0, 0, TAU);
     ctx.fill();
+    ctx.restore();
   }
 
   function addSparkle(x, y, t){
@@ -2125,6 +2530,7 @@ for(const f of bloomOrder){
     seedStars();
     buildStarText();
     rebuildSkyCache();
+    rebuildStaticSkyOverlayCache();
 
     seedBouquet();
     seedSoil();
@@ -2181,19 +2587,61 @@ for(const f of bloomOrder){
   requestResize();
 
   let _rafId = 0;
-let _lastDraw = 0;
+  let _lastDraw = 0;
 
-function frame(t){
-  _rafId = requestAnimationFrame(frame);
+  // Auto-calidad (A): baja/sube preset según el rendimiento real
+  let _emaDt = 16;
+  let _goodFrames = 0;
+  let _cooldownUntil = 0;
 
-  const minStep = 1000 / (CONFIG.maxFPS || 60);
-  if(_lastDraw && (t - _lastDraw) < minStep) return;
-  _lastDraw = t;
+  function autoQualityTick(dt, t){
+    if(!CONFIG.autoQuality) return;
 
-  drawSky(t);
-  drawBouquet(t);
-  drawTapSparkles(t);
-}
+    _emaDt = _emaDt*0.92 + dt*0.08;
+
+    if(t < _cooldownUntil) return;
+
+    const q = (CONFIG.quality ?? 2);
+
+    // si va lento, baja calidad rápido
+    if(_emaDt > 28 && q > 0){
+      applyQuality(q - 1);
+      _cooldownUntil = t + 2500;
+      _goodFrames = 0;
+      return;
+    }
+
+    // si va muy fluido sostenido, sube calidad con paciencia
+    if(_emaDt < 17 && q < 2){
+      _goodFrames++;
+      if(_goodFrames > 160){
+        applyQuality(q + 1);
+        _cooldownUntil = t + 4500;
+        _goodFrames = 0;
+      }
+    }else{
+      _goodFrames = 0;
+    }
+  }
+
+  function frame(t){
+    _rafId = requestAnimationFrame(frame);
+
+    const minStep = 1000 / (CONFIG.maxFPS || 60);
+    if(_lastDraw && (t - _lastDraw) < minStep) return;
+
+    const dt = _lastDraw ? (t - _lastDraw) : 0;
+    _lastDraw = t;
+
+    if(dt) autoQualityTick(dt, t);
+
+    drawSky(t);
+    drawBouquet(t);
+    drawTapSparkles(t);
+
+    updateHUD(false);
+  }
+
 
 function start(){
   if(_rafId) return;
