@@ -104,12 +104,13 @@
 
   // Color aleatorio pero estable por semilla (así cada gerbera "nace" con su propio tono)
   const colorFromSeed = (seed)=>{
+    // Antes: tono aleatorio por semilla. Ahora: amarillo (con variación mínima para que no se vea “plano”).
     let s = (seed >>> 0) || 1;
     const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0, s / 4294967296);
 
-    const h = Math.floor(rnd()*360);
-    const sat = 55 + rnd()*28;   // 55..83
-    const lit = 58 + rnd()*18;   // 58..76 (pastel luminoso)
+    const h = 50;                 // amarillo
+    const sat = 88 + rnd()*8;     // 88..96
+    const lit = 56 + rnd()*10;    // 56..66
     return hslToRgb(h, sat, lit);
   };
 
@@ -175,8 +176,8 @@ function restartIntro(){
   };
 
   const CONFIG = {
-    stars: 240,
-    twinkle: 0.80,
+    stars: 320,
+    twinkle: 0.90,
     sway: 0.65,
     reduceMotion: false,
     forceFlowerMotion: true,
@@ -186,7 +187,7 @@ function restartIntro(){
     crownStrength: 0.008,
 
     // Texto “en estrellas”
-    starText: 'your daily flowers my darling <3',
+    starText: 'today you look so beautiful, darling <3',
     starTextStrength: 0.95    ,
 
     // Rendimiento / calidad
@@ -402,6 +403,8 @@ window.addEventListener('keydown', (e) => {
       {cx: 0.28, cy: 0.20, r: 0.18},
       {cx: 0.72, cy: 0.16, r: 0.20},
       {cx: 0.52, cy: 0.30, r: 0.16},
+      {cx: 0.12, cy: 0.12, r: 0.14},   // micro-cúmulo (izq arriba)
+      {cx: 0.88, cy: 0.22, r: 0.15},   // micro-cúmulo (der medio)
     ];
 
     const mwBand = () => {
@@ -432,8 +435,8 @@ window.addEventListener('keydown', (e) => {
       const yBias = Math.pow(1 - p.y, 1.8);
 
       const roll = Math.random();
-      const big = roll < (0.035 + 0.020*yBias);
-      const mid = !big && roll < (0.18 + 0.05*yBias);
+      const big = roll < (0.045 + 0.025*yBias);
+      const mid = !big && roll < (0.22 + 0.06*yBias);
 
       const rBase = big ? (2.2 + Math.random()*3.0)
                   : (mid ? (1.2 + Math.random()*1.4) : (0.55 + Math.random()*0.95));
@@ -444,6 +447,7 @@ window.addEventListener('keydown', (e) => {
       const temp = Math.random();
       if(temp < 0.10) hue = 205 + Math.random()*35;
       else if(temp < 0.16) hue = 35 + Math.random()*18;
+      else if(temp < 0.19) hue = 10 + Math.random()*20; // rojizo raro
       else if(big && temp < 0.45) hue = 200 + Math.random()*60;
 
       stars.push({
@@ -1693,7 +1697,7 @@ function drawMoon(t){
       [5,7],[7,4]
     ];
 
-    const toX = (p)=>p.x*W;
+    const toX = (p)=>(1 - p.x)*W;
     const toY = (p)=>p.y*H;
 
     g.save();
@@ -1702,7 +1706,7 @@ function drawMoon(t){
     g.lineJoin = 'round';
 
     // Bruma suave detrás para integrarlo (muy sutil)
-    const cx = W*0.30, cy = H*0.25;
+    const cx = W*0.70, cy = H*0.25;
     const haze = g.createRadialGradient(cx, cy, 10, cx, cy, Math.min(W,H)*0.22);
     haze.addColorStop(0, 'rgba(200,220,255,0.06)');
     haze.addColorStop(1, 'rgba(0,0,0,0)');
@@ -1822,7 +1826,7 @@ const neb = (x,y,r, a, cr,cg,cb) => {
     g.save();
     g.globalCompositeOperation = 'screen';
     const pr = makePRNG((W*73856093) ^ (H*19349663) ^ 0xA53);
-    const count = clamp(Math.floor((W*H)/2600), 520, 1500);
+    const count = clamp(Math.floor((W*H)/2050), 900, 2400);
     for(let i=0;i<count;i++){
       const x = pr()*W;
       const y = Math.pow(pr(), 1.62) * (H*0.74);
@@ -1834,9 +1838,31 @@ const neb = (x,y,r, a, cr,cg,cb) => {
       g.arc(x, y, r, 0, TAU);
       g.fill();
     }
-    g.restore();
 
-    drawCapricornConstellationToCache(g);
+    // Cúmulos extra (estático): densidad bonita sin depender solo del render dinámico
+    const clusters2 = [
+      {cx: W*0.18, cy: H*0.18, r: Math.min(W,H)*0.12, n: 180},
+      {cx: W*0.84, cy: H*0.14, r: Math.min(W,H)*0.13, n: 210},
+      {cx: W*0.55, cy: H*0.26, r: Math.min(W,H)*0.11, n: 160},
+    ];
+    for(const c of clusters2){
+      for(let k=0;k<c.n;k++){
+        const ang = pr()*TAU;
+        const rr  = Math.sqrt(pr()) * c.r;
+        const x = c.cx + Math.cos(ang)*rr;
+        const y = c.cy + Math.sin(ang)*rr;
+        if(y > H*0.74) continue;
+        const a = 0.018 + pr()*0.045;
+        const r = 0.35 + pr()*0.90;
+        const warm = pr() < 0.20;
+        g.fillStyle = warm ? `rgba(255,245,235,${a})` : `rgba(200,225,255,${a})`;
+        g.beginPath();
+        g.arc(x, y, r, 0, TAU);
+        g.fill();
+      }
+    }
+
+    g.restore();
 
     const mx = W*LIGHT.x, my = H*LIGHT.y;
     const moon = g.createRadialGradient(mx, my, 10, mx, my, Math.max(W,H)*0.55);
@@ -1894,7 +1920,7 @@ const neb = (x,y,r, a, cr,cg,cb) => {
     g.fillRect(0,0,W,H);
 
 
-    // Constelación Capricornio (izquierda)
+    // Constelación Capricornio (derecha)
     drawCapricornConstellationToCache(g);
     skyCache = off;
   }
@@ -2432,11 +2458,17 @@ const neb = (x,y,r, a, cr,cg,cb) => {
     const cached = bloomCache.get(key);
     if(cached) return cached;
     const ss = (CONFIG.quality>=3 ? 3 : 2);
-    const cw = Math.ceil(w * 2.8);
-    const ch = Math.ceil(h * 2.4 + w * 0.35);
+
+    // ===== FIX “pétalos cortados” =====
+    // El sprite anterior era un poco pequeño en la parte superior: algunos pétalos (len ~ h*1.0
+    // + centerY ~ -h*0.62) alcanzaban ~ -1.6h, y ay=1.55h los recortaba.
+    // Solución: añadir padding real y subir ay + alto del sprite.
+    const pad = Math.ceil(Math.max(w, h) * 0.55);
+    const cw  = Math.ceil(w * 3.25 + pad);
+    const ch  = Math.ceil(h * 3.00 + w * 0.45 + pad);
 
     const ax = Math.ceil(cw * 0.50);
-    const ay = Math.ceil(h  * 1.55);
+    const ay = Math.ceil(h * 1.95 + pad * 0.15);
 
     const off = document.createElement('canvas');
     off.width  = cw * ss;
@@ -2453,11 +2485,11 @@ const neb = (x,y,r, a, cr,cg,cb) => {
     return obj;
   }
   function renderTulipBloomSprite(c2, w, h, col, seed, open, petalsVisible){
-    // Gerbera mejorada (v2):
-    // - pétalos con punta redondeada + variación de color/alpha
-    // - “corona” interna de pétalos cortos (da volumen)
-    // - centro con anillo + espiral/polen más rico
-    // Nota: esto se renderiza a sprite (cache), así que el costo es razonable.
+    // Gerbera mejorada (v3):
+    // - Capa “back” para profundidad (pétalos detrás)
+    // - Pétalos con ligera curvatura (shear), estrías y highlight de punta
+    // - Centro con “florets” tubulares alrededor del disco + polen más denso
+    // Renderizado a sprite (cache) para que el costo no se coma la animación.
 
     let s = (seed >>> 0) || 1;
     const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0, s / 4294967296);
@@ -2472,31 +2504,39 @@ const neb = (x,y,r, a, cr,cg,cb) => {
       b: Math.round(lerp(a.b,b.b,t))
     });
 
-    // Colores: damos más “material” al pétalo (base oscuro -> punta clara)
-    const lite = mix(col, {r:255,g:255,b:255}, 0.46);
-    const mid  = mix(col, {r:255,g:230,b:245}, 0.22);
-    const deep = mix(col, {r:18,g:6,b:24},      0.55);
-    const edge = mix(col, {r:255,g:245,b:250},  0.16);
+    // Paleta del pétalo (base -> cuerpo -> punta)
+    const lite = mix(col, {r:255,g:255,b:255}, 0.50);
+    const mid  = mix(col, {r:255,g:230,b:245}, 0.24);
+    const deep = mix(col, {r:18,g:6,b:24},      0.58);
+    const edge = mix(col, {r:255,g:245,b:250},  0.18);
 
-    // Centro de la cabeza
     const centerY = -h*0.62;
+
+    // Sombra global (da “cuerpo” a la cabeza)
+    c2.save();
+    c2.globalAlpha = 0.20;
+    c2.fillStyle = rgba(0,0,0,0.18);
+    c2.beginPath();
+    c2.ellipse(0, centerY + h*0.34, w*1.05, h*0.52, 0, 0, TAU);
+    c2.fill();
+    c2.restore();
 
     // Halo suave
     c2.save();
     c2.globalCompositeOperation = 'lighter';
-    c2.globalAlpha = 0.10;
-    const haloR = Math.max(w*1.35, h*1.00);
+    c2.globalAlpha = 0.11;
+    const haloR = Math.max(w*1.45, h*1.10);
     const halo = c2.createRadialGradient(0, centerY, 8, 0, centerY, haloR);
     halo.addColorStop(0, rgba(col.r,col.g,col.b,0.22));
     halo.addColorStop(0.55, rgba(col.r,col.g,col.b,0.07));
     halo.addColorStop(1, rgba(col.r,col.g,col.b,0));
     c2.fillStyle = halo;
     c2.beginPath();
-    c2.ellipse(0, centerY, w*1.12, h*1.02, 0, 0, TAU);
+    c2.ellipse(0, centerY, w*1.18, h*1.08, 0, 0, TAU);
     c2.fill();
     c2.restore();
 
-    // Aparición por pétalo (no “en bloque”)
+    // Aparición escalonada por pétalo
     const petalStage = (i, total) => {
       const j = (Math.sin((seed*0.0009 + i*12.345) * 1.73) * 0.5 + 0.5) * 0.92;
       const threshold = (i + j) / total;
@@ -2504,53 +2544,53 @@ const neb = (x,y,r, a, cr,cg,cb) => {
       return clamp(x, 0, 1);
     };
 
-    const drawPetal = (ang, len, wid, alpha, shade, bend, tint) => {
+    const drawPetal = (ang, len, wid, alpha, shade, bend, tint, curl) => {
       c2.save();
       c2.translate(0, centerY);
       c2.rotate(ang);
       c2.rotate(bend);
 
+      // Curvatura ligera (como “cucharita”)
+      c2.transform(1, 0, curl, 1, 0, 0);
+
       const tipY = -len;
 
       // sombra suave detrás (profundidad)
       c2.save();
-      c2.globalAlpha = alpha * 0.16;
+      c2.globalAlpha = alpha * 0.14;
       c2.fillStyle = rgba(0,0,0,0.26);
       c2.beginPath();
       c2.moveTo(0, 0);
       c2.quadraticCurveTo( wid*0.92, -len*0.62, 0, tipY);
       c2.quadraticCurveTo(-wid*0.92, -len*0.62, 0, 0);
       c2.closePath();
-      c2.translate(0.7, 1.3);
+      c2.translate(0.7, 1.2);
       c2.fill();
       c2.restore();
 
       // degradado principal del pétalo
       const g = c2.createLinearGradient(0, 0, 0, tipY);
-      const base = mix(deep, col, 0.25 + 0.20*tint);
+      const base = mix(deep, col, 0.22 + 0.22*tint);
       const body = mix(col,  mid, 0.18 + 0.18*tint);
       const tip  = mix(lite, {r:255,g:255,b:255}, 0.10 + 0.10*tint);
 
       g.addColorStop(0,    rgba(base.r,base.g,base.b, 0.52*shade));
-      g.addColorStop(0.25, rgba(col.r,col.g,col.b,    0.96*shade));
+      g.addColorStop(0.25, rgba(col.r,col.g,col.b,    0.98*shade));
       g.addColorStop(0.68, rgba(body.r,body.g,body.b, 0.98*shade));
       g.addColorStop(1,    rgba(tip.r,tip.g,tip.b,    0.98*shade));
 
       c2.globalAlpha = alpha;
       c2.fillStyle = g;
 
-      // Forma: punta redondeada (no “púa”)
+      // Forma: punta redondeada
       const ctrlY = -len*0.64;
       const ctrlX = wid*(0.96 + rnd()*0.14);
-      const cap   = wid*(0.18 + 0.08*rnd()); // ancho de la punta
+      const cap   = wid*(0.18 + 0.08*rnd());
 
       c2.beginPath();
       c2.moveTo(0, 0);
-      // borde derecho
       c2.bezierCurveTo( ctrlX, ctrlY,  ctrlX*0.55, tipY*0.90,  cap, tipY);
-      // “cap” redondeado
       c2.quadraticCurveTo(0, tipY - wid*0.05, -cap, tipY);
-      // borde izquierdo
       c2.bezierCurveTo(-ctrlX*0.55, tipY*0.90, -ctrlX, ctrlY, 0, 0);
       c2.closePath();
       c2.fill();
@@ -2566,17 +2606,32 @@ const neb = (x,y,r, a, cr,cg,cb) => {
       c2.quadraticCurveTo(ctrlX*0.85, ctrlY*0.98, cap*0.35, tipY);
       c2.stroke();
 
-      // vena central sutil
-      c2.globalAlpha = alpha * 0.10;
+      // Estrías (textura del pétalo)
+      c2.save();
+      c2.globalAlpha = alpha * 0.06;
       c2.strokeStyle = 'rgba(255,255,255,0.22)';
-      c2.lineWidth = Math.max(0.7, wid*0.06);
+      c2.lineWidth = Math.max(0.7, wid*0.05);
+      for(let k=0;k<3;k++){
+        const o = (k-1) * wid*0.18;
+        c2.beginPath();
+        c2.moveTo(o*0.12, -len*0.06);
+        c2.quadraticCurveTo(o*0.55, -len*0.44, o*0.06, tipY*0.92);
+        c2.stroke();
+      }
+      c2.restore();
+
+      // Highlight de punta
+      c2.save();
+      c2.globalCompositeOperation = 'screen';
+      c2.globalAlpha = alpha * 0.09;
+      c2.fillStyle = 'rgba(255,255,255,0.20)';
       c2.beginPath();
-      c2.moveTo(0, 0);
-      c2.quadraticCurveTo(wid*0.06, tipY*0.55, 0, tipY*0.96);
-      c2.stroke();
+      c2.ellipse(0, tipY + wid*0.10, wid*0.40, wid*0.18, 0, 0, TAU);
+      c2.fill();
+      c2.restore();
 
       // sombra lateral (para “tubo”)
-      c2.globalAlpha = alpha * 0.08;
+      c2.globalAlpha = alpha * 0.07;
       c2.strokeStyle = 'rgba(0,0,0,0.22)';
       c2.lineWidth = Math.max(0.7, wid*0.06);
       c2.beginPath();
@@ -2587,36 +2642,53 @@ const neb = (x,y,r, a, cr,cg,cb) => {
       c2.restore();
     };
 
-    // Capas (menos “espinas”, más pétalo)
-    const totalOuter = 34 + (rnd()*7|0); // 34..40
-    const totalMid   = Math.round(totalOuter * 0.76);
-    const totalInner = Math.round(totalOuter * 0.52);
-    const totalCrown = 18 + (rnd()*6|0); // 18..23
+    // Capas
+    const totalOuter = 38 + (rnd()*9|0); // 38..46
+    const totalMid   = Math.round(totalOuter * 0.78);
+    const totalInner = Math.round(totalOuter * 0.56);
+    const totalBack  = Math.round(totalOuter * 0.62);
+    const totalCrown = 20 + (rnd()*7|0); // 20..26
 
-    const baseOuterLen = h*(0.80 + 0.05*rnd()) * (0.70 + 0.30*op);
-    const baseOuterWid = w*(0.135 + 0.020*rnd());
+    const baseOuterLen = h*(0.82 + 0.05*rnd()) * (0.70 + 0.30*op);
+    const baseOuterWid = w*(0.135 + 0.022*rnd());
 
-    const baseMidLen   = h*(0.62 + 0.04*rnd()) * (0.70 + 0.30*op);
-    const baseMidWid   = w*(0.112 + 0.016*rnd());
+    const baseMidLen   = h*(0.64 + 0.04*rnd()) * (0.70 + 0.30*op);
+    const baseMidWid   = w*(0.112 + 0.018*rnd());
 
-    const baseInLen    = h*(0.46 + 0.03*rnd()) * (0.70 + 0.30*op);
-    const baseInWid    = w*(0.085 + 0.012*rnd());
+    const baseInLen    = h*(0.48 + 0.03*rnd()) * (0.70 + 0.30*op);
+    const baseInWid    = w*(0.088 + 0.012*rnd());
 
-    const baseCrLen    = h*(0.30 + 0.02*rnd()) * (0.75 + 0.25*op);
-    const baseCrWid    = w*(0.070 + 0.010*rnd());
+    const baseCrLen    = h*(0.30 + 0.03*rnd()) * (0.75 + 0.25*op);
+    const baseCrWid    = w*(0.072 + 0.011*rnd());
+
+    // Back layer (pétalos detrás)
+    for(let i=0;i<totalBack;i++){
+      const st = petalStage(i, totalBack);
+      if(st <= 0) continue;
+
+      const ang  = (i/totalBack)*TAU + (rnd()*0.08 - 0.04) + 0.02;
+      const bend = (rnd()*0.22 - 0.11);
+      const tint = rnd()*1.0;
+      const curl = (rnd()*0.26 - 0.13) * (0.45 + 0.55*st);
+
+      const len = baseOuterLen*(1.02 + 0.18*rnd()) * (0.35 + 0.65*st);
+      const wid = baseOuterWid*(1.05 + 0.45*rnd()) * (0.55 + 0.45*st);
+      drawPetal(ang, len, wid, 0.30*st, 0.82, bend, tint, curl);
+    }
 
     // Outer
     for(let i=0;i<totalOuter;i++){
       const st = petalStage(i, totalOuter);
       if(st <= 0) continue;
 
-      const ang = (i/totalOuter)*TAU + (rnd()*0.08 - 0.04);
+      const ang  = (i/totalOuter)*TAU + (rnd()*0.08 - 0.04);
       const bend = (rnd()*0.18 - 0.09);
       const tint = rnd()*1.0;
+      const curl = (rnd()*0.22 - 0.11) * (0.45 + 0.55*st);
 
       const len = baseOuterLen*(0.86 + 0.24*rnd()) * (0.35 + 0.65*st);
       const wid = baseOuterWid*(0.78 + 0.36*rnd()) * (0.55 + 0.45*st);
-      drawPetal(ang, len, wid, 0.92*st, 0.92, bend, tint);
+      drawPetal(ang, len, wid, 0.95*st, 0.92, bend, tint, curl);
     }
 
     // Mid
@@ -2624,13 +2696,14 @@ const neb = (x,y,r, a, cr,cg,cb) => {
       const st = petalStage(i, totalMid);
       if(st <= 0) continue;
 
-      const ang = (i/totalMid)*TAU + (rnd()*0.08 - 0.04) + 0.05;
+      const ang  = (i/totalMid)*TAU + (rnd()*0.08 - 0.04) + 0.05;
       const bend = (rnd()*0.14 - 0.07);
       const tint = rnd()*1.0;
+      const curl = (rnd()*0.18 - 0.09) * (0.45 + 0.55*st);
 
       const len = baseMidLen*(0.86 + 0.22*rnd()) * (0.35 + 0.65*st);
       const wid = baseMidWid*(0.78 + 0.34*rnd()) * (0.55 + 0.45*st);
-      drawPetal(ang, len, wid, 0.78*st, 0.98, bend, tint);
+      drawPetal(ang, len, wid, 0.80*st, 0.98, bend, tint, curl);
     }
 
     // Inner rays
@@ -2638,49 +2711,48 @@ const neb = (x,y,r, a, cr,cg,cb) => {
       const st = petalStage(i, totalInner);
       if(st <= 0) continue;
 
-      const ang = (i/totalInner)*TAU + (rnd()*0.08 - 0.04) - 0.03;
+      const ang  = (i/totalInner)*TAU + (rnd()*0.08 - 0.04) - 0.03;
       const bend = (rnd()*0.12 - 0.06);
       const tint = rnd()*1.0;
+      const curl = (rnd()*0.16 - 0.08) * (0.45 + 0.55*st);
 
       const len = baseInLen*(0.88 + 0.18*rnd()) * (0.35 + 0.65*st);
       const wid = baseInWid*(0.82 + 0.30*rnd()) * (0.55 + 0.45*st);
-      drawPetal(ang, len, wid, 0.62*st, 1.00, bend, tint);
+      drawPetal(ang, len, wid, 0.64*st, 1.00, bend, tint, curl);
     }
 
-    // Corona interna (pétalos cortos y más claros, alrededor del centro)
-    // Da ese look “gerbera” más voluminoso.
+    // Corona interna (pétalos cortos)
     const crownAppear = clamp((appear - 0.30) * 1.6, 0, 1);
     if(crownAppear > 0){
-      const crownCol = mix(col, {r:255,g:245,b:235}, 0.35);
-      const crownLite = mix(crownCol, {r:255,g:255,b:255}, 0.55);
-      const crownDeep = mix(crownCol, {r:40,g:20,b:30}, 0.45);
+      const crownCol  = mix(col, {r:255,g:245,b:235}, 0.38);
+      const crownLite = mix(crownCol, {r:255,g:255,b:255}, 0.58);
+      const crownDeep = mix(crownCol, {r:40,g:20,b:30}, 0.46);
 
       for(let i=0;i<totalCrown;i++){
         const st = petalStage(i, totalCrown) * crownAppear;
         if(st <= 0) continue;
 
-        const ang = (i/totalCrown)*TAU + (rnd()*0.08 - 0.04);
+        const ang  = (i/totalCrown)*TAU + (rnd()*0.08 - 0.04);
         const bend = (rnd()*0.10 - 0.05);
 
-        // mini-pétalo con su propio degradado rápido (sin llamar drawPetal para no mezclar paleta)
         c2.save();
         c2.translate(0, centerY);
         c2.rotate(ang);
         c2.rotate(bend);
 
-        const len = baseCrLen*(0.90 + 0.20*rnd()) * (0.45 + 0.55*st);
-        const wid = baseCrWid*(0.85 + 0.30*rnd()) * (0.55 + 0.45*st);
+        const len = baseCrLen*(0.90 + 0.22*rnd()) * (0.45 + 0.55*st);
+        const wid = baseCrWid*(0.85 + 0.32*rnd()) * (0.55 + 0.45*st);
         const tipY = -len;
 
-        const g = c2.createLinearGradient(0, 0, 0, tipY);
-        g.addColorStop(0, rgba(crownDeep.r,crownDeep.g,crownDeep.b, 0.42));
-        g.addColorStop(0.40, rgba(crownCol.r,crownCol.g,crownCol.b, 0.85));
-        g.addColorStop(1, rgba(crownLite.r,crownLite.g,crownLite.b, 0.95));
+        const gg = c2.createLinearGradient(0, 0, 0, tipY);
+        gg.addColorStop(0, rgba(crownDeep.r,crownDeep.g,crownDeep.b, 0.42));
+        gg.addColorStop(0.40, rgba(crownCol.r,crownCol.g,crownCol.b, 0.85));
+        gg.addColorStop(1, rgba(crownLite.r,crownLite.g,crownLite.b, 0.95));
 
-        c2.globalAlpha = 0.55 * st;
-        c2.fillStyle = g;
+        c2.globalAlpha = 0.58 * st;
+        c2.fillStyle = gg;
 
-        const ctrlX = wid*(0.95 + rnd()*0.10);
+        const ctrlX = wid*(0.95 + rnd()*0.12);
         const ctrlY = -len*0.62;
         const cap = wid*(0.22 + 0.06*rnd());
 
@@ -2696,59 +2768,95 @@ const neb = (x,y,r, a, cr,cg,cb) => {
       }
     }
 
-    // Centro (disco) con anillo + textura tipo espiral
-    const discR = w*(0.22 + 0.02*rnd());
+    // Centro (disco) + florets tubulares
+    const discR = w*(0.235 + 0.02*rnd());
     const discGrow = (0.25 + 0.75*clamp(appear*1.25, 0, 1));
 
-    // Sombra de “cuenco” (ancla el centro)
+    // Sombra de “cuenco”
     c2.save();
     c2.globalAlpha = 0.18 * discGrow;
     c2.fillStyle = 'rgba(0,0,0,0.28)';
     c2.beginPath();
-    c2.ellipse(0, centerY + discR*0.10, discR*1.25*discGrow, discR*0.90*discGrow, 0, 0, TAU);
+    c2.ellipse(0, centerY + discR*0.10, discR*1.30*discGrow, discR*0.92*discGrow, 0, 0, TAU);
     c2.fill();
     c2.restore();
 
-    const core = c2.createRadialGradient(0, centerY, discR*0.10, 0, centerY, discR*1.45);
+    const core = c2.createRadialGradient(0, centerY, discR*0.10, 0, centerY, discR*1.50);
     core.addColorStop(0,   rgba(255, 246, 190, 0.98));
     core.addColorStop(0.45,rgba(245, 205, 120, 0.98));
     core.addColorStop(0.78,rgba(195, 110,  55, 0.96));
     core.addColorStop(1,   rgba(105,  55,  32, 0.96));
 
     c2.save();
-    c2.globalAlpha = 0.24 + 0.76*discGrow;
+    c2.globalAlpha = 0.26 + 0.76*discGrow;
     c2.fillStyle = core;
     c2.beginPath();
-    c2.ellipse(0, centerY, discR*1.08*discGrow, discR*0.98*discGrow, rnd()*0.8, 0, TAU);
+    c2.ellipse(0, centerY, discR*1.10*discGrow, discR*1.00*discGrow, rnd()*0.8, 0, TAU);
     c2.fill();
 
-    // anillo exterior con puntitos (transición pétalo-centro)
+    // anillo exterior
     c2.globalAlpha *= 0.70;
     c2.strokeStyle = rgba(255, 238, 175, 0.45);
     c2.lineWidth = Math.max(0.9, discR*0.11);
     c2.beginPath();
-    c2.ellipse(0, centerY, discR*1.05*discGrow, discR*0.92*discGrow, 0, 0, TAU);
+    c2.ellipse(0, centerY, discR*1.07*discGrow, discR*0.94*discGrow, 0, 0, TAU);
     c2.stroke();
 
-    // polen: espiral + granos
+    // Florets tubulares (transición pétalo-centro)
+    const florets = 44;
+    for(let i=0;i<florets;i++){
+      const a = (i/florets)*TAU + rnd()*0.08;
+      const rr = discR*(1.08 + 0.06*rnd())*discGrow;
+      const x = Math.cos(a)*rr*0.80;
+      const y = centerY + Math.sin(a)*rr*0.58;
+
+      c2.save();
+      c2.translate(x, y);
+      c2.rotate(a + Math.PI*0.5);
+
+      const L = discR*(0.20 + 0.10*rnd())*discGrow;
+      const Wd = discR*(0.07 + 0.03*rnd())*discGrow;
+
+      const gg = c2.createLinearGradient(0, 0, 0, -L);
+      gg.addColorStop(0, 'rgba(85,45,26,0.75)');
+      gg.addColorStop(0.55, 'rgba(210,125,70,0.80)');
+      gg.addColorStop(1, 'rgba(255,230,150,0.78)');
+
+      c2.globalAlpha = 0.26 + 0.34*rnd();
+      c2.fillStyle = gg;
+      // Cuerpo tipo “cápsula”
+      c2.beginPath();
+      c2.ellipse(0, -L*0.55, Wd*0.55, L*0.55, 0, 0, TAU);
+      c2.fill();
+
+      // puntito brillante
+      c2.globalCompositeOperation = 'screen';
+      c2.globalAlpha *= 0.30;
+      c2.fillStyle = 'rgba(255,255,255,0.18)';
+      c2.beginPath();
+      c2.ellipse(0, -L*0.85, Wd*0.35, Wd*0.26, 0, 0, TAU);
+      c2.fill();
+
+      c2.restore();
+    }
+
+    // Polen: espiral + granos
     c2.globalAlpha *= 0.78;
-    const grains = 84;
+    const grains = 112;
     for(let k=0;k<grains;k++){
-      // espiral suave
       const t = (k/(grains-1));
-      const a = t*TAU*2.1 + rnd()*0.25;
-      const rr = discR*(0.15 + 0.80*t)*discGrow;
+      const a = t*TAU*2.25 + rnd()*0.25;
+      const rr = discR*(0.12 + 0.82*t)*discGrow;
       const x = Math.cos(a)*rr*0.78;
       const y = centerY + Math.sin(a)*rr*0.60;
 
       const r0 = discR*(0.010 + 0.020*rnd())*discGrow;
-      const dark = 0.28 + 0.30*rnd();
+      const dark = 0.26 + 0.32*rnd();
       c2.fillStyle = rgba(70, 35, 22, dark);
       c2.beginPath();
       c2.ellipse(x, y, r0*1.25, r0, rnd()*TAU, 0, TAU);
       c2.fill();
 
-      // micro-highlight
       if(k%4===0){
         c2.globalCompositeOperation = 'screen';
         c2.fillStyle = 'rgba(255,255,255,0.08)';
@@ -2762,25 +2870,26 @@ const neb = (x,y,r, a, cr,cg,cb) => {
     // brillo suave del centro
     c2.globalCompositeOperation = 'lighter';
     c2.globalAlpha = 0.10;
-    const shine = c2.createRadialGradient(0, centerY - discR*0.15, 0, 0, centerY - discR*0.15, discR*2.3);
+    const shine = c2.createRadialGradient(0, centerY - discR*0.15, 0, 0, centerY - discR*0.15, discR*2.4);
     shine.addColorStop(0, 'rgba(255,255,255,0.18)');
     shine.addColorStop(1, 'rgba(255,255,255,0)');
     c2.fillStyle = shine;
     c2.beginPath();
-    c2.arc(0, centerY - discR*0.15, discR*2.05, 0, TAU);
+    c2.arc(0, centerY - discR*0.15, discR*2.10, 0, TAU);
     c2.fill();
 
     c2.restore();
 
     // sombra mínima para “anclar” la cabeza al tallo
     c2.save();
-    c2.globalAlpha = 0.20;
-    c2.fillStyle = rgba(0,0,0,0.18);
+    c2.globalAlpha = 0.18;
+    c2.fillStyle = rgba(0,0,0,0.16);
     c2.beginPath();
-    c2.ellipse(0, h*0.02, w*0.30, h*0.11, 0, 0, TAU);
+    c2.ellipse(0, h*0.02, w*0.32, h*0.12, 0, 0, TAU);
     c2.fill();
     c2.restore();
   }
+
 
 
 
@@ -3073,26 +3182,15 @@ const neb = (x,y,r, a, cr,cg,cb) => {
 
 // ===== Bouquet =====
   const DESCS = [
-    // 9 gerberas: abanico amplio para que se aprecie cada una (sin amontonarse)
-    // dx = separación horizontal, hf = altura del tallo, bs = escala de la flor
-    {dx:-0.82, hf:0.98, bs:0.92},
-    {dx:-0.60, hf:1.05, bs:0.93},
-    {dx:-0.38, hf:1.12, bs:0.94},
-    {dx:-0.18, hf:1.18, bs:0.95},
-    {dx: 0.00, hf:1.22, bs:0.96},
-    {dx: 0.18, hf:1.18, bs:0.95},
-    {dx: 0.38, hf:1.12, bs:0.94},
-    {dx: 0.60, hf:1.05, bs:0.93},
-    {dx: 0.82, hf:0.98, bs:0.92},
+    // 6 gerberas: abanico limpio, sin encimar (dx = separación horizontal, hf = altura del tallo, bs = escala de la flor)
+    {dx:-0.70, hf:1.02, bs:0.93},
+    {dx:-0.42, hf:1.10, bs:0.94},
+    {dx:-0.16, hf:1.18, bs:0.95},
+    {dx: 0.16, hf:1.18, bs:0.95},
+    {dx: 0.42, hf:1.10, bs:0.94},
+    {dx: 0.70, hf:1.02, bs:0.93},
   ];
-  const COLORS = [
-    // Rosados (variación sutil para pétalos suaves y luminosos)
-    { r: 255, g: 182, b: 193 }, // light pink
-    { r: 255, g: 160, b: 180 }, // rosa suave
-    { r: 255, g: 192, b: 203 }, // pink clásico
-    { r: 255, g: 140, b: 170 }, // rosa más intenso
-    { r: 248, g: 200, b: 210 }, // rosa empolvado
-  ];
+  const BLOOM_COLORS = ['#FFE36A','#FFD84A','#FFCF3A','#FFEA8A','#FFD24D','#FFF1A8'];
 
   let bouquet = [];
 
