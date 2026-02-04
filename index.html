@@ -55,13 +55,13 @@
   </style>
 </head>
 <body>
-  <canvas id="c" role="img" aria-label="Animación de un ramo de gerberas violetas bajo un cielo estrellado con nubes, sol y la constelación de Capricornio"></canvas>
+  <canvas id="c" role="img" aria-label="Animación de un ramo de gerberas violetas bajo un cielo estrellado con nubes, luna y la constelación de Capricornio"></canvas>
   <script>
 (() => {
   'use strict';
 
   const canvas = document.getElementById('c');
-  const ctx = canvas.getContext('2d', { alpha:true });
+  const ctx = canvas.getContext('2d', { alpha:false });
 
   const hud = document.getElementById('hud');
 
@@ -104,14 +104,14 @@
 
   // Color aleatorio pero estable por semilla (así cada gerbera "nace" con su propio tono)
   const colorFromSeed = (seed)=>{
-    // Violeta (con variación sutil por flor para que se vea natural).
+    // Rosado (con variación sutil por flor para que se vea natural).
     let s = (seed >>> 0) || 1;
     const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0, s / 4294967296);
 
-    // Hue violeta ~ 270-300, saturación media-alta, luz media.
-    const h   = 285 + (rnd()*26 - 13);  // 272..298
-    const sat = 58 + rnd()*18;          // 58..76
-    const lit = 52 + rnd()*14;          // 52..66
+    // Hue rosado ~ 325-350, saturación media-alta, luz un poco más alta.
+    const h   = 338 + (rnd()*24 - 12);  // 326..350
+    const sat = 62 + rnd()*18;          // 62..80
+    const lit = 58 + rnd()*14;          // 58..72
     return hslToRgb(h, sat, lit);
   };
 
@@ -247,17 +247,18 @@ function restartIntro(){
     crownStrength: 0.008,
 
     // Texto “en estrellas”
-    starText: 'Have great day my darling <3',
+    starText: 'every day, you look so beatiful <3',
     starTextStrength: 0.95    ,
 
     // Rendimiento / calidad
     maxFPS: 60,
     dprCap: 1.8,
     grassAnimFactor: 1.0,
+    grassDetail: 1,
     debug: false,
     quality: 2,
     hud: false,
-    autoQuality: true
+    autoQuality: false
 
   };
 
@@ -329,9 +330,9 @@ function restartIntro(){
 
 // ===== Calidad rápida (Q) y atajos =====
 const QUALITY_PRESETS = [
-  { name: 'baja',  dpr: 1.15, stars: 140, twinkle: 0.65, sway: 0.16, shoot: 0, grass: 0.55, fps: 40 },
-  { name: 'media', dpr: 1.40, stars: 200, twinkle: 0.75, sway: 0.22, shoot: 1, grass: 0.80, fps: 55 },
-  { name: 'alta',  dpr: 1.80, stars: 240, twinkle: 0.80, sway: 0.28, shoot: 1, grass: 1.00, fps: 60 }
+  { name: 'baja',  dpr: 1.15, stars: 140, twinkle: 0.65, sway: 0.16, shoot: 0, grass: 0.55, grassDetail: 0, fps: 40 },
+  { name: 'media', dpr: 1.40, stars: 200, twinkle: 0.75, sway: 0.22, shoot: 1, grass: 0.80, grassDetail: 0, fps: 55 },
+  { name: 'alta',  dpr: 1.80, stars: 240, twinkle: 0.80, sway: 0.28, shoot: 1, grass: 1.00, grassDetail: 1, fps: 60 }
 ];
 
 function applyQuality(level, doResize=true){
@@ -343,6 +344,7 @@ function applyQuality(level, doResize=true){
   CONFIG.sway = q.sway;
   CONFIG.shootingStars = q.shoot;
   CONFIG.grassAnimFactor = q.grass;
+  CONFIG.grassDetail = (typeof q.grassDetail === 'number') ? q.grassDetail : 1;
   CONFIG.maxFPS = q.fps;
   if(doResize) requestResize();
   saveSettings();
@@ -650,6 +652,31 @@ window.addEventListener('keydown', (e) => {
   let fieldCacheKey = '';
   let fieldBandCache = null;
   let fieldBandCacheKey = '';
+
+
+  let bouquetShadeCache = null;
+  let bouquetShadeKey = '';
+
+  function rebuildBouquetShadeCache(){
+    const key = `${W}x${H}@d${DPR.toFixed(2)}`;
+    if(bouquetShadeCache && bouquetShadeKey === key) return;
+    bouquetShadeKey = key;
+
+    const off = document.createElement('canvas');
+    off.width  = Math.floor(W * DPR);
+    off.height = Math.floor(H * DPR);
+    const g = off.getContext('2d', {alpha:true});
+    g.setTransform(DPR,0,0,DPR,0,0);
+
+    const hx = W*0.5, hy = H*0.78;
+    const hg = g.createRadialGradient(hx, hy, 10, hx, hy, Math.max(W,H)*0.40);
+    hg.addColorStop(0, 'rgba(0,0,0,0)');
+    hg.addColorStop(1, 'rgba(0,0,0,0.30)');
+    g.fillStyle = hg;
+    g.fillRect(0,0,W,H);
+
+    bouquetShadeCache = off;
+  }
 
   let bushCache = null;
   let bushCacheKey = '';
@@ -1018,39 +1045,61 @@ function drawSun(t){
     const gy = H * 0.74;
     const groundH = H - gy;
 
-    const tufts = clamp(Math.floor(W / 14), 42, 110);
-    const bladesBase = 10;
-    const bladesExtra = 10;
+    // Más pasto “arriba” para que no se vea una banda plana y el ramo no parezca flotando.
+    // También damos un poquito más de densidad cerca del centro (donde está el ramo).
+    const tufts = clamp(Math.floor(W / 14), 46, 120);
+    const bladesBase = 11;
+    const bladesExtra = 11;
+
+    const center = W * 0.5;
 
     for(let t=0;t<tufts;t++){
       const tx = (t + Math.random()*0.85) * (W / tufts);
+      const cx = Math.abs(tx - center) / Math.max(1, W*0.5);
+      const bonus = (cx < 0.35) ? 3 : 0; // densidad sutil extra al centro
+
       const tuftSeed = Math.random()*TAU;
-      const count = bladesBase + Math.floor(Math.random()*bladesExtra);
+      const count = bladesBase + Math.floor(Math.random()*bladesExtra) + bonus;
 
       for(let i=0;i<count;i++){
         const r = Math.random();
-        const layer = (r < 0.52) ? 0 : (r < 0.86 ? 1 : 2);
+        const layer = (r < 0.50) ? 0 : (r < 0.84 ? 1 : 2);
 
-        const baseBand = layer===2 ? 0.72 : (layer===1 ? 0.64 : 0.56);
-        const ty = gy + groundH*(baseBand + Math.random()*(1-baseBand));
+        // Antes el pasto “nacía” muy abajo. Ahora nace cerca del borde superior del suelo (gy)
+        // y se vuelve más alto/denso hacia abajo.
+        const baseBand = layer===2 ? 0.22 : (layer===1 ? 0.08 : 0.04);
+
+        // Distribución: capas 0/1 más cerca del horizonte, capa 2 más hacia abajo.
+        const u = (layer===2 ? Math.sqrt(Math.random()) : Math.pow(Math.random(), 1.55));
+        const ty = gy + groundH*(baseBand + u*(1-baseBand));
 
         const jitterX = (Math.random()-0.5) * (12 + layer*22);
         const jitterY = (Math.random()-0.5) * (6 + layer*10);
 
-        const hBase = layer===2 ? 84 : (layer===1 ? 62 : 44);
-        const hVar  = layer===2 ? 98 : (layer===1 ? 72 : 54);
+        const depth = clamp((ty - gy) / Math.max(1e-6, groundH), 0, 1);
+
+        const hBase = layer===2 ? 78 : (layer===1 ? 54 : 38);
+        const hVar  = layer===2 ? 96 : (layer===1 ? 70 : 50);
+
+        // Más corto cerca del horizonte (depth~0), más largo hacia abajo (depth~1)
+        const hScale = (layer===2 ? (0.70 + 0.60*depth) : (0.52 + 0.90*depth));
+        const h = (hBase + Math.random()*hVar) * hScale;
 
         const curlAmp = layer===2 ? 0.65 : (layer===1 ? 0.55 : 0.45);
+
+        const aBase = (layer===2 ? 0.18 : (layer===1 ? 0.14 : 0.11)) + Math.random()*(layer===2 ? 0.22 : (layer===1 ? 0.18 : 0.14));
+        // Más transparente arriba, más presente abajo
+        const a = aBase * (0.60 + 0.55*depth);
 
         grass.push({
           layer,
           x: tx + jitterX,
           y: ty + jitterY,
-          h: hBase + Math.random()*hVar,
+          h,
           w: (layer===2 ? 1.55 : (layer===1 ? 1.05 : 0.78)) + Math.random()*(layer===2 ? 1.55 : (layer===1 ? 1.10 : 0.90)),
           p: tuftSeed + i*0.52 + Math.random()*0.85,
           s: (layer===2 ? 0.72 : (layer===1 ? 0.90 : 0.66)) + Math.random()*(layer===2 ? 1.05 : (layer===1 ? 1.05 : 1.00)),
-          a: (layer===2 ? 0.18 : (layer===1 ? 0.14 : 0.11)) + Math.random()*(layer===2 ? 0.22 : (layer===1 ? 0.18 : 0.14)),
+          a,
           bend: (layer===2 ? 1.35 : (layer===1 ? 1.10 : 0.95)) + Math.random()*0.35,
           curl: (Math.random()-0.5) * curlAmp,
           thick: layer===2 ? (0.55 + Math.random()*0.85) : 0,
@@ -1074,8 +1123,8 @@ function drawSun(t){
 
     const gf = (CONFIG.grassAnimFactor ?? 1.0);
 
-    const max1 = clamp(Math.floor(W * 0.55 * gf), 200, 650);
-    const max2 = clamp(Math.floor(W * 0.40 * gf), 160, 520);
+    const max1 = clamp(Math.floor(W * 0.55 * gf), 220, 720);
+    const max2 = clamp(Math.floor(W * 0.40 * gf), 180, 600);
 
     grassAnim1.push(...g1.slice(0, max1));
     grassAnim2.push(...g2.slice(0, max2));
@@ -1092,13 +1141,15 @@ function drawSun(t){
     const gy = H * 0.74;
     const groundH = H - gy;
 
-    const gg = g.createLinearGradient(0, gy, 0, H);
-    gg.addColorStop(0, 'rgba(8,14,10,0.05)');
+    const gy0 = gy - 44; // entra suave arriba del suelo (evita “corte”)
+    const gg = g.createLinearGradient(0, gy0, 0, H);
+    gg.addColorStop(0, 'rgba(8,14,10,0.0)');
+    gg.addColorStop(0.10, 'rgba(8,14,10,0.04)');
     gg.addColorStop(0.22, 'rgba(16,44,28,0.28)');
     gg.addColorStop(0.66, 'rgba(8,22,16,0.60)');
     gg.addColorStop(1, 'rgba(0,0,0,0.78)');
     g.fillStyle = gg;
-    g.fillRect(0, gy, W, groundH);
+    g.fillRect(0, gy0, W, H - gy0);
 
     // variación de tono (parches) para evitar banda plana
     for(let i=0;i<8;i++){
@@ -1672,6 +1723,9 @@ function drawSun(t){
 
     const wind = windField(t) * 0.75;
 
+    const detail = (CONFIG.grassDetail ?? 1);
+    const step = detail ? 1 : 2;
+
     const drawBlade = (b, front) => {
       const xN = (b.x / W) - 0.5;
       const gWind = CONFIG.reduceMotion ? 0 : (Math.sin(t*0.00062)*0.92 + Math.sin(t*0.00114)*0.32);
@@ -1701,7 +1755,7 @@ function drawSun(t){
         ctx.globalAlpha = old;
       }
 
-      if(b.layer === 2){
+      if(detail && b.layer === 2){
         const w0 = b.w * (1.00 + b.thick);
         const w1 = Math.max(0.8, w0 * 0.16);
 
@@ -1715,13 +1769,8 @@ function drawSun(t){
         const px = -dy * inv;
         const py =  dx * inv;
 
-        const lg = ctx.createLinearGradient(x0, y0, x1, y1);
-        lg.addColorStop(0, 'rgba(10,55,32,0.88)');
-        lg.addColorStop(0.55, 'rgba(28,118,68,0.78)');
-        lg.addColorStop(1, 'rgba(115,220,150,0.56)');
-
         ctx.save();
-        ctx.fillStyle = lg;
+        ctx.fillStyle = front ? 'rgba(35,125,75,0.72)' : 'rgba(18,88,52,0.72)';
 
         ctx.beginPath();
         ctx.moveTo(t0x + px*w0, t0y + py*w0);
@@ -1763,14 +1812,16 @@ function drawSun(t){
     };
 
     ctx.save();
-    for(const b of grassAnim1){
+    for(let i=0;i<grassAnim1.length;i+=step){
+      const b = grassAnim1[i];
       ctx.globalAlpha = 0.16 + b.a*0.92;
       drawBlade(b, false);
     }
     ctx.restore();
 
     ctx.save();
-    for(const b of grassAnim2){
+    for(let i=0;i<grassAnim2.length;i+=step){
+      const b = grassAnim2[i];
       ctx.globalAlpha = 0.22 + b.a*0.98;
       drawBlade(b, true);
     }
@@ -1791,6 +1842,19 @@ function drawSun(t){
     ctx.fillRect(0, hzTop, W, hzBot - hzTop);
     ctx.restore();
 
+    // Sombra suave en la unión: elimina el “corte” y pega el ramo al suelo
+    ctx.save();
+    ctx.globalCompositeOperation = 'multiply';
+    const seamTop = gy - 18;
+    const seamBot = gy + 110;
+    const seam = ctx.createLinearGradient(0, seamTop, 0, seamBot);
+    seam.addColorStop(0, 'rgba(0,0,0,0)');
+    seam.addColorStop(0.45, 'rgba(0,0,0,0.16)');
+    seam.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = seam;
+    ctx.fillRect(0, seamTop, W, seamBot - seamTop);
+    ctx.restore();
+
     ctx.save();
     const thatchTop = gy + groundH*0.74;
     const tg = ctx.createLinearGradient(0, thatchTop, 0, H);
@@ -1799,7 +1863,7 @@ function drawSun(t){
     ctx.fillStyle = tg;
     ctx.fillRect(0, thatchTop, W, H - thatchTop);
     ctx.restore();
-    if(!(CONFIG.reduceMotion && !CONFIG.forceFlowerMotion)){
+    if(detail && !(CONFIG.reduceMotion && !CONFIG.forceFlowerMotion)){
       ctx.save();
       ctx.globalAlpha = 0.05;
       ctx.fillStyle = 'rgba(220,255,240,0.18)';
@@ -1988,6 +2052,225 @@ function drawSun(t){
   }
 
   // ===== Cielo (cache) =====
+
+
+  // --- Rendimiento: sprites y layer cacheado (evita sombras/gradientes por estrella cada frame) ---
+  let starSprite = null;
+  let starSpriteKey = '';
+  function rebuildStarSprite(){
+    const key = `d${Math.round(DPR*100)}`;
+    if(starSprite && starSpriteKey === key) return;
+    starSpriteKey = key;
+
+    const size = 40; // px “lógicos”
+    const off = document.createElement('canvas');
+    off.width = Math.floor(size * DPR);
+    off.height = Math.floor(size * DPR);
+    const g = off.getContext('2d', {alpha:true});
+    g.setTransform(DPR,0,0,DPR,0,0);
+
+    const cx = size/2, cy = size/2;
+    const R = size*0.44;
+
+    const rg = g.createRadialGradient(cx, cy, 0, cx, cy, R);
+    rg.addColorStop(0.0, 'rgba(255,255,255,0.95)');
+    rg.addColorStop(0.18,'rgba(255,255,255,0.38)');
+    rg.addColorStop(1.0, 'rgba(255,255,255,0.00)');
+    g.fillStyle = rg;
+    g.fillRect(0,0,size,size);
+
+    g.fillStyle = 'rgba(255,255,255,1)';
+    g.beginPath();
+    g.arc(cx, cy, size*0.075, 0, TAU);
+    g.fill();
+
+    g.globalAlpha = 0.40;
+    g.strokeStyle = 'rgba(255,255,255,0.90)';
+    g.lineWidth = 1;
+    const k = size*0.18;
+    g.beginPath();
+    g.moveTo(cx-k, cy); g.lineTo(cx+k, cy);
+    g.moveTo(cx, cy-k); g.lineTo(cx, cy+k);
+    g.stroke();
+    g.globalAlpha = 1;
+
+    starSprite = off;
+  }
+
+  function drawStarSprite(g, x, y, r, hue, flare, alpha){
+    if(!starSprite) rebuildStarSprite();
+    const base = 7.5;
+    const fMul = flare ? (1.12 + flare*0.35) : 1.0;
+    const sz = Math.max(2, r * base * fMul);
+
+    g.globalAlpha = alpha;
+    g.drawImage(starSprite, x - sz/2, y - sz/2, sz, sz);
+
+    if(hue){
+      g.save();
+      g.globalAlpha = alpha * 0.65;
+      g.fillStyle = `hsla(${hue}, 78%, 92%, 1)`;
+      g.beginPath();
+      g.arc(x, y, Math.max(0.9, r*0.55), 0, TAU);
+      g.fill();
+      g.restore();
+    }
+  }
+
+  // Caches: texto del cielo + estrellas (actualizados a 30fps máximo)
+  let skyDynCache = null, skyDynCtx = null, skyDynKey = '';
+  let skyDynLast = 0;
+  let textBackdropCache = null, textBackdropKey = '';
+
+  function rebuildTextBackdropCache(){
+    const key = `${W}x${H}@d${DPR.toFixed(2)}@t${CONFIG.starText}`;
+    if(textBackdropCache && textBackdropKey === key) return;
+    textBackdropKey = key;
+
+    const off = document.createElement('canvas');
+    off.width = Math.floor(W * DPR);
+    off.height = Math.floor(H * DPR);
+    const g = off.getContext('2d', {alpha:true});
+    g.setTransform(DPR,0,0,DPR,0,0);
+
+    const gx = W*0.5, gy = H*0.28;
+    const fontHint = clamp(Math.min(W,H)*0.09, 26, 58);
+
+    const bg = g.createRadialGradient(gx, gy, 0, gx, gy, fontHint*3.2);
+    bg.addColorStop(0.0, 'rgba(0,0,0,0.34)');
+    bg.addColorStop(0.55,'rgba(0,0,0,0.12)');
+    bg.addColorStop(1.0, 'rgba(0,0,0,0)');
+    g.fillStyle = bg;
+    g.fillRect(0,0,W,H);
+
+    const glow = g.createRadialGradient(gx, gy, 10, gx, gy, fontHint*7.5);
+    glow.addColorStop(0, 'rgba(210,230,255,0.16)');
+    glow.addColorStop(1, 'rgba(210,230,255,0)');
+    g.fillStyle = glow;
+    g.fillRect(0,0,W,H);
+
+    textBackdropCache = off;
+  }
+
+  function rebuildSkyDynCache(){
+    const q = CONFIG.quality || 2;
+    const key = `${W}x${H}@d${DPR.toFixed(2)}@q${q}`;
+    if(skyDynCache && skyDynKey === key) return;
+    skyDynKey = key;
+
+    const off = document.createElement('canvas');
+    off.width = Math.floor(W * DPR);
+    off.height = Math.floor(H * DPR);
+    const g = off.getContext('2d', {alpha:true});
+    g.setTransform(DPR,0,0,DPR,0,0);
+
+    skyDynCache = off;
+    skyDynCtx = g;
+    skyDynLast = 0;
+
+    rebuildStarSprite();
+    rebuildTextBackdropCache();
+  }
+
+  function renderSkyDynamic(t){
+    if(!skyDynCtx || !skyDynCache) return;
+
+    const fps = clamp(CONFIG.maxFPS || 60, 24, 60);
+    const minStep = 1000 / fps;
+    if(skyDynLast && (t - skyDynLast) < minStep) return;
+    skyDynLast = t;
+
+    const g = skyDynCtx;
+    g.setTransform(DPR,0,0,DPR,0,0);
+    g.clearRect(0,0,W,H);
+
+    // wisps dinámicos, pero en cache (30fps)
+    g.save();
+    g.globalCompositeOperation = 'screen';
+    const tt = t*0.000016;
+    g.globalAlpha = 0.032;
+    const baseAlphaWisp = g.globalAlpha;
+    for(let i=0;i<3;i++){
+      const x = (W*(0.18 + i*0.32) + (Math.sin(tt*2.6 + i)*W*0.08)) % (W+160) - 80;
+      const y = H*(0.05 + 0.10*Math.abs(Math.sin(tt*1.9 + i*1.4)));
+      const w = Math.min(W,H)*(0.12 + 0.03*Math.sin(tt*2.0 + i));
+      const h = w*0.42;
+      const fade = clamp(1 - (y - H*0.16)/(H*0.10), 0, 1);
+      if(fade <= 0.01) continue;
+      g.globalAlpha = baseAlphaWisp * fade;
+      const grd = g.createRadialGradient(x, y, w*0.08, x, y, w*0.72);
+      grd.addColorStop(0.0, 'rgba(230,245,255,0.14)');
+      grd.addColorStop(0.6, 'rgba(150,205,255,0.06)');
+      grd.addColorStop(1.0, 'rgba(60,95,150,0.00)');
+      g.fillStyle = grd;
+      g.beginPath();
+      g.ellipse(x, y, w, h, 0, 0, TAU);
+      g.fill();
+    }
+    g.restore();
+
+    rebuildTextBackdropCache();
+
+    if(textBackdropCache){
+      g.drawImage(textBackdropCache, 0, 0, textBackdropCache.width / DPR, textBackdropCache.height / DPR);
+    }
+
+    // Texto hecho con estrellas (sprite, sin shadowBlur por partícula)
+    if(textStars.length){
+      g.save();
+      g.globalCompositeOperation = 'screen';
+
+      for(const st of textStars){
+        const tw = CONFIG.reduceMotion ? 1 : (0.78 + 0.22*Math.sin(t*0.0012*st.s + st.p));
+        const alpha = clamp(st.a * (0.95 + 0.85*tw), 0, 1);
+
+        const x = st.x*W;
+        const y = st.y*H;
+
+        drawStarSprite(g, x, y, st.r, st.hue, st.flare, alpha);
+      }
+
+      g.restore();
+    }
+
+    // Estrellas + constelaciones
+    g.save();
+    g.globalCompositeOperation = 'screen';
+    g.lineCap = 'round';
+    g.lineJoin = 'round';
+    g.strokeStyle = 'rgba(200,220,255,1)';
+
+    for(const L of starLinks){
+      const a = stars[L.i];
+      const b = stars[L.j];
+      starPos(a, t, _spA);
+      starPos(b, t, _spB);
+      if(_spA.y > H*0.62 || _spB.y > H*0.62) continue;
+      g.globalAlpha = L.a;
+      g.lineWidth = 1;
+      g.beginPath();
+      g.moveTo(_spA.x, _spA.y);
+      g.lineTo(_spB.x, _spB.y);
+      g.stroke();
+    }
+
+    for(const st of stars){
+      const tw = CONFIG.reduceMotion ? 1 : (0.72 + 0.28*Math.sin(t*0.0011*st.s + st.p)) * (0.85 + st.tw*0.30);
+      const alpha = st.a * (0.72 + 0.58*tw) * CONFIG.twinkle;
+
+      starPos(st, t, _spA);
+      const x = _spA.x;
+      const y = _spA.y;
+
+      drawStarSprite(g, x, y, st.r, st.hue, st.flare, alpha);
+    }
+
+    g.restore();
+
+    g.globalCompositeOperation = 'source-over';
+    g.globalAlpha = 1;
+  }
+
 
   const _spA = {x:0,y:0};
   const _spB = {x:0,y:0};
@@ -2638,35 +2921,8 @@ const neb = (x,y,r, a, cr,cg,cb) => {
 
 
   function drawSky(t){
-
     if(skyCache){
       ctx.drawImage(skyCache, 0, 0, skyCache.width / DPR, skyCache.height / DPR);
-
-      // wisps dinámicos (muy ligeros): pocas nubes altas, súper sutiles
-      ctx.save();
-      ctx.globalCompositeOperation = 'screen';
-      const tt = t*0.000016;
-      ctx.globalAlpha = 0.032;
-      const baseAlphaWisp = ctx.globalAlpha;
-      for(let i=0;i<3;i++){
-        const x = (W*(0.18 + i*0.32) + (Math.sin(tt*2.6 + i)*W*0.08)) % (W+160) - 80;
-        const y = H*(0.05 + 0.10*Math.abs(Math.sin(tt*1.9 + i*1.4))); // 0.05..0.15
-        const w = Math.min(W,H)*(0.12 + 0.03*Math.sin(tt*2.0 + i));
-        const h = w*0.42;
-        // evita que suba demasiado hacia el mensaje
-        const fade = clamp(1 - (y - H*0.16)/(H*0.10), 0, 1);
-        if(fade <= 0.01) continue;
-        ctx.globalAlpha = baseAlphaWisp * fade;
-        const grd = ctx.createRadialGradient(x, y, w*0.08, x, y, w*0.72);
-        grd.addColorStop(0.0, 'rgba(230,245,255,0.14)');
-        grd.addColorStop(0.6, 'rgba(150,205,255,0.06)');
-        grd.addColorStop(1.0, 'rgba(60,95,150,0.00)');
-        ctx.fillStyle = grd;
-        ctx.beginPath();
-        ctx.ellipse(x, y, w, h, 0, 0, TAU);
-        ctx.fill();
-      }
-      ctx.restore();
     }else{
       const sky = ctx.createLinearGradient(0, 0, 0, H);
       sky.addColorStop(0, 'rgba(12,14,46,1)');
@@ -2674,83 +2930,33 @@ const neb = (x,y,r, a, cr,cg,cb) => {
       sky.addColorStop(1, 'rgba(3,3,10,1)');
       ctx.fillStyle = sky;
       ctx.fillRect(0,0,W,H);
-
     }
 
-    // Sol siempre encima del fondo (aunque el cielo esté cacheado)
-    drawSun(t);
-
+    // Reduce-motion: usa overlay estático (muy barato)
     if(CONFIG.reduceMotion && staticSkyOverlayCache){
       ctx.drawImage(staticSkyOverlayCache, 0, 0, staticSkyOverlayCache.width / DPR, staticSkyOverlayCache.height / DPR);
       ctx.shadowBlur = 0;
       ctx.globalAlpha = 1;
       ctx.globalCompositeOperation = 'source-over';
-      // no arrancamos nuevas fugaces en reduce motion
+
+      drawMoon(t);
       if(shooting.active) drawShootingStar(t);
       return;
     }
 
-    drawStarText(t);
-
-    ctx.save();
-    ctx.globalCompositeOperation = 'screen';
-
-    drawConstellations(t);
-
-    for(const st of stars){
-      const tw = CONFIG.reduceMotion ? 1 : (0.72 + 0.28*Math.sin(t*0.0011*st.s + st.p)) * (0.85 + st.tw*0.30);
-      const alpha = st.a * (0.72 + 0.58*tw) * CONFIG.twinkle;
-
-      starPos(st, t, _spA);
-      const x = _spA.x;
-      const y = _spA.y;
-
-      ctx.globalAlpha = alpha;
-
-      if(st.r < 1.15){
-        ctx.shadowBlur = 0;
-      }else{
-        ctx.shadowColor = 'rgba(255,255,255,0.55)';
-        ctx.shadowBlur = 8 + st.r*3.2;
-      }
-
-      ctx.fillStyle = st.hue ? `hsla(${st.hue}, 80%, 90%, 1)` : 'rgba(255,255,255,1)';
-      ctx.beginPath();
-      ctx.arc(x, y, st.r, 0, TAU);
-      ctx.fill();
-
-      if(st.flare){
-        ctx.save();
-        ctx.globalCompositeOperation = 'lighter';
-        ctx.shadowBlur = 0;
-
-        ctx.globalAlpha = alpha * 0.42 * st.flare;
-        const rg = ctx.createRadialGradient(x,y, 0, x,y, 18 + st.r*11);
-        rg.addColorStop(0, 'rgba(255,255,255,0.20)');
-        rg.addColorStop(0.45, 'rgba(255,255,255,0.07)');
-        rg.addColorStop(1, 'rgba(255,255,255,0)');
-        ctx.fillStyle = rg;
-        ctx.beginPath();
-        ctx.arc(x,y, 18 + st.r*11, 0, TAU);
-        ctx.fill();
-
-        ctx.globalAlpha = alpha * 0.28 * st.flare;
-        ctx.strokeStyle = 'rgba(255,255,255,0.55)';
-        ctx.lineWidth = 1;
-        const k = 3.6 + st.r*1.6;
-        ctx.beginPath();
-        ctx.moveTo(x-k, y); ctx.lineTo(x+k, y);
-        ctx.moveTo(x, y-k); ctx.lineTo(x, y+k);
-        ctx.stroke();
-        ctx.restore();
-      }
+    // Layer dinámico cacheado (30fps): estrellas + constelaciones + texto + wisps
+    rebuildSkyDynCache();
+    renderSkyDynamic(t);
+    if(skyDynCache){
+      ctx.drawImage(skyDynCache, 0, 0, skyDynCache.width / DPR, skyDynCache.height / DPR);
     }
-    ctx.restore();
 
     ctx.shadowBlur = 0;
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'source-over';
 
+    // Luna y fugaces por encima
+    drawMoon(t);
     maybeStartShootingStar(t);
     drawShootingStar(t);
   }
@@ -3079,6 +3285,28 @@ const neb = (x,y,r, a, cr,cg,cb) => {
       }
       c2.restore();
 
+      // Vena central (detalle suave)
+      c2.save();
+      c2.globalAlpha = alpha * 0.06;
+      c2.strokeStyle = 'rgba(255,255,255,0.28)';
+      c2.lineWidth = Math.max(0.7, wid*0.05);
+      c2.beginPath();
+      c2.moveTo(0, -len*0.04);
+      c2.quadraticCurveTo(wid*0.10, -len*0.46, 0, tipY*0.92);
+      c2.stroke();
+      c2.restore();
+
+      // Sombra de vena (lado opuesto)
+      c2.save();
+      c2.globalAlpha = alpha * 0.04;
+      c2.strokeStyle = 'rgba(0,0,0,0.20)';
+      c2.lineWidth = Math.max(0.7, wid*0.05);
+      c2.beginPath();
+      c2.moveTo(-wid*0.06, -len*0.06);
+      c2.quadraticCurveTo(-wid*0.12, -len*0.52, -wid*0.03, tipY*0.90);
+      c2.stroke();
+      c2.restore();
+
       // Highlight de punta
       c2.save();
       c2.globalCompositeOperation = 'screen';
@@ -3102,20 +3330,20 @@ const neb = (x,y,r, a, cr,cg,cb) => {
     };
 
     // Capas
-    const totalOuter = 38 + (rnd()*9|0); // 38..46
+    const totalOuter = 42 + (rnd()*11|0); // 42..52
     const totalMid   = Math.round(totalOuter * 0.78);
     const totalInner = Math.round(totalOuter * 0.56);
     const totalBack  = Math.round(totalOuter * 0.62);
     const totalCrown = 20 + (rnd()*7|0); // 20..26
 
-    const baseOuterLen = h*(0.82 + 0.05*rnd()) * (0.70 + 0.30*op);
-    const baseOuterWid = w*(0.135 + 0.022*rnd());
+    const baseOuterLen = h*(0.86 + 0.06*rnd()) * (0.70 + 0.30*op);
+    const baseOuterWid = w*(0.124 + 0.018*rnd());
 
-    const baseMidLen   = h*(0.64 + 0.04*rnd()) * (0.70 + 0.30*op);
-    const baseMidWid   = w*(0.112 + 0.018*rnd());
+    const baseMidLen   = h*(0.67 + 0.05*rnd()) * (0.70 + 0.30*op);
+    const baseMidWid   = w*(0.104 + 0.016*rnd());
 
-    const baseInLen    = h*(0.48 + 0.03*rnd()) * (0.70 + 0.30*op);
-    const baseInWid    = w*(0.088 + 0.012*rnd());
+    const baseInLen    = h*(0.50 + 0.04*rnd()) * (0.70 + 0.30*op);
+    const baseInWid    = w*(0.082 + 0.012*rnd());
 
     const baseCrLen    = h*(0.30 + 0.03*rnd()) * (0.75 + 0.25*op);
     const baseCrWid    = w*(0.072 + 0.011*rnd());
@@ -3231,6 +3459,20 @@ const neb = (x,y,r, a, cr,cg,cb) => {
     const discR = w*(0.235 + 0.02*rnd());
     const discGrow = (0.25 + 0.75*clamp(appear*1.25, 0, 1));
 
+    // Oclusión donde nacen pétalos (profundidad alrededor del disco)
+    c2.save();
+    c2.globalCompositeOperation = 'multiply';
+    c2.globalAlpha = 0.22 * discGrow;
+    const occ = c2.createRadialGradient(0, centerY, discR*0.35, 0, centerY, discR*1.55);
+    occ.addColorStop(0, 'rgba(0,0,0,0)');
+    occ.addColorStop(0.55, 'rgba(0,0,0,0.32)');
+    occ.addColorStop(1, 'rgba(0,0,0,0)');
+    c2.fillStyle = occ;
+    c2.beginPath();
+    c2.arc(0, centerY, discR*1.65, 0, TAU);
+    c2.fill();
+    c2.restore();
+
     // Sombra de “cuenco”
     c2.save();
     c2.globalAlpha = 0.18 * discGrow;
@@ -3260,6 +3502,29 @@ const neb = (x,y,r, a, cr,cg,cb) => {
     c2.beginPath();
     c2.ellipse(0, centerY, discR*1.07*discGrow, discR*0.94*discGrow, 0, 0, TAU);
     c2.stroke();
+
+    // Textura de celdas (súper sutil) dentro del disco
+    c2.save();
+    c2.beginPath();
+    c2.ellipse(0, centerY, discR*1.12*discGrow, discR*1.02*discGrow, 0, 0, TAU);
+    c2.clip();
+    const cells = 56;
+    for(let i=0;i<cells;i++){
+      const a = rnd()*TAU;
+      const rr = Math.sqrt(rnd())*discR*1.02*discGrow;
+      const x = Math.cos(a)*rr*0.78;
+      const y = centerY + Math.sin(a)*rr*0.58;
+      const r1 = discR*(0.020 + 0.018*rnd())*discGrow;
+
+      c2.globalAlpha = 0.06 + 0.05*rnd();
+      c2.fillStyle = 'rgba(0,0,0,0.35)';
+      c2.beginPath(); c2.arc(x, y, r1, 0, TAU); c2.fill();
+
+      c2.globalAlpha *= 0.55;
+      c2.fillStyle = 'rgba(255,255,255,0.22)';
+      c2.beginPath(); c2.arc(x - r1*0.25, y - r1*0.25, r1*0.55, 0, TAU); c2.fill();
+    }
+    c2.restore();
 
     // Florets tubulares (transición pétalo-centro)
     const florets = 44;
@@ -3299,9 +3564,45 @@ const neb = (x,y,r, a, cr,cg,cb) => {
       c2.restore();
     }
 
+    // Florets internos (más pequeños) para densidad
+    const florets2 = 28;
+    for(let i=0;i<florets2;i++){
+      const a = (i/florets2)*TAU + rnd()*0.10 + 0.02;
+      const rr = discR*(0.70 + 0.08*rnd())*discGrow;
+      const x = Math.cos(a)*rr*0.74;
+      const y = centerY + Math.sin(a)*rr*0.52;
+
+      c2.save();
+      c2.translate(x, y);
+      c2.rotate(a + Math.PI*0.5);
+
+      const L = discR*(0.16 + 0.08*rnd())*discGrow;
+      const Wd = discR*(0.055 + 0.025*rnd())*discGrow;
+
+      const gg = c2.createLinearGradient(0, 0, 0, -L);
+      gg.addColorStop(0, 'rgba(70,34,22,0.70)');
+      gg.addColorStop(0.55, 'rgba(190,110,62,0.78)');
+      gg.addColorStop(1, 'rgba(255,228,145,0.70)');
+
+      c2.globalAlpha = 0.18 + 0.26*rnd();
+      c2.fillStyle = gg;
+      c2.beginPath();
+      c2.ellipse(0, -L*0.55, Wd*0.55, L*0.55, 0, 0, TAU);
+      c2.fill();
+
+      c2.globalCompositeOperation = 'screen';
+      c2.globalAlpha *= 0.26;
+      c2.fillStyle = 'rgba(255,255,255,0.16)';
+      c2.beginPath();
+      c2.ellipse(0, -L*0.85, Wd*0.33, Wd*0.24, 0, 0, TAU);
+      c2.fill();
+
+      c2.restore();
+    }
+
     // Polen: espiral + granos
     c2.globalAlpha *= 0.78;
-    const grains = 112;
+    const grains = 150;
     for(let k=0;k<grains;k++){
       const t = (k/(grains-1));
       const a = t*TAU*2.25 + rnd()*0.25;
@@ -3315,6 +3616,18 @@ const neb = (x,y,r, a, cr,cg,cb) => {
       c2.beginPath();
       c2.ellipse(x, y, r0*1.25, r0, rnd()*TAU, 0, TAU);
       c2.fill();
+
+      // chispas doradas ocasionales
+      if(k%7===0){
+        c2.save();
+        c2.globalCompositeOperation = 'screen';
+        c2.globalAlpha = 0.06 + 0.06*rnd();
+        c2.fillStyle = 'rgba(255,220,140,0.22)';
+        c2.beginPath();
+        c2.arc(x + r0*0.15, y - r0*0.15, r0*(0.55 + 0.45*rnd()), 0, TAU);
+        c2.fill();
+        c2.restore();
+      }
 
       if(k%4===0){
         c2.globalCompositeOperation = 'screen';
@@ -3683,14 +3996,20 @@ bouquet = DESCS.map((p,i)=>{
   function drawBouquet(t){
     drawGrass(t);
 
-    const hx = W*0.5, hy = H*0.78;
-    const hg = ctx.createRadialGradient(hx, hy, 10, hx, hy, Math.max(W,H)*0.40);
-    hg.addColorStop(0, 'rgba(0,0,0,0)');
-    hg.addColorStop(1, 'rgba(0,0,0,0.30)');
-    ctx.fillStyle = hg;
-    ctx.fillRect(0,0,W,H);
+        // sombra suave del primer plano (cacheado)
+    rebuildBouquetShadeCache();
+    if(bouquetShadeCache){
+      ctx.drawImage(bouquetShadeCache, 0, 0, bouquetShadeCache.width / DPR, bouquetShadeCache.height / DPR);
+    }else{
+      const hx = W*0.5, hy = H*0.78;
+      const hg = ctx.createRadialGradient(hx, hy, 10, hx, hy, Math.max(W,H)*0.40);
+      hg.addColorStop(0, 'rgba(0,0,0,0)');
+      hg.addColorStop(1, 'rgba(0,0,0,0.30)');
+      ctx.fillStyle = hg;
+      ctx.fillRect(0,0,W,H);
+    }
 
-    // Campo de flores al fondo (detrás del arbusto y por encima del suelo)
+// Campo de flores al fondo (detrás del arbusto y por encima del suelo)
     rebuildFieldBandCache();
     if(fieldBandCache){
       ctx.save();
@@ -3748,7 +4067,10 @@ const STEM = {r:55,g:155,b:92};
 
     const gw = windField(t) * CONFIG.sway;
 
-    const order = bouquet.slice().sort((a,b)=> (b.height - a.height) || (a.x - b.x));
+    const order = drawBouquet._order || (drawBouquet._order = []);
+    order.length = bouquet.length;
+    for(let i=0;i<bouquet.length;i++) order[i] = bouquet[i];
+    order.sort((a,b)=> (b.height - a.height) || (a.x - b.x));
 
     const introActive = INTRO.active;
     const master = introActive ? clamp((t - INTRO.t0) / INTRO.dur, 0, 1) : 1;
@@ -3922,7 +4244,11 @@ ctx.restore();
     ctx.fillRect(0, fogTop, W, H - fogTop);
     ctx.restore();
 
-    const bloomOrder = order.slice().sort((a,b)=>a.bloomY - b.bloomY);
+    const bloomOrder = drawBouquet._bloom || (drawBouquet._bloom = []);
+
+    bloomOrder.length = order.length;
+    for(let i=0;i<order.length;i++) bloomOrder[i] = order[i];
+    bloomOrder.sort((a,b)=>a.bloomY - b.bloomY);
 
 for(const f of bloomOrder){
       const bu = (f._bloomU ?? 1);
@@ -4067,13 +4393,15 @@ for(const f of bloomOrder){
     rebuildSkyCache();
     rebuildMoonCache();
     rebuildStaticSkyOverlayCache();
-
+    rebuildSkyDynCache();
 
     rebuildFieldCache();
     seedBouquet();
     seedSoil();
     seedGrass();
     rebuildGroundCache();
+
+    rebuildBouquetShadeCache();
 
     for(const f of bouquet){
       getBloomSprite(f.bw, f.bh, f.col, f.seed, f.open);
