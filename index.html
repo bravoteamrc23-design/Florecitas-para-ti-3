@@ -55,7 +55,7 @@
   </style>
 </head>
 <body>
-  <canvas id="c" role="img" aria-label="Animación de un ramo de gerberas violetas bajo un cielo estrellado con nubes, luna y la constelación de Capricornio"></canvas>
+  <canvas id="c" role="img" aria-label="Animación de un ramo de gerberas azul turquesa bajo un cielo estrellado con nubes, luna y la constelación de Capricornio"></canvas>
   <script>
 (() => {
   'use strict';
@@ -104,14 +104,14 @@
 
   // Color aleatorio pero estable por semilla (así cada gerbera "nace" con su propio tono)
   const colorFromSeed = (seed)=>{
-    // Rosado (con variación sutil por flor para que se vea natural).
+    // Azul turquesa (con variación sutil por flor para que se vea natural).
     let s = (seed >>> 0) || 1;
     const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0, s / 4294967296);
 
-    // Hue rosado ~ 325-350, saturación media-alta, luz un poco más alta.
-    const h   = 338 + (rnd()*24 - 12);  // 326..350
-    const sat = 62 + rnd()*18;          // 62..80
-    const lit = 58 + rnd()*14;          // 58..72
+    // Hue turquesa ~ 175-200, saturación alta, luz media.
+    const h   = 188 + (rnd()*26 - 13);  // 175..201
+    const sat = 70 + rnd()*20;          // 70..90
+    const lit = 52 + rnd()*16;          // 52..68
     return hslToRgb(h, sat, lit);
   };
 
@@ -247,7 +247,7 @@ function restartIntro(){
     crownStrength: 0.008,
 
     // Texto “en estrellas”
-    starText: 'every day, you look so beatiful <3',
+    starText: 'todos los días te ves preciosa <3',
     starTextStrength: 0.95    ,
 
     // Rendimiento / calidad
@@ -4019,29 +4019,58 @@ bouquet = DESCS.map((p,i)=>{
       ctx.restore();
     }
 
-// Arbusto: base cacheada + borde suave (sin tapar el campo ni borrar el césped)
+// Arbusto: overlay suave (sin cortes visibles)
     rebuildBushCache();
     if(bushCache){
       const bushTop = H*0.78;
 
-      // Pasada 1: franja suave arriba (fade visual, sin composiciones destructivas)
+      // “Blend” vertical para que el arbusto no meta una línea dura al cambiar de densidad
+      const blend = Math.min(140, H*0.10);
+      const y0 = bushTop - blend;
+      const y1 = bushTop + blend*0.35;
+
+      // Pasada A: velo superior (muy suave)
       ctx.save();
-      ctx.globalAlpha *= 0.22;
+      ctx.globalAlpha *= 0.12;
       ctx.beginPath();
-      ctx.rect(0, bushTop - H*0.06, W, H*0.14);
+      ctx.rect(0, y0, W, blend*1.25);
       ctx.clip();
       ctx.drawImage(bushCache, 0, 0, bushCache.width / DPR, bushCache.height / DPR);
       ctx.restore();
 
-      // Pasada 2: base más densa, recortada hacia abajo
+      // Pasada B: cuerpo medio (entra antes del top para suavizar transición)
       ctx.save();
-      ctx.globalAlpha *= 0.62;
+      ctx.globalAlpha *= 0.32;
       ctx.beginPath();
-      ctx.rect(0, bushTop, W, H - bushTop);
+      ctx.rect(0, y0 + blend*0.25, W, H - (y0 + blend*0.25));
       ctx.clip();
       ctx.drawImage(bushCache, 0, 0, bushCache.width / DPR, bushCache.height / DPR);
       ctx.restore();
+
+      // Pasada C: base más densa (empieza más abajo para que no haya “corte”)
+      ctx.save();
+      ctx.globalAlpha *= 0.55;
+      ctx.beginPath();
+      ctx.rect(0, y1, W, H - y1);
+      ctx.clip();
+      ctx.drawImage(bushCache, 0, 0, bushCache.width / DPR, bushCache.height / DPR);
+      ctx.restore();
+
+      // Bruma fina encima del borde: termina de esconder cualquier bandita residual
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      const fogTop = y0 - 18;
+      const fogBot = y1 + 26;
+      const fog = ctx.createLinearGradient(0, fogTop, 0, fogBot);
+      fog.addColorStop(0, 'rgba(120,170,255,0)');
+      fog.addColorStop(0.40, 'rgba(120,170,255,0.05)');
+      fog.addColorStop(0.75, 'rgba(90,140,220,0.03)');
+      fog.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = fog;
+      ctx.fillRect(0, fogTop, W, fogBot - fogTop);
+      ctx.restore();
     }
+
 
     // Brillo animado leve
     // Brillo animado leve (como “respiración” del follaje)
