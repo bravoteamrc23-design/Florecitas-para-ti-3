@@ -4,11 +4,9 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>Ramo de gerberas (noche)</title>
-
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Dancing+Script:wght@500;600;700&display=swap" rel="stylesheet">
-
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600;700&family=Cormorant+Garamond:wght@500;600&display=swap" rel="stylesheet" />
   <style>
     :root{
       --bg1:#070814;
@@ -58,184 +56,506 @@
   
     #hud{display:none !important;}
   
-
-    
-    /* Intro screen: shown before starting the animation (tap/click to begin)
-       "Carta" style: handwriting font + romantic paper background. */
-    canvas{opacity:0; transform:scale(1.01); filter:blur(1px); transition: opacity 1400ms cubic-bezier(0.2,0.8,0.2,1), transform 1400ms cubic-bezier(0.2,0.8,0.2,1), filter 1400ms cubic-bezier(0.2,0.8,0.2,1);}
-    body.scene-ready canvas{opacity:1; transform:scale(1); filter:blur(0px);}
+    /* ===== Intro "carta de amor" (estilo sobre + rosa) ===== */
+    canvas{ opacity:0; filter: blur(8px) saturate(0.90); transition: opacity 1200ms ease, filter 1200ms ease; }
+    canvas.show{ opacity:1; filter:none; }
 
     #introScreen{
-      position:fixed;
-      inset:0;
-      z-index:5;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      padding:24px;
-      cursor:pointer;
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 22px;
+      overflow: hidden;
       background:
-        radial-gradient(980px 720px at 50% 8%, rgba(255,204,224,0.88), rgba(255,204,224,0.0) 62%),
-        radial-gradient(840px 620px at 18% 90%, rgba(255,176,206,0.62), rgba(255,176,206,0.0) 64%),
-        radial-gradient(760px 560px at 85% 75%, rgba(214,180,255,0.30), rgba(214,180,255,0.0) 66%),
-        linear-gradient(180deg, rgba(255,252,248,0.99), rgba(255,236,246,0.97));
-      transition: opacity 1200ms cubic-bezier(0.2,0.8,0.2,1), transform 1200ms cubic-bezier(0.2,0.8,0.2,1), filter 1200ms cubic-bezier(0.2,0.8,0.2,1);
-      user-select:none;
-      -webkit-user-select:none;
+        radial-gradient(1200px 900px at 50% 20%, rgba(255,223,200,0.25), rgba(0,0,0,0) 62%),
+        radial-gradient(900px 700px at 20% 30%, rgba(255,190,170,0.18), rgba(0,0,0,0) 60%),
+        radial-gradient(900px 700px at 80% 65%, rgba(120,70,55,0.28), rgba(0,0,0,0) 62%),
+        linear-gradient(180deg, #4a2b20 0%, #2d1813 55%, #1a0f10 100%);
       touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
     }
 
-    /* Subtle "paper lines" texture */
+    /* textura suave + viñeta */
     #introScreen::before{
       content:"";
       position:absolute;
       inset:0;
       background:
-        repeating-linear-gradient(
-          0deg,
-          rgba(160,120,140,0.06) 0px,
-          rgba(160,120,140,0.06) 1px,
-          rgba(0,0,0,0.0) 10px,
-          rgba(0,0,0,0.0) 22px
-        );
-      opacity:0.55;
-      mix-blend-mode:multiply;
+        radial-gradient(1200px 900px at 50% 15%, rgba(0,0,0,0), rgba(0,0,0,0.42) 72%),
+        repeating-linear-gradient(12deg, rgba(255,255,255,0.035) 0 2px, rgba(0,0,0,0) 2px 7px);
+      opacity: 0.55;
       pointer-events:none;
+      mix-blend-mode: soft-light;
     }
 
-    /* Tiny hearts watermark pattern */
+    /* grano finito */
     #introScreen::after{
       content:"";
       position:absolute;
-      inset:-40px;
-      background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%3Cpath%20d%3D%22M32%2054s-19-11.4-26-23.5C-0.4%2017.8%208.1%208.5%2018.4%209.2c6.2.4%2010.5%204.1%2013.6%208.4%203.1-4.3%207.4-8%2013.6-8.4%2010.3-.7%2018.8%208.6%2012.4%2021.3C51%2042.6%2032%2054%2032%2054z%22%0A%20%20%20%20%20%20%20%20fill%3D%22%23d65a86%22%20fill-opacity%3D%220.14%22/%3E%0A%3C/svg%3E");
-      background-size: 86px 86px;
-      background-repeat: repeat;
-      opacity:0.40;
-      transform: rotate(-6deg);
+      inset:0;
+      background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20width%3D%27120%27%20height%3D%27120%27%20viewBox%3D%270%200%20120%20120%27%3E%3Cfilter%20id%3D%27n%27%3E%3CfeTurbulence%20type%3D%27fractalNoise%27%20baseFrequency%3D%270.9%27%20numOctaves%3D%272%27%20stitchTiles%3D%27stitch%27/%3E%3C/filter%3E%3Crect%20width%3D%27120%27%20height%3D%27120%27%20filter%3D%27url%28%23n%29%27%20opacity%3D%270.22%27/%3E%3C/svg%3E");
+      background-size: 140px 140px;
+      opacity: 0.18;
       pointer-events:none;
-      mix-blend-mode:multiply;
+      mix-blend-mode: overlay;
+    }
+
+    #loveWrap{
+      position: relative;
+      width: min(720px, 100%);
+      height: min(86vh, 900px);
+      max-height: 900px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      filter: drop-shadow(0 22px 46px rgba(0,0,0,0.35));
+    }
+
+    /* sobre */
+    #envelope{
+      position:absolute;
+      bottom: 8%;
+      width: 94%;
+      height: 44%;
+      border-radius: 18px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.40), rgba(0,0,0,0) 42%),
+        linear-gradient(180deg, #d8c2ab, #b79b84);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.55),
+        inset 0 -18px 30px rgba(0,0,0,0.18),
+        0 30px 70px rgba(0,0,0,0.30);
+      transform: rotate(-4deg);
+      overflow: hidden;
+    }
+    #envelope::before{
+      content:"";
+      position:absolute;
+      left:0; right:0; top:0;
+      height: 64%;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.28), rgba(0,0,0,0) 60%),
+        linear-gradient(180deg, #dec9b4, #c4a991);
+      clip-path: polygon(0 0, 100% 0, 50% 76%);
+      opacity: 0.55;
+      filter: blur(0.2px);
+    }
+    #envelope::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      border-radius: 18px;
+      box-shadow: inset 0 0 0 1px rgba(60,35,28,0.20);
+      pointer-events:none;
+    }
+
+    /* carta */
+    #letter{
+      position:absolute;
+      top: 6%;
+      width: min(560px, 86%);
+      height: min(680px, 78%);
+      transform: rotate(2deg);
+      z-index: 3;
+      animation: floatPaper 5.8s ease-in-out infinite;
+    }
+
+    #letter .paper{
+      position: relative;
+      width: 100%;
+      height: 100%;
+      border-radius: 10px;
+      overflow: hidden;
+      background:
+        radial-gradient(260px 240px at 14% 18%, rgba(150,100,70,0.16), rgba(0,0,0,0) 60%),
+        radial-gradient(340px 300px at 82% 12%, rgba(150,100,70,0.14), rgba(0,0,0,0) 60%),
+        radial-gradient(520px 380px at 50% 88%, rgba(90,55,40,0.18), rgba(0,0,0,0) 72%),
+        linear-gradient(180deg, #f7ead4 0%, #ecd4b4 56%, #e5c7a5 100%);
+      border: 1px solid rgba(60,35,28,0.22);
+      box-shadow:
+        0 26px 70px rgba(0,0,0,0.24),
+        inset 0 1px 0 rgba(255,255,255,0.72);
+    }
+    /* fibras del papel + líneas suaves */
+    #letter .paper::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        repeating-linear-gradient(0deg, rgba(90,55,40,0.045) 0 1px, rgba(0,0,0,0) 1px 28px),
+        radial-gradient(240px 170px at 18% 18%, rgba(110,70,50,0.18), rgba(0,0,0,0) 65%),
+        radial-gradient(260px 200px at 80% 12%, rgba(110,70,50,0.14), rgba(0,0,0,0) 68%),
+        radial-gradient(420px 260px at 50% 92%, rgba(80,50,38,0.18), rgba(0,0,0,0) 72%);
+      opacity: 0.35;
+      mix-blend-mode: multiply;
+      pointer-events:none;
+    }
+    #letter .paper::after{
+      content:"";
+      position:absolute;
+      inset:-20px;
+      background:
+        repeating-linear-gradient(25deg, rgba(255,255,255,0.05) 0 2px, rgba(0,0,0,0) 2px 10px);
+      opacity: 0.35;
+      mix-blend-mode: soft-light;
+      pointer-events:none;
+      transform: rotate(-2deg);
+      filter: blur(0.2px);
+    }
+
+    #paperContent{
+      position: relative;
+      height: 100%;
+      padding: 22px 22px 18px;
+      display:flex;
+      flex-direction: column;
+      justify-content: space-between;
+      z-index: 2;
+    }
+
+    #introTitle{
+      font-family: "Dancing Script", cursive;
+      font-weight: 700;
+      font-size: clamp(46px, 7.5vw, 66px);
+      line-height: 1.05;
+      text-align: center;
+      color: rgba(55,30,22,0.96);
+      margin: 6px 0 8px;
+      text-shadow: 0 1px 0 rgba(255,255,255,0.35);
+    }
+
+    #introMsg{
+      font-family: "Dancing Script", cursive;
+      font-weight: 600;
+      font-size: clamp(22px, 4.4vw, 34px);
+      line-height: 1.22;
+      text-align: center;
+      color: rgba(55,30,22,0.92);
+      margin: 0 6px 0;
+    }
+
+    /* botón como sello de cera */
+    #introBtn{
+      appearance:none;
+      -webkit-appearance:none;
+      border: 0;
+      padding: 12px 18px;
+      border-radius: 999px;
+      font-family: "Cormorant Garamond", serif;
+      font-weight: 600;
+      font-size: 20px;
+      letter-spacing: 0.4px;
+      color: rgba(255,244,248,0.98);
+      background:
+        radial-gradient(18px 18px at 30% 28%, rgba(255,255,255,0.24), rgba(0,0,0,0) 70%),
+        radial-gradient(60px 60px at 70% 85%, rgba(0,0,0,0.22), rgba(0,0,0,0) 60%),
+        linear-gradient(180deg, #b0184f, #7b0f36);
+      box-shadow:
+        inset 0 2px 10px rgba(255,255,255,0.14),
+        inset 0 -14px 22px rgba(0,0,0,0.22),
+        0 18px 34px rgba(0,0,0,0.30);
+      align-self: center;
+      margin-top: 18px;
+      cursor: pointer;
+      transform: translateZ(0);
+      transition: transform 140ms ease, filter 160ms ease;
+    }
+    #introBtn:hover{ filter: brightness(1.03) saturate(1.05); }
+    #introBtn:active{ transform: translateY(1px) scale(0.99); }
+    #introBtn:focus-visible{
+      outline: 3px solid rgba(255,220,235,0.55);
+      outline-offset: 4px;
+    }
+
+    /* rosa */
+    #rose{
+      position:absolute;
+      left: 4%;
+      bottom: 6%;
+      width: 150px;
+      height: 150px;
+      z-index: 4;
+      pointer-events:none;
+      transform: rotate(-18deg);
+      opacity: 0.98;
+      filter: drop-shadow(0 16px 22px rgba(0,0,0,0.28));
+      background-repeat: no-repeat;
+      background-size: contain;
+      background-position: center;
+      background-image: url("data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%20200%20200%22%3E%0A%20%20%3Cdefs%3E%0A%20%20%20%20%3CradialGradient%20id=%22petal%22%20cx=%220.35%22%20cy=%220.25%22%20r=%220.9%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset=%220%22%20stop-color=%22#ffd6e7%22/%3E%0A%20%20%20%20%20%20%3Cstop%20offset=%220.55%22%20stop-color=%22#d34b7a%22/%3E%0A%20%20%20%20%20%20%3Cstop%20offset=%221%22%20stop-color=%22#7b1636%22/%3E%0A%20%20%20%20%3C/radialGradient%3E%0A%20%20%20%20%3ClinearGradient%20id=%22leaf%22%20x1=%220%22%20y1=%220%22%20x2=%221%22%20y2=%221%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset=%220%22%20stop-color=%22#4fbf7a%22/%3E%0A%20%20%20%20%20%20%3Cstop%20offset=%221%22%20stop-color=%22#1b5f3d%22/%3E%0A%20%20%20%20%3C/linearGradient%3E%0A%20%20%20%20%3Cfilter%20id=%22s%22%20x=%22-20%%22%20y=%22-20%%22%20width=%22140%%22%20height=%22140%%22%3E%0A%20%20%20%20%20%20%3CfeGaussianBlur%20in=%22SourceAlpha%22%20stdDeviation=%222%22/%3E%0A%20%20%20%20%20%20%3CfeOffset%20dx=%221%22%20dy=%223%22%20result=%22o%22/%3E%0A%20%20%20%20%20%20%3CfeColorMatrix%20in=%22o%22%20type=%22matrix%22%0A%20%20%20%20%20%20%20%20values=%220%200%200%200%200%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%200%200%200%200%200%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%200%200%200%200%200%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%200%200%200%20.25%200%22/%3E%0A%20%20%20%20%20%20%3CfeMerge%3E%0A%20%20%20%20%20%20%20%20%3CfeMergeNode/%3E%0A%20%20%20%20%20%20%20%20%3CfeMergeNode%20in=%22SourceGraphic%22/%3E%0A%20%20%20%20%20%20%3C/feMerge%3E%0A%20%20%20%20%3C/filter%3E%0A%20%20%3C/defs%3E%0A%20%20%3C!--%20stem%20--%3E%0A%20%20%3Cpath%20d=%22M110%20150c-8%2010-18%2018-30%2024%22%20fill=%22none%22%20stroke=%22#2b7a4c%22%20stroke-width=%226%22%20stroke-linecap=%22round%22%20opacity=%220.9%22/%3E%0A%20%20%3Cpath%20d=%22M102%20150c-5%209-11%2015-18%2019%22%20fill=%22none%22%20stroke=%22#1d5d3a%22%20stroke-width=%223%22%20stroke-linecap=%22round%22%20opacity=%220.9%22/%3E%0A%20%20%3C!--%20leaves%20--%3E%0A%20%20%3Cpath%20d=%22M92%20152c-18-6-32-2-46%2010%2018%204%2034%201%2046-10z%22%20fill=%22url(#leaf)%22%20opacity=%220.95%22%20filter=%22url(#s)%22/%3E%0A%20%20%3Cpath%20d=%22M108%20148c20-2%2034%206%2044%2022-20-2-36-10-44-22z%22%20fill=%22url(#leaf)%22%20opacity=%220.95%22%20filter=%22url(#s)%22/%3E%0A%20%20%3C!--%20rose%20--%3E%0A%20%20%3Cg%20filter=%22url(#s)%22%3E%0A%20%20%20%20%3Cpath%20d=%22M114%2040c20%2010%2032%2026%2030%2046-2%2018-16%2032-34%2040-18%208-36%206-50-6-14-12-18-30-10-48%208-18%2026-30%2064-32z%22%20fill=%22url(#petal)%22/%3E%0A%20%20%20%20%3Cpath%20d=%22M118%2055c10%206%2016%2014%2014%2024-2%2012-12%2020-24%2026-12%206-24%206-34-2-10-8-12-18-6-30%206-12%2018-20%2050-18z%22%20fill=%22rgba(255,220,236,0.18)%22/%3E%0A%20%20%20%20%3Cpath%20d=%22M118%2062c6%204%208%208%207%2014-1%208-8%2014-16%2018-8%204-16%204-22-2-6-5-7-11-4-18%204-8%2012-13%2035-12z%22%20fill=%22rgba(255,255,255,0.16)%22/%3E%0A%20%20%20%20%3Cpath%20d=%22M116%2072c4%203%205%206%204%2010-1%205-6%209-11%2012-6%203-11%203-16-1-4-3-5-7-3-12%203-5%208-9%2026-9z%22%20fill=%22rgba(0,0,0,0.10)%22/%3E%0A%20%20%3C/g%3E%0A%3C/svg%3E");
     }
 
     #introScreen.hide{
-      opacity:0;
-      transform: translateY(-18px) scale(0.985);
-      filter: blur(10px);
+      opacity: 0;
+      filter: blur(14px);
+      transform: scale(1.02);
+      transition: opacity 1100ms ease, filter 1100ms ease, transform 1100ms ease;
+      pointer-events: none;
+    }
+
+    @keyframes floatPaper{
+      0%,100% { transform: rotate(2deg) translateY(0); }
+      50%     { transform: rotate(2deg) translateY(-6px); }
+    }
+
+    @media (max-width: 420px){
+      #loveWrap{ height: min(90vh, 860px); }
+      #rose{ width: 118px; height: 118px; left: 2%; bottom: 5%; }
+      #letter{ width: 92%; height: 78%; }
+      #introBtn{ font-size: 18px; padding: 11px 16px; }
+    }
+
+    @media (prefers-reduced-motion: reduce){
+      #letter{ animation: none; }
+      #introScreen, #introScreen.hide, canvas{ transition: none !important; }
+    }
+
+
+  
+    /* Dibujo dentro de la hoja (boceto sutil) */
+    .paperDoodle{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
       pointer-events:none;
+      opacity:.18;
+      filter: blur(.25px);
+      color: rgba(70,40,30,.55);
+      mix-blend-mode: multiply;
     }
-
-    #introScreen .card{
-      position:relative;
-      width:min(720px, calc(100vw - 48px));
-      padding:26px 22px 22px;
-      border-radius:26px;
-      background:
-        radial-gradient(980px 260px at 50% 0%, rgba(255,210,230,0.55), rgba(255,210,230,0.0) 64%),
-        linear-gradient(180deg, rgba(255,255,255,0.92), rgba(255,246,252,0.92));
-      border: 1px solid rgba(150,95,120,0.25);
-      box-shadow: 0 22px 70px rgba(35,10,25,0.20);
-      text-align:center;
-      overflow:hidden;
-    }
-
-    /* Paper grain */
-    #introScreen .card::before{
-      content:"";
-      position:absolute;
-      inset:-40px;
-      background:
-        radial-gradient(circle at 20% 30%, rgba(120,80,95,0.07), rgba(0,0,0,0.0) 50%),
-        radial-gradient(circle at 80% 70%, rgba(120,80,95,0.06), rgba(0,0,0,0.0) 52%),
-        repeating-linear-gradient(135deg, rgba(120,80,95,0.035) 0px, rgba(120,80,95,0.035) 1px, rgba(0,0,0,0.0) 7px, rgba(0,0,0,0.0) 14px);
-      opacity:0.55;
-      pointer-events:none;
-      mix-blend-mode:multiply;
-    }
-
-    /* A faint "stamp" heart */
-    #introScreen .card::after{
-      content:"";
-      position:absolute;
-      right:-18px;
-      top:-10px;
-      width:160px;
-      height:160px;
-      background:
-        radial-gradient(circle at 45% 40%, rgba(214,90,134,0.20), rgba(214,90,134,0.0) 60%),
-        radial-gradient(circle at 60% 60%, rgba(214,90,134,0.14), rgba(214,90,134,0.0) 62%);
-      transform: rotate(10deg);
-      pointer-events:none;
-      opacity:0.9;
-    }
-
-    #introScreen .title{
-      font: 600 clamp(28px, 7.2vw, 52px)/1.05 "Dancing Script", "Great Vibes", "Brush Script MT", cursive;
-      color: rgba(55,18,35,0.92);
-      letter-spacing: 0.2px;
-      text-shadow:
-        0 10px 28px rgba(40,12,24,0.12);
-      padding: 2px 6px;
-    }
-
-    #introScreen .divider{
-      margin: 14px auto 12px;
-      width: min(320px, 70%);
-      height: 10px;
-      position:relative;
-      opacity:0.85;
-    }
-    #introScreen .divider::before{
-      content:"";
-      position:absolute;
-      left:0; right:0; top:50%;
-      height:1px;
-      background: linear-gradient(90deg, rgba(150,95,120,0.0), rgba(150,95,120,0.38), rgba(150,95,120,0.0));
-      transform: translateY(-50%);
-    }
-    #introScreen .divider::after{
-      content:"❤";
-      position:absolute;
-      left:50%; top:50%;
-      transform: translate(-50%, -55%);
-      font: 600 16px/1 "Dancing Script", cursive;
-      color: rgba(214,90,134,0.52);
-      text-shadow: 0 8px 18px rgba(40,10,25,0.10);
-      background: rgba(255,250,252,0.75);
-      padding: 2px 10px;
-      border-radius: 999px;
-      border: 1px solid rgba(150,95,120,0.18);
-    }
-
-    #introScreen .hint{
-      margin-top: 8px;
-      font: 500 clamp(13px, 3.0vw, 17px)/1.35 "Cormorant Garamond", Georgia, serif;
-      color: rgba(65,22,40,0.80);
-    }
-    #introScreen .hint span{
-      display:inline-block;
-      padding: 8px 12px;
-      border-radius: 999px;
-      background: rgba(214,90,134,0.10);
-      border: 1px solid rgba(150,95,120,0.18);
-      box-shadow: 0 14px 24px rgba(35,10,25,0.10);
-    }
-
-    #introScreen:focus-visible .card{
-      box-shadow: 0 26px 80px rgba(35,10,25,0.26);
-      outline: 3px solid rgba(214,90,134,0.18);
-      outline-offset: 4px;
-    }
+    .paperDoodle .thin{ stroke-width:2.2; opacity:.85; }
+    .paperDoodle .med{ stroke-width:3.2; opacity:.9; }
+    .paperDoodle .bold{ stroke-width:4.2; opacity:.92; }
+    .paperDoodle .fade{ opacity:.55; }
 
   </style>
 </head>
 <body>
-  <canvas id="c" role="img" aria-label="Animación de un ramo de gerberas azul turquesa bajo un cielo estrellado con nubes, luna y la constelación de Capricornio"></canvas>
+  <canvas id="c" role="img" aria-label="Animación de un ramo de gerberas azules y amarillas bajo un cielo estrellado con nubes, luna y la constelación de Capricornio"></canvas>
 
-  <div id="introScreen" role="button" tabindex="0" aria-label="Iniciar la animación">
-    <div class="card">
-      <div class="title">recuerda que son con mucho cariño para ti</div>
-      <div class="divider" aria-hidden="true"></div>
-      <div class="hint"><span>toca aqui &lt;3</span></div>
+  <div id="introScreen" role="dialog" aria-label="Mensaje de inicio">
+    <div id="loveWrap">
+      <div id="envelope" aria-hidden="true"></div>
+
+      <div id="letter" aria-hidden="false">
+        <div class="paper">
+          
+          <svg class="paperDoodle" viewBox="0 0 600 800" aria-hidden="true" focusable="false">
+            <defs>
+              <filter id="pencil">
+                <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch" result="n"/>
+                <feDisplacementMap in="SourceGraphic" in2="n" scale="1.15" xChannelSelector="R" yChannelSelector="G"/>
+              </filter>
+
+              <!-- hachurado suave -->
+              <pattern id="hatch" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(18)">
+                <path d="M0 0 L0 12" stroke="currentColor" stroke-width="1.2" opacity=".25"/>
+              </pattern>
+
+              <!-- puntitos tipo tinta -->
+              <pattern id="speckle" width="26" height="26" patternUnits="userSpaceOnUse">
+                <circle cx="4" cy="7" r="1.1" fill="currentColor" opacity=".09"/>
+                <circle cx="18" cy="12" r="0.9" fill="currentColor" opacity=".07"/>
+                <circle cx="10" cy="22" r="1.0" fill="currentColor" opacity=".06"/>
+                <circle cx="22" cy="24" r="0.8" fill="currentColor" opacity=".05"/>
+              </pattern>
+            </defs>
+
+            <!-- textura muy tenue -->
+            <g filter="url(#pencil)" opacity=".55">
+              <rect x="0" y="0" width="600" height="800" fill="url(#speckle)"/>
+            </g>
+
+            <!-- pliegues del papel -->
+            <g fill="none" stroke="currentColor" class="thin fade" filter="url(#pencil)">
+              <path d="M72 175 C165 150, 268 158, 350 148 C445 136, 520 150, 560 170" />
+              <path d="M55 520 C170 540, 285 520, 370 538 C462 556, 525 548, 570 528" />
+              <path d="M300 105 C294 205, 306 320, 295 445 C285 565, 310 678, 300 765" opacity=".45"/>
+            </g>
+
+            <!-- marco superior con encaje -->
+            <g fill="none" stroke="currentColor" class="thin fade" filter="url(#pencil)">
+              <path d="M70 95
+                       Q 90 72 110 95
+                       Q 130 118 150 95
+                       Q 170 72 190 95
+                       Q 210 118 230 95
+                       Q 250 72 270 95
+                       Q 290 118 310 95
+                       Q 330 72 350 95
+                       Q 370 118 390 95
+                       Q 410 72 430 95
+                       Q 450 118 470 95
+                       Q 490 72 510 95
+                       Q 530 118 550 95" />
+              <path d="M70 720
+                       Q 90 698 110 720
+                       Q 130 742 150 720
+                       Q 170 698 190 720
+                       Q 210 742 230 720
+                       Q 250 698 270 720
+                       Q 290 742 310 720
+                       Q 330 698 350 720
+                       Q 370 742 390 720
+                       Q 410 698 430 720
+                       Q 450 742 470 720
+                       Q 490 698 510 720
+                       Q 530 742 550 720" />
+              <!-- puntitos tipo bordado -->
+              <path d="M88 114 L88 114 M128 114 L128 114 M168 114 L168 114 M208 114 L208 114 M248 114 L248 114
+                       M288 114 L288 114 M328 114 L328 114 M368 114 L368 114 M408 114 L408 114 M448 114 L448 114
+                       M488 114 L488 114 M528 114 L528 114"
+                    stroke-linecap="round" stroke-width="4.2" opacity=".35"/>
+              <path d="M88 701 L88 701 M128 701 L128 701 M168 701 L168 701 M208 701 L208 701 M248 701 L248 701
+                       M288 701 L288 701 M328 701 L328 701 M368 701 L368 701 M408 701 L408 701 M448 701 L448 701
+                       M488 701 L488 701 M528 701 L528 701"
+                    stroke-linecap="round" stroke-width="4.2" opacity=".30"/>
+            </g>
+
+            <!-- marco lateral con enredadera y hojas -->
+            <g fill="none" stroke="currentColor" filter="url(#pencil)">
+              <path class="med fade" d="M88 130 C70 190, 72 250, 95 305 C120 365, 108 420, 86 472
+                                   C62 530, 70 600, 96 655 C116 698, 122 724, 106 760" />
+              <path class="med fade" d="M512 130 C530 190, 528 250, 505 305 C480 365, 492 420, 514 472
+                                   C538 530, 530 600, 504 655 C484 698, 478 724, 494 760" />
+              <!-- hojas izquierda -->
+              <g class="thin fade">
+                <path d="M92 205 C70 202, 58 190, 56 174 C72 184, 86 194, 96 212" />
+                <path d="M100 245 C78 248, 62 240, 54 226 C72 232, 88 234, 104 250" />
+                <path d="M92 350 C70 352, 58 342, 56 326 C72 336, 86 346, 96 360" />
+                <path d="M100 395 C78 398, 62 390, 54 378 C72 384, 88 386, 104 400" />
+                <path d="M92 585 C70 586, 58 576, 56 560 C74 572, 86 578, 96 592" />
+                <path d="M102 630 C80 632, 64 624, 56 612 C74 618, 90 620, 106 634" />
+              </g>
+              <!-- hojas derecha -->
+              <g class="thin fade">
+                <path d="M508 205 C530 202, 542 190, 544 174 C528 184, 514 194, 504 212" />
+                <path d="M500 245 C522 248, 538 240, 546 226 C528 232, 512 234, 496 250" />
+                <path d="M508 350 C530 352, 542 342, 544 326 C528 336, 514 346, 504 360" />
+                <path d="M500 395 C522 398, 538 390, 546 378 C528 384, 512 386, 496 400" />
+                <path d="M508 585 C530 586, 542 576, 544 560 C526 572, 514 578, 504 592" />
+                <path d="M498 630 C520 632, 536 624, 544 612 C526 618, 510 620, 494 634" />
+              </g>
+            </g>
+
+            <!-- sobre con sello, timbre y pequeña nota -->
+            <g filter="url(#pencil)" stroke="currentColor" fill="none">
+              <!-- sobre -->
+              <path class="bold fade" d="M165 520 L435 520 L435 645 L165 645 Z" />
+              <path class="med fade" d="M165 520 L300 610 L435 520" />
+              <path class="med fade" d="M165 645 L300 565 L435 645" />
+              <!-- sello de cera -->
+              <g>
+                <circle cx="300" cy="610" r="36" class="bold" opacity=".30"/>
+                <circle cx="300" cy="610" r="30" class="med" opacity=".38"/>
+                <path class="med" opacity=".40" d="M300 626 C286 616, 272 604, 286 590
+                                                  C296 580, 310 586, 300 600
+                                                  C290 586, 304 580, 314 590
+                                                  C328 604, 314 616, 300 626 Z"/>
+                <!-- brillo -->
+                <path class="thin" opacity=".20" d="M285 595 C278 606, 280 616, 288 624" />
+              </g>
+              <!-- timbre postal -->
+              <g opacity=".35">
+                <rect x="388" y="532" width="42" height="52" rx="6" class="med"/>
+                <path class="thin" d="M392 540 L426 540 M392 550 L426 550 M392 560 L426 560" />
+                <path class="thin" d="M396 576 C405 568, 413 568, 422 576" />
+              </g>
+              <!-- nota mini -->
+              <path class="thin fade" d="M188 545 C206 538, 230 538, 248 545" />
+              <path class="thin fade" d="M182 565 C210 555, 240 557, 268 565" />
+            </g>
+
+            <!-- gran corazón con listón y hachurado -->
+            <g filter="url(#pencil)" stroke="currentColor" fill="none">
+              <path class="bold" opacity=".30"
+                d="M300 210
+                   C265 170, 205 178, 205 238
+                   C205 298, 268 338, 300 372
+                   C332 338, 395 298, 395 238
+                   C395 178, 335 170, 300 210 Z"/>
+              <!-- listón -->
+              <path class="med fade" d="M220 292 C250 270, 280 264, 300 268 C320 264, 350 270, 380 292" />
+              <path class="med fade" d="M260 280 C252 300, 250 318, 262 332 C276 348, 298 342, 300 326
+                                       C302 342, 324 348, 338 332 C350 318, 348 300, 340 280" />
+              <path class="thin fade" d="M265 304 C275 294, 288 292, 300 296 C312 292, 325 294, 335 304" />
+
+              <!-- hachurado dentro del corazón -->
+              <clipPath id="heartClip">
+                <path d="M300 210
+                         C265 170, 205 178, 205 238
+                         C205 298, 268 338, 300 372
+                         C332 338, 395 298, 395 238
+                         C395 178, 335 170, 300 210 Z"/>
+              </clipPath>
+              <g clip-path="url(#heartClip)" opacity=".22">
+                <rect x="190" y="160" width="220" height="250" fill="url(#hatch)"/>
+                <!-- sombras extra -->
+                <path class="thin" d="M220 240 C245 250, 270 260, 290 284" />
+                <path class="thin" d="M380 240 C355 250, 330 260, 310 284" />
+              </g>
+            </g>
+
+            <!-- caligrafía fantasma -->
+            <g filter="url(#pencil)" fill="none" stroke="currentColor" class="thin" opacity=".16">
+              <path d="M120 410 C170 388, 220 394, 270 402 C330 412, 390 402, 450 392" />
+              <path d="M120 432 C190 412, 250 420, 310 430 C375 442, 430 434, 470 420" />
+              <path d="M120 455 C180 442, 240 448, 300 458 C360 468, 420 462, 470 448" />
+              <path d="M120 478 C200 468, 260 475, 320 486 C380 498, 440 492, 480 476" />
+              <!-- “floreos” -->
+              <path d="M145 392 C132 408, 130 420, 146 436 C160 450, 178 446, 186 432" />
+              <path d="M455 392 C468 408, 470 420, 454 436 C440 450, 422 446, 414 432" />
+            </g>
+
+            <!-- mini constelación romántica -->
+            <g filter="url(#pencil)" stroke="currentColor" fill="none" opacity=".32">
+              <path class="thin fade" d="M160 150 L210 138 L252 160 L300 145 L350 160 L392 138 L440 150" />
+              <circle cx="160" cy="150" r="4.2" fill="currentColor" opacity=".25"/>
+              <circle cx="210" cy="138" r="3.6" fill="currentColor" opacity=".22"/>
+              <circle cx="252" cy="160" r="3.2" fill="currentColor" opacity=".20"/>
+              <circle cx="300" cy="145" r="4.4" fill="currentColor" opacity=".24"/>
+              <circle cx="350" cy="160" r="3.2" fill="currentColor" opacity=".20"/>
+              <circle cx="392" cy="138" r="3.6" fill="currentColor" opacity=".22"/>
+              <circle cx="440" cy="150" r="4.2" fill="currentColor" opacity=".25"/>
+            </g>
+
+            <!-- rosas en esquinas (más detalladas) -->
+            <g filter="url(#pencil)" stroke="currentColor" fill="none" opacity=".42">
+              <!-- esquina superior izquierda -->
+              <path class="med" d="M132 170 C122 156, 126 138, 146 134 C164 130, 176 146, 170 162
+                                   C164 178, 144 182, 132 170 Z"/>
+              <path class="thin fade" d="M146 138 C152 144, 154 152, 148 160" />
+              <path class="thin fade" d="M140 150 C148 150, 156 156, 156 164" />
+              <path class="thin fade" d="M120 184 C136 178, 150 176, 166 184" />
+              <path class="thin fade" d="M120 184 C128 196, 142 206, 156 210" />
+
+              <!-- esquina inferior derecha -->
+              <path class="med" d="M468 650 C478 664, 474 682, 454 686 C436 690, 424 674, 430 658
+                                   C436 642, 456 638, 468 650 Z"/>
+              <path class="thin fade" d="M454 682 C448 676, 446 668, 452 660" />
+              <path class="thin fade" d="M460 670 C452 670, 444 664, 444 656" />
+              <path class="thin fade" d="M480 636 C464 642, 450 644, 434 636" />
+              <path class="thin fade" d="M480 636 C472 624, 458 614, 444 610" />
+            </g>
+
+          </svg>
+<div id="paperContent">
+            <div>
+              <div id="introTitle">Para ti &lt;3</div>
+              <div id="introMsg">recuerda con mucho cariño para ti</div>
+            </div>
+
+            <button id="introBtn" type="button">toca aquí</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="rose" aria-hidden="true"></div>
     </div>
   </div>
 
@@ -243,10 +563,60 @@
 (() => {
   'use strict';
 
-  let STARTED = false;
-
   const canvas = document.getElementById('c');
   const ctx = canvas.getContext('2d', { alpha:false });
+
+  // ===== Intro overlay (móvil + desktop) =====
+  const introScreen = document.getElementById('introScreen');
+  const introBtn    = document.getElementById('introBtn');
+
+  // Mantén el canvas escondido hasta el toque/click
+  canvas.classList.remove('show');
+
+  let _started = false;
+  function startExperience(){
+    if(_started) return;
+    _started = true;
+
+    // Inicia la “generación” del ramo a partir del toque
+    try{ restartIntro(); }catch(_){}
+
+    // Transición visual
+    if(introScreen) introScreen.classList.add('hide');
+    canvas.classList.add('show');
+
+    // Arranca la animación
+    start();
+
+    // Limpia overlay al final del fade
+    setTimeout(()=>{ try{ introScreen && introScreen.remove(); }catch(_){ } }, 1250);
+  }
+
+  // En móvil, NO confíes solo en "click". Usa pointer y touch también.
+  const bindStart = (el)=>{
+    if(!el) return;
+    el.addEventListener('pointerup', startExperience, {passive:true});
+    el.addEventListener('touchend',  startExperience, {passive:true});
+    el.addEventListener('click',     startExperience, {passive:true});
+  };
+  bindStart(introBtn);
+
+  // Permite tocar en cualquier parte de la carta (móvil friendly)
+  if(introScreen){
+    const tapAnywhere = (e)=>{
+      // Si fue el botón, ya lo maneja el propio botón
+      try{ if(e && e.target && e.target.closest && e.target.closest('#introBtn')) return; }catch(_){}
+      startExperience();
+    };
+    introScreen.addEventListener('pointerup', tapAnywhere, {passive:true});
+    introScreen.addEventListener('touchend',  tapAnywhere, {passive:true});
+    introScreen.addEventListener('click',     tapAnywhere, {passive:true});
+  }
+
+  window.addEventListener('keydown', (e)=>{
+    if(e.key === 'Enter' || e.key === ' ') startExperience();
+  });
+
 
   const hud = document.getElementById('hud');
 
@@ -289,20 +659,24 @@
 
   // Color aleatorio pero estable por semilla (así cada gerbera "nace" con su propio tono)
   const colorFromSeed = (seed)=>{
-    // Azul turquesa (con variación sutil por flor para que se vea natural).
+    // Azul marino MUY claro (navy). Variación mínima por flor para que se vea natural,
+    // pero sin salirse del rango "azul marino" (nada de morados/rosas accidentales).
     let s = (seed >>> 0) || 1;
     const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0, s / 4294967296);
 
-    // Hue turquesa ~ 175-200, saturación alta, luz media.
-    const h   = 188 + (rnd()*26 - 13);  // 175..201
-    const sat = 70 + rnd()*20;          // 70..90
-    const lit = 52 + rnd()*16;          // 52..68
-    return hslToRgb(h, sat, lit);
+    const base = { r: 10, g: 28, b: 70 };       // #0A1C46
+    const v    = 10 + Math.floor(rnd()*10);     // 10..19 (ligero brillo)
+    const tilt = (rnd()*2 - 1) * 2;             // -2..2 (micro variación)
+    return {
+      r: clamp(base.r + v + tilt, 0, 255),
+      g: clamp(base.g + v + tilt, 0, 255),
+      b: clamp(base.b + v,        0, 255)
+    };
   };
 
 // ===== Intro: generación del ramo al abrir =====
 // master: 0..1 controla el “construir” tallo -> hojas -> pétalos.
-const INTRO = { active: false, t0: performance.now(), dur: 5200 };
+const INTRO = { active: true, t0: performance.now(), dur: 5200 };
 
 const smoothstep = (a,b,x) => {
   const t = clamp((x - a) / Math.max(1e-6, (b - a)), 0, 1);
@@ -432,7 +806,7 @@ function restartIntro(){
     crownStrength: 0.008,
 
     // Texto “en estrellas”
-    starText: 'todos los días te ves preciosa <3',
+    starText: 'hoy no te vi, pero seguro te veías muy bonita <3',
     starTextStrength: 0.95    ,
 
     // Rendimiento / calidad
@@ -829,6 +1203,12 @@ window.addEventListener('keydown', (e) => {
   const soil = [];
   const grassAnim1 = [];
   const grassAnim2 = [];
+
+  // Capa extra: pasto en primer plano (para “fusionar” tallos con el suelo)
+  const overlayGrass = [];
+
+  // Luciérnagas/polvo brillante cerca del ramo (toque romántico sin matar el rendimiento)
+  const fireflies = [];
 
   let groundCache = null;
   let skyCache = null;
@@ -1313,6 +1693,153 @@ function drawSun(t){
 
     grassAnim1.push(...g1.slice(0, max1));
     grassAnim2.push(...g2.slice(0, max2));
+  }
+
+
+  function seedOverlayGrass(){
+    overlayGrass.length = 0;
+
+    const gy = H * 0.74;
+    const groundH = H - gy;
+
+    // Densidad moderada: solo una capa “de fusión” para que los tallos no se vean pegados.
+    const pr = makePRNG(((W|0)*73856093) ^ ((H|0)*19349663) ^ 0xB00B135);
+    const n = clamp(Math.floor(W / 11), 60, 120);
+
+    for(let i=0;i<n;i++){
+      const x = pr() * W;
+      const centerBias = 1 - Math.abs(x - W*0.5) / Math.max(1, W*0.5); // 0..1
+      const y = gy + groundH*(0.05 + pr()*0.24) + (1-centerBias)*groundH*0.015;
+
+      const h = groundH*(0.16 + pr()*0.30) * (0.78 + 0.55*centerBias);
+      const w = 0.85 + pr()*1.75;
+
+      overlayGrass.push({
+        x, y, h, w,
+        a: 0.10 + pr()*0.18,
+        p: pr()*TAU,
+        s: 0.65 + pr()*1.35,
+        bend: 0.70 + pr()*1.10
+      });
+    }
+  }
+
+  function drawOverlayGrass(t, fade=1){
+    if(!overlayGrass.length) return;
+
+    const wind = windField(t) * 0.55;
+    const step = (CONFIG.grassDetail ?? 1) ? 1 : 2;
+
+    ctx.save();
+    // Base: oscuro, para que haya “cuerpo”
+    ctx.globalAlpha = 0.55 * fade;
+    ctx.strokeStyle = 'rgba(8,44,26,0.85)';
+
+    for(let i=0;i<overlayGrass.length;i+=step){
+      const b = overlayGrass[i];
+
+      const gWind = CONFIG.reduceMotion ? 0 : (Math.sin(t*0.00062)*0.86 + Math.sin(t*0.00111)*0.32);
+      const micro = CONFIG.reduceMotion ? 0 : Math.sin(t*0.00115*b.s + b.p) * 0.12;
+
+      const tilt = (gWind*0.40 + wind + micro) * 0.22 * CONFIG.sway;
+      const x1 = b.x + tilt * (10 + b.bend*8);
+      const y1 = b.y - b.h;
+      const cx = b.x + tilt * (6 + b.bend*5);
+      const cy = b.y - b.h*0.55;
+
+      ctx.lineWidth = b.w;
+      ctx.beginPath();
+      ctx.moveTo(b.x, b.y);
+      ctx.quadraticCurveTo(cx, cy, x1, y1);
+      ctx.stroke();
+    }
+
+    // Highlight: borde claro sutil (para no verse “plano”)
+    ctx.globalAlpha = 0.18 * fade;
+    ctx.strokeStyle = 'rgba(210,255,230,0.22)';
+
+    for(let i=0;i<overlayGrass.length;i+=step){
+      const b = overlayGrass[i];
+
+      const gWind = CONFIG.reduceMotion ? 0 : (Math.sin(t*0.00062)*0.86 + Math.sin(t*0.00111)*0.32);
+      const micro = CONFIG.reduceMotion ? 0 : Math.sin(t*0.00115*b.s + b.p) * 0.12;
+
+      const tilt = (gWind*0.40 + wind + micro) * 0.22 * CONFIG.sway;
+      const x1 = b.x + tilt * (10 + b.bend*8);
+      const y1 = b.y - b.h;
+      const cx = b.x + tilt * (6 + b.bend*5);
+      const cy = b.y - b.h*0.55;
+
+      ctx.lineWidth = Math.max(0.7, b.w*0.30);
+      ctx.beginPath();
+      ctx.moveTo(b.x + 0.8, b.y);
+      ctx.quadraticCurveTo(cx + 0.55, cy, x1 + 0.25, y1);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
+  function seedFireflies(){
+    fireflies.length = 0;
+
+    const pr = makePRNG(((W|0)*83492791) ^ ((H|0)*297657976) ^ 0xF1EEF1E);
+    const cx = W * 0.5;
+    const gy = H * 0.74;
+    const groundH = H - gy;
+
+    const n = clamp(Math.floor(W / 70), 10, 22);
+    for(let i=0;i<n;i++){
+      const u = pr();
+      const x = cx + (pr()*2 - 1) * W*0.32 * (0.40 + 0.60*u);
+      const y = gy + groundH*(0.06 + pr()*0.34);
+      fireflies.push({
+        x, y,
+        r: 1.15 + pr()*2.35,
+        a: 0.10 + pr()*0.20,
+        s: 0.60 + pr()*1.40,
+        p: pr()*TAU,
+        dx: (pr()*2 - 1) * (12 + pr()*22),
+        dy: (pr()*2 - 1) * (8 + pr()*18)
+      });
+    }
+  }
+
+  function drawFireflies(t, fade=1){
+    if(!fireflies.length) return;
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+
+    for(const f of fireflies){
+      const tw = CONFIG.reduceMotion ? 0.65 : (0.50 + 0.50*Math.sin(t*0.00110*f.s + f.p));
+      const a = f.a * (0.35 + 0.65*tw) * fade;
+      if(a <= 0.002) continue;
+
+      const x = f.x + (CONFIG.reduceMotion ? 0 : Math.sin(t*0.00035*f.s + f.p) * f.dx);
+      const y = f.y + (CONFIG.reduceMotion ? 0 : Math.cos(t*0.00031*f.s + f.p*1.3) * f.dy);
+
+      ctx.globalAlpha = a;
+      ctx.shadowColor = 'rgba(255,240,190,0.65)';
+      ctx.shadowBlur  = 18 + f.r*6;
+
+      ctx.fillStyle = 'rgba(255,240,190,0.55)';
+      ctx.beginPath();
+      ctx.arc(x, y, f.r, 0, TAU);
+      ctx.fill();
+
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = a * 0.75;
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      ctx.beginPath();
+      ctx.arc(x, y, f.r*0.45, 0, TAU);
+      ctx.fill();
+    }
+
+    ctx.restore();
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
   }
 
   function rebuildGroundCache(){
@@ -3356,9 +3883,9 @@ const neb = (x,y,r, a, cr,cg,cb) => {
 
     // Paleta del pétalo (base -> cuerpo -> punta)
     const lite = mix(col, {r:255,g:255,b:255}, 0.50);
-    const mid  = mix(col, {r:255,g:230,b:245}, 0.24);
-    const deep = mix(col, {r:18,g:6,b:24},      0.58);
-    const edge = mix(col, {r:255,g:245,b:250},  0.18);
+    const mid  = mix(col, {r:245,g:250,b:255}, 0.24);
+    const deep = mix(col, {r:2,g:8,b:24},      0.58);
+    const edge = mix(col, {r:245,g:250,b:255},  0.18);
 
     const centerY = -h*0.62;
 
@@ -3596,7 +4123,7 @@ const neb = (x,y,r, a, cr,cg,cb) => {
     // Corona interna (pétalos cortos)
     const crownAppear = clamp((appear - 0.30) * 1.6, 0, 1);
     if(crownAppear > 0){
-      const crownCol  = mix(col, {r:255,g:245,b:235}, 0.38);
+      const crownCol  = mix(col, {r:240,g:246,b:255}, 0.38);
       const crownLite = mix(crownCol, {r:255,g:255,b:255}, 0.58);
       const crownDeep = mix(crownCol, {r:40,g:20,b:30}, 0.46);
 
@@ -4138,47 +4665,64 @@ const neb = (x,y,r, a, cr,cg,cb) => {
 
 
 // ===== Bouquet =====
+  // Ramo más rico (8 gerberas): más profundidad, mejor composición y sin amontonarse.
   const DESCS = [
-    // 6 gerberas: ramo más junto (compacto) pero sin encimar pétalos
-    {dx:-0.62, hf:0.98, bs:0.82},
-    {dx:-0.40, hf:1.08, bs:0.92},
-    {dx:-0.14, hf:1.16, bs:0.94},
-    {dx: 0.14, hf:1.16, bs:0.94},
-    {dx: 0.40, hf:1.08, bs:0.92},
-    {dx: 0.62, hf:0.98, bs:0.82},
+    {dx:-0.66, hf:1.05, bs:0.82}, // lateral izq (atrás)
+    {dx:-0.44, hf:1.16, bs:0.92},
+    {dx:-0.18, hf:1.28, bs:1.02},
+    {dx: 0.18, hf:1.28, bs:1.02},
+    {dx: 0.44, hf:1.16, bs:0.92},
+    {dx: 0.66, hf:1.05, bs:0.82}, // lateral der (atrás)
+    {dx:-0.06, hf:0.98, bs:0.78}, // front pequeño
+    {dx: 0.06, hf:0.98, bs:0.78}, // front pequeño
   ];
-  const BLOOM_COLORS = ['#6EC1FF','#3A86FF','#2F74E8','#8ED4FF','#4DA3FF','#B7E6FF'];
 
   let bouquet = [];
 
   function seedBouquet(){
     const cx = W*0.5;
-    const baseY = H*0.93;
-    const scaleBase = lerp(0.74, 1.12, clamp(Math.min(W, H)/820, 0, 1));
-    const spread = Math.min(W*0.52, 280 + W*0.06);
-bouquet = DESCS.map((p,i)=>{
+    // Un pelín más abajo para que en móviles no “tope” arriba y se sienta centrado.
+    const baseY = H*0.935;
+
+    // Escala un poquito más generosa (sin pasarse) para que el ramo se vea “presente”.
+    const scaleBase = lerp(0.74, 1.14, clamp(Math.min(W, H)/820, 0, 1));
+
+    // Un poco más de apertura lateral para que respire.
+    const spread = Math.min(W*0.56, 310 + W*0.07);
+
+    bouquet = DESCS.map((p,i)=>{
+      const seed = (1337 + i*101) >>> 0;
+      let s = seed || 1;
+      const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0, s / 4294967296);
+
       const scale = scaleBase * p.bs;
-      const bw = (36 + ((i%3)-1)*2) * scale;
-      const bh = (82 + ((i%4)-2)*3) * scale;
-      const twist = p.dx * 0.09;
+
+      // Variación real (pero estable) por flor
+      const bw = (34 + rnd()*8) * scale;
+      const bh = (78 + rnd()*14) * scale;
+
+      // Inclinación: composición + micro azar (para que no parezcan clones)
+      const twist = p.dx * 0.10 + (rnd()*2 - 1) * 0.06;
+
+      // Apertura: 0.88..1.00 (con micro variación)
+      const open = clamp(0.88 + rnd()*0.16 + (i%2)*0.02, 0, 1);
 
       return {
         i,
         x: cx + p.dx*spread,
         baseY,
         scale,
-        height: (235 * scaleBase) * p.hf,
-        phase: i*0.85,
+        height: (242 * scaleBase) * p.hf * (0.94 + rnd()*0.10),
+        phase: i*0.83 + rnd()*0.35,
         bw, bh,
         twist,
-        seed: 1337 + i*101,
-        col: colorFromSeed(1337 + i*101),
-        open: 0.92 + (i % 4) * 0.03
+        seed,
+        col: colorFromSeed(seed),
+        open
       };
     });
   }
-
-  function drawBouquet(t){
+function drawBouquet(t){
     drawGrass(t);
 
         // sombra suave del primer plano (cacheado)
@@ -4458,6 +5002,9 @@ ctx.restore();
     ctx.fillRect(0, fogTop, W, H - fogTop);
     ctx.restore();
 
+    // Pasto en primer plano: tapa uniones y hace que los tallos se sientan “dentro” del suelo.
+    drawOverlayGrass(t, introActive ? (0.55 + 0.45*master) : 1);
+
     const bloomOrder = drawBouquet._bloom || (drawBouquet._bloom = []);
 
     bloomOrder.length = order.length;
@@ -4502,6 +5049,38 @@ for(const f of bloomOrder){
 
       drawTulipBloom(f.bw, f.bh, f.col, f.seed, (f._openNow ?? f.open), (f._petals ?? 6));
 
+      // Volumen extra: un toque de luz y sombra direccional (recorta mejor y se ve menos “plano”)
+      {
+        const cyHL = -f.bh*0.62;
+        ctx.save();
+        ctx.beginPath();
+        ctx.ellipse(0, cyHL, f.bw*0.88, f.bh*0.70, 0, 0, TAU);
+        ctx.clip();
+
+        // brillo (lado de la luna)
+        ctx.globalCompositeOperation = 'screen';
+        ctx.globalAlpha *= (0.08 + 0.06*depth);
+
+        let hg = ctx.createLinearGradient(f.bw*0.72, cyHL - f.bh*0.48, -f.bw*0.56, cyHL + f.bh*0.18);
+        hg.addColorStop(0, 'rgba(255,255,255,0.36)');
+        hg.addColorStop(0.35, 'rgba(255,255,255,0.14)');
+        hg.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = hg;
+        ctx.fillRect(-f.bw*1.25, cyHL - f.bh*1.12, f.bw*2.5, f.bh*2.3);
+
+        // sombra suave (lado opuesto)
+        ctx.globalCompositeOperation = 'multiply';
+        ctx.globalAlpha *= 0.55;
+        let sg = ctx.createLinearGradient(-f.bw*0.76, cyHL - f.bh*0.44, f.bw*0.56, cyHL + f.bh*0.22);
+        sg.addColorStop(0, 'rgba(0,0,0,0.22)');
+        sg.addColorStop(0.55, 'rgba(0,0,0,0.10)');
+        sg.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = sg;
+        ctx.fillRect(-f.bw*1.25, cyHL - f.bh*1.12, f.bw*2.5, f.bh*2.3);
+
+        ctx.restore();
+      }
+
       // “Shimmer” ligero sobre el centro/pétalos para dar vida sin re-renderizar sprites cada frame
       if(!CONFIG.reduceMotion){
         const cy = -f.bh*0.62;
@@ -4540,6 +5119,9 @@ for(const f of bloomOrder){
     ctx.beginPath();
     ctx.ellipse(knotX, knotY, Math.min(130, W*0.24), 34, 0, 0, TAU);
     ctx.fill();ctx.restore();
+
+    // Luciérnagas/polvo brillante (sutil): le da vida al primer plano
+    drawFireflies(t, introActive ? (0.35 + 0.65*master) : 1);
   }
 
   function addSparkle(x, y, t){
@@ -4613,6 +5195,8 @@ for(const f of bloomOrder){
     seedBouquet();
     seedSoil();
     seedGrass();
+    seedOverlayGrass();
+    seedFireflies();
     rebuildGroundCache();
 
     rebuildBouquetShadeCache();
@@ -4630,7 +5214,6 @@ for(const f of bloomOrder){
   window.addEventListener('resize', requestResize, {passive:true});
 
   canvas.addEventListener('pointerdown', (e) => {
-    if(!STARTED) return;
     const r = canvas.getBoundingClientRect();
     const x = (e.clientX - r.left);
     const y = (e.clientY - r.top);
@@ -4737,43 +5320,13 @@ function stop(){
 }
 
 document.addEventListener('visibilitychange', () => {
+  if(!_started) return;
   if(document.hidden) stop();
-  else { if(STARTED) start(); }
+  else start();
 }, {passive:true});
 
-
-  const intro = document.getElementById('introScreen');
-  function begin(){
-    if(STARTED) return;
-    STARTED = true;
-
-    // arrancar animación de “generación” al entrar
-    INTRO.active = true;
-    INTRO.t0 = performance.now();
-
-    
-// transición suave: primero desvanecemos la carta, luego revelamos el canvas
-if(intro) intro.classList.add('hide');
-
-// preparar tamaños/caches
-try{ resize(); }catch(_){ /* en caso extremo, intentamos arrancar igual */ }
-
-// empezar a revelar la escena (crossfade) y arrancar
-window.setTimeout(()=>{ document.body.classList.add('scene-ready'); }, 120);
-window.setTimeout(()=>{ start(); }, 260);
-}
-
-  // Click/tap/tecla
-  if(intro){
-    intro.addEventListener('pointerdown', (e)=>{ e.preventDefault(); begin(); }, {passive:false});
-    intro.addEventListener('keydown', (e)=>{
-      if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); begin(); }
-    }, {passive:false});
-  } else {
-    // si por alguna razón no está el overlay, arranca normal
-    begin();
-  }
-
+resize();
+// No arrancamos hasta que el usuario toque la carta.
 })();
 </script>
 </body>
