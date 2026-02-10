@@ -175,7 +175,7 @@
         radial-gradient(340px 300px at 82% 12%, rgba(150,100,70,0.14), rgba(0,0,0,0) 60%),
         radial-gradient(520px 380px at 50% 88%, rgba(90,55,40,0.18), rgba(0,0,0,0) 72%),
         linear-gradient(180deg, #f7ead4 0%, #ecd4b4 56%, #e5c7a5 100%);
-      border: 1px solid rgba(60,35,28,0.22);
+      border: none;
       box-shadow:
         0 26px 70px rgba(0,0,0,0.24),
         inset 0 1px 0 rgba(255,255,255,0.72);
@@ -210,10 +210,13 @@
     #paperContent{
       position: relative;
       height: 100%;
-      padding: 22px 22px 18px;
+      padding: 28px 22px 18px;
       display:flex;
       flex-direction: column;
-      justify-content: space-between;
+      justify-content: flex-start;
+      align-items: center;
+      gap: 14px;
+      text-align: center;
       z-index: 2;
     }
 
@@ -228,14 +231,37 @@
       text-shadow: 0 1px 0 rgba(255,255,255,0.35);
     }
 
-    #introTitle .heart{
-      display:inline-block;
-      margin-left: .06em;
-      color: rgba(170, 20, 60, 0.92);
-      text-shadow: 0 1px 0 rgba(255,255,255,0.35), 0 10px 24px rgba(170,20,60,0.18);
-      transform: translateY(-.02em);
+    #introTextBlock{
+      width: 100%;
+      padding: 0;
+      border-radius: 0;
+      background: transparent;
     }
 
+
+    #introTitle .heart{
+      display:inline-flex;
+      align-items: baseline;
+      margin-left: .10em;
+      transform: translateY(-.02em);
+      color: rgba(170, 20, 60, 0.92);
+      text-shadow: 0 1px 0 rgba(255,255,255,0.35), 0 10px 24px rgba(170,20,60,0.18);
+    }
+    #introTitle .heartSvg{
+      width: 0.95em;
+      height: 0.95em;
+      vertical-align: -0.08em;
+      overflow: visible;
+    }
+    #introTitle .heartSvg path{
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2.35;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    
     #introMsg{
       font-family: "Dancing Script", cursive;
       font-weight: 600;
@@ -331,17 +357,46 @@
       width:100%;
       height:100%;
       pointer-events:none;
-      opacity: .24;
-      filter: blur(.18px);
+      z-index: 0;
+      opacity: .34;
+      filter: blur(.10px);
       color: rgba(70,40,30,.62);
       mix-blend-mode: multiply;
+      /* que el dibujo viva abajo del texto */
+      -webkit-mask-image: linear-gradient(to bottom,
+        rgba(0,0,0,0) 0%,
+        rgba(0,0,0,0) 30%,
+        rgba(0,0,0,1) 55%,
+        rgba(0,0,0,1) 100%);
+      mask-image: linear-gradient(to bottom,
+        rgba(0,0,0,0) 0%,
+        rgba(0,0,0,0) 30%,
+        rgba(0,0,0,1) 55%,
+        rgba(0,0,0,1) 100%);
     }
+
+    .paperFrame{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      pointer-events:none;
+      z-index: 1;
+      opacity: .70;
+      color: rgba(70,40,30,.72);
+      mix-blend-mode: multiply;
+      filter: blur(.05px);
+    }
+    .paperFrame .thin{ stroke-width: 2.0; }
     .paperDoodle .thin{ stroke-width:2.2; opacity:.85; }
     .paperDoodle .med{ stroke-width:3.2; opacity:.9; }
     .paperDoodle .bold{ stroke-width:4.2; opacity:.92; }
     .paperDoodle .fade{ opacity:.55; }
 
-  </style>
+  
+    /* margen doble en toda la hoja (dos líneas tipo papelería) */
+
+</style>
 </head>
 <body>
   <canvas id="c" role="img" aria-label="Animación de un ramo de orquídeas rosadas bajo un cielo estrellado con nubes, luna y la constelación de Capricornio"></canvas>
@@ -352,8 +407,15 @@
 
       <div id="letter" aria-hidden="false">
         <div class="paper">
-          
-          <svg class="paperDoodle" viewBox="0 0 600 800" aria-hidden="true" focusable="false">
+
+          <svg class="paperFrame" viewBox="0 0 600 800" aria-hidden="true" focusable="false" preserveAspectRatio="none">
+            <g>
+              <rect x="28" y="28" width="544" height="744" rx="22" fill="none" stroke="currentColor" opacity=".22" class="thin"/>
+              <rect x="44" y="44" width="512" height="712" rx="18" fill="none" stroke="currentColor" opacity=".16" class="thin"/>
+            </g>
+          </svg>
+
+<svg class="paperDoodle" viewBox="0 0 600 800" aria-hidden="true" focusable="false">
   <defs>
     <filter id="pencil">
       <feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="2" stitchTiles="stitch" result="n"/>
@@ -372,9 +434,6 @@
   </defs>
 
   <g filter="url(#pencil)">
-    <!-- marco súper sutil -->
-    <rect x="28" y="28" width="544" height="744" rx="22" fill="none" stroke="currentColor" opacity=".22" class="thin"/>
-    <rect x="44" y="44" width="512" height="712" rx="18" fill="none" stroke="currentColor" opacity=".16" class="thin"/>
 
     <!-- luna -->
     <g opacity=".25">
@@ -438,9 +497,13 @@
   </g>
 </svg>
 <div id="paperContent">
-            <div>
+            <div id="introTextBlock">
               <div id="introMsg">recuerda que son con mucho cariño</div>
-              <div id="introTitle">para ti <span class="heart" aria-hidden="true">❤</span></div>
+              <div id="introTitle">para ti <span class="heart" aria-hidden="true">
+                <svg class="heartSvg" viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5C2 6 3.99 4 6.5 4c1.74 0 3.41.81 4.5 2.09C12.09 4.81 13.76 4 15.5 4C18.01 4 20 6 20 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                </svg>
+              </span></div>
             </div>
 
             <button id="introBtn" type="button">toca aquí</button>
@@ -552,18 +615,24 @@
 
   // Color aleatorio pero estable por semilla (así cada orquídea "nace" con su propio tono)
   const colorFromSeed = (seed)=>{
-    // Rosado estable por semilla: variación sutil por flor para que se vea natural,
-    // sin salirse del rango "rosado/orquídea" (evita azules o rojos chillones).
+    // Blanco marfil estable por semilla (base) + micro variación,
+    // y el rubor rosado se aplica después como “toques” en el shader.
     let s = (seed >>> 0) || 1;
     const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0, s / 4294967296);
 
-    const base = { r: 232, g: 86,  b: 170 };     // #E856AA (rosado)
-    const v    = -10 + Math.floor(rnd()*21);     // -10..10 (luz)
-    const t    = -6  + Math.floor(rnd()*13);     // -6..6 (micro tono)
+    // base marfil (ligeramente cálido)
+    const base = { r: 248, g: 246, b: 252 };   // off-white
+    const v  = -6 + Math.floor(rnd()*13);      // -6..6 (luz)
+    const w  = -3 + Math.floor(rnd()*7);       // -3..3 (cálido/frío)
+    const p  = rnd();                          // 0..1 (micro rosado)
+    const pr = Math.round(lerp(-2, 6, p));
+    const pg = Math.round(lerp(-4, 3, p));
+    const pb = Math.round(lerp( 0, 5, 1-p));
+
     return {
-      r: clamp(base.r + v,        0, 255),
-      g: clamp(base.g + v + t,    0, 255),
-      b: clamp(base.b + v + t*2,  0, 255)
+      r: clamp(base.r + v + w + pr, 225, 255),
+      g: clamp(base.g + v + pg,     220, 255),
+      b: clamp(base.b + v - w + pb, 225, 255)
     };
   };
 
@@ -699,7 +768,7 @@ function restartIntro(){
     crownStrength: 0.008,
 
     // Texto “en estrellas”
-    starText: 'no hay día que no pases por mi mente <3',
+    starText: 'Día o noche, te veo con ojos de cariño',
     starTextStrength: 0.95    ,
 
     // Rendimiento / calidad
@@ -2561,6 +2630,68 @@ function drawSun(t){
       });
     }
 
+
+    // Corazón hecho con estrellas (en lugar de "<3")
+    // Se coloca al final de la frase y se mantiene dentro de pantalla con clamp.
+    {
+      const mtW = g.measureText(CONFIG.starText).width;
+      const heartScale = fontSize * 0.42;
+
+      const hx = clamp(
+        x + Math.min(maxW*0.42, mtW*0.5 + heartScale*0.95),
+        heartScale*1.15,
+        tc.width - heartScale*1.15
+      );
+      const hy = y + fontSize*0.06;
+
+      const pushStar = (px, py, sizeMul, aMul)=>{
+        const r = (0.62 + pr()*1.15) * (fontSize/46) * sizeMul;
+        const alpha = (0.12 + pr()*0.22) * CONFIG.starTextStrength * aMul;
+        const hue = 335 + pr()*22; // rosa cálido
+        textStars.push({
+          x: px, y: py,
+          r,
+          a: alpha,
+          p: pr()*TAU,
+          s: 0.70 + pr()*1.10,
+          hue,
+          flare: (pr() < 0.18) ? (0.18 + pr()*0.40) : 0
+        });
+      };
+
+      // curva paramétrica de corazón
+      const N = 180;
+      const curve = [];
+      for(let i=0;i<N;i++){
+        const tt = (i/N)*TAU;
+        const sx = 16*Math.pow(Math.sin(tt), 3);
+        const sy = 13*Math.cos(tt) - 5*Math.cos(2*tt) - 2*Math.cos(3*tt) - Math.cos(4*tt);
+        curve.push({ x: sx/18, y: -sy/18 });
+      }
+
+      // contorno
+      for(let i=0;i<curve.length;i+=2){
+        const p = curve[i];
+        const jx = (pr()*2-1) * 0.025;
+        const jy = (pr()*2-1) * 0.025;
+        const nx = (hx + (p.x + jx)*heartScale) / tc.width;
+        const ny = (hy + (p.y + jy)*heartScale) / tc.height;
+        pushStar(nx, ny, 0.95, 1.05);
+      }
+
+      // relleno (muestra puntos “hacia adentro” desde la curva)
+      const fillN = 110;
+      for(let i=0;i<fillN;i++){
+        const p = curve[(pr()*curve.length)|0];
+        const f = Math.pow(pr(), 0.65); // concentra hacia el interior
+        const jx = (pr()*2-1) * 0.020;
+        const jy = (pr()*2-1) * 0.020;
+        const nx = (hx + (p.x*f + jx)*heartScale) / tc.width;
+        const ny = (hy + (p.y*f + jy)*heartScale) / tc.height;
+        pushStar(nx, ny, 0.78, 0.88);
+      }
+    }
+
     // halo disperso alrededor del texto: suaviza bordes y lo integra al cielo
     const haloBudget = Math.min(28, Math.max(10, Math.floor(textStars.length * 0.20)));
     for(let i=0;i<haloBudget;i++){
@@ -3781,13 +3912,17 @@ const neb = (x,y,r, a, cr,cg,cb) => {
     const deep = mix(col, {r:  2,g:  8,b: 24}, 0.70);
     const edge = mix(lite, {r:255,g:255,b:255}, 0.55);
 
-    // garganta/centro: blanco-rosado (mantiene el rosado sin meter amarillos raros)
-    const throat = mix(col, {r:255,g:235,b:245}, 0.74);
-    const throatDeep = mix(col, {r: 56,g: 10,b: 38}, 0.62);
+    // Rubor rosado (toques) para pétalos blancos
+    const blushA = {r:255,g:175,b:210};
+    const blushB = {r:238,g:120,b:180};
 
-    // labelo algo más luminoso
-    const lipCol  = mix(col, {r:255,g:235,b:245}, 0.46);
-    const lipDeep = mix(col, {r: 64,g: 12,b: 42}, 0.62);
+    // garganta/centro: blanco con rubor rosado
+    const throat = mix(blushA, {r:255,g:248,b:252}, 0.55);
+    const throatDeep = mix(blushB, {r: 60,g: 12,b: 45}, 0.55);
+
+    // labelo (centro) más rosado y con profundidad
+    const lipCol  = mix(blushA, {r:255,g:240,b:250}, 0.40);
+    const lipDeep = mix(blushB, {r: 64,g: 12,b: 42}, 0.62);
 
     const centerY = -h*0.58;
 
@@ -3836,7 +3971,7 @@ const neb = (x,y,r, a, cr,cg,cb) => {
       c2.transform(1, 0, curl, 1, 0, 0);
 
       // “Tipo” de pieza: dorsal / sepal / petal (variación de redondeo)
-      const tipRound = (kind==='petal') ? 0.38 : (kind==='dorsal' ? 0.30 : 0.33);
+      const tipRound = (kind==='petal') ? 0.50 : (kind==='dorsal' ? 0.42 : 0.44);
       const ruffleAmp = (isBack ? 0.045 : 0.070) * (kind==='petal' ? 1.0 : 0.85);
 
       // Precalcula forma (determinista dentro de esta pieza)
@@ -3850,19 +3985,57 @@ const neb = (x,y,r, a, cr,cg,cb) => {
       const tipCtrl = tipY - len*(0.04 + 0.02*rnd());
 
       const path = ()=>{
+        // Silueta más “phalaenopsis”: base estrecha, hombro amplio y punta redondeada,
+        // con ondulación fina en el borde (ruffle) que se intensifica hacia el tip.
+        const steps = 26;
+        const sCurve = (t)=> t*t*(3-2*t);
+
+        const baseHalf = wid * (kind==='petal' ? 0.080 : 0.065) * (0.95 + 0.10*rndLocal(9));
+        const midHalf  = shoulder * (0.98 + 0.03*rndLocal(10));
+        const tipHalf  = tipW * (0.98 + 0.05*rndLocal(11));
+        const midT     = kind==='petal' ? 0.22 : 0.18;
+
+        const halfAt = (t)=>{
+          if(t < midT){
+            const u = sCurve(t / midT);
+            return lerp(baseHalf, midHalf, u);
+          } else {
+            const u = sCurve((t - midT) / (1 - midT));
+            return lerp(midHalf, tipHalf, u);
+          }
+        };
+
+        const ampBase = ruf * (isBack ? 0.65 : 1.00) * (kind==='petal' ? 1.05 : 0.85);
+
         c2.beginPath();
-        c2.moveTo(0, 0);
-        c2.bezierCurveTo(
-          shoulder + wob1, -len*(0.16 + 0.02*rndLocal(0)),
-          upper    + wob2, -len*(0.66 + 0.03*rndLocal(1)),
-          tipW, tipY
-        );
-        c2.quadraticCurveTo(0, tipCtrl, -tipW, tipY);
-        c2.bezierCurveTo(
-          -upper    - wob2, -len*(0.66 + 0.03*rndLocal(2)),
-          -shoulder - wob1, -len*(0.16 + 0.02*rndLocal(3)),
-          0, 0
-        );
+
+        // borde derecho (base→tip)
+        for(let i=0;i<=steps;i++){
+          const t = i/steps;
+          const y = -len*t;
+
+          const amp = ampBase * (0.12 + 0.88*Math.pow(t, 1.25));
+          const wob = Math.sin(t*TAU*(2.20 + 0.25*rndLocal(12)) + 1.10 + wob1*0.08) * amp
+                    + Math.sin(t*TAU*(3.70 + 0.18*rndLocal(13)) + 2.00 + wob2*0.07) * (amp*0.35);
+
+          const x = halfAt(t) + wob;
+          if(i===0) c2.moveTo(x, y);
+          else c2.lineTo(x, y);
+        }
+
+        // borde izquierdo (regreso tip→base)
+        for(let i=steps;i>=0;i--){
+          const t = i/steps;
+          const y = -len*t;
+
+          const amp = ampBase * (0.12 + 0.88*Math.pow(t, 1.25));
+          const wob = Math.sin(t*TAU*(2.15 + 0.25*rndLocal(14)) + 2.20 - wob1*0.07) * amp
+                    + Math.sin(t*TAU*(3.55 + 0.18*rndLocal(15)) + 0.60 - wob2*0.06) * (amp*0.35);
+
+          const x = -halfAt(t) - wob;
+          c2.lineTo(x, y);
+        }
+
         c2.closePath();
       };
 
@@ -3917,7 +4090,7 @@ const neb = (x,y,r, a, cr,cg,cb) => {
       // translucencia de bordes (subsurface) + brillo suave
       c2.save();
       c2.globalCompositeOperation = 'screen';
-      c2.globalAlpha = alpha * (isBack ? 0.06 : 0.10);
+      c2.globalAlpha = alpha * (isBack ? 0.06 : 0.12);
       path();
       c2.clip();
 
@@ -3948,6 +4121,51 @@ const neb = (x,y,r, a, cr,cg,cb) => {
 
       c2.restore();
 
+
+      // especular “ceroso” (realismo: brillo direccional suave)
+      c2.save();
+      c2.globalCompositeOperation = 'screen';
+      c2.globalAlpha = alpha * (isBack ? 0.025 : 0.075);
+      path();
+      c2.clip();
+      const sg = c2.createLinearGradient(-wid*0.65, -len*0.10, wid*0.85, -len*0.95);
+      sg.addColorStop(0.00, 'rgba(255,255,255,0)');
+      sg.addColorStop(0.38, 'rgba(255,255,255,0.08)');
+      sg.addColorStop(0.55, 'rgba(255,255,255,0.20)');
+      sg.addColorStop(0.70, 'rgba(255,255,255,0.06)');
+      sg.addColorStop(1.00, 'rgba(255,255,255,0)');
+      c2.fillStyle = sg;
+      c2.fillRect(-wid*1.4, tipY-len*0.25, wid*2.8, len*1.6);
+      c2.restore();
+
+      // rubor rosado (toques): concentra un blush suave hacia los bordes y el tip
+      // para que el pétalo sea mayormente blanco, pero con tintes rosados naturales.
+      c2.save();
+      c2.globalCompositeOperation = 'screen';
+      c2.globalAlpha = alpha * (isBack ? 0.030 : 0.075);
+      path();
+      c2.clip();
+
+      const pg = c2.createRadialGradient(0, tipY*0.60, 0, 0, tipY*0.60, len*0.95);
+      pg.addColorStop(0.00, 'rgba(255,255,255,0)');
+      pg.addColorStop(0.45, rgba(blushA.r, blushA.g, blushA.b, 0.12));
+      pg.addColorStop(1.00, rgba(blushB.r, blushB.g, blushB.b, 0.22));
+      c2.fillStyle = pg;
+      c2.fillRect(-wid*1.6, tipY-len*0.30, wid*3.2, len*1.75);
+
+      // pequeño toque hacia el centro (muy sutil)
+      c2.globalAlpha = alpha * (isBack ? 0.015 : 0.040);
+      const pg2 = c2.createRadialGradient(0, tipY*0.20, 0, 0, tipY*0.20, len*0.65);
+      pg2.addColorStop(0.00, rgba(blushA.r, blushA.g, blushA.b, 0.10));
+      pg2.addColorStop(0.55, 'rgba(255,255,255,0)');
+      pg2.addColorStop(1.00, 'rgba(255,255,255,0)');
+      c2.fillStyle = pg2;
+      c2.beginPath();
+      c2.ellipse(0, tipY*0.18, wid*0.62, len*0.40, 0, 0, TAU);
+      c2.fill();
+
+      c2.restore();
+
       // borde iluminado (más fino y “natural”)
       c2.save();
       c2.globalAlpha = alpha * 0.14;
@@ -3955,6 +4173,43 @@ const neb = (x,y,r, a, cr,cg,cb) => {
       c2.lineWidth = Math.max(0.75, wid*0.085);
       c2.lineJoin = 'round';
       c2.lineCap  = 'round';
+      path();
+      c2.stroke();
+      c2.restore();
+
+
+      // micro “ruffle” en los bordes (más orgánico, sin sobrecargar)
+      // Ahora usa el mismo contorno del pétalo para que no se vean trazos “fuera” del relleno.
+      c2.save();
+      c2.lineJoin = 'round';
+      c2.lineCap  = 'round';
+
+      const rg = c2.createLinearGradient(0, -len*0.10, 0, tipY);
+      rg.addColorStop(0.00, 'rgba(255,255,255,0.08)');
+      rg.addColorStop(0.55, 'rgba(255,255,255,0.24)');
+      rg.addColorStop(1.00, 'rgba(255,255,255,0.06)');
+
+      c2.globalAlpha = alpha * (kind==='petal' ? 0.16 : 0.12);
+      c2.strokeStyle = rg;
+      c2.lineWidth = Math.max(0.55, wid*0.030);
+      path();
+      c2.stroke();
+
+      // Segundo pase mínimo, ligeramente desplazado (da sensación de borde “ondulado”)
+      c2.globalAlpha = alpha * (kind==='petal' ? 0.055 : 0.040);
+      c2.lineWidth = Math.max(0.35, wid*0.018);
+      c2.translate((rndLocal(20)*2-1)*0.35, (rndLocal(21)*2-1)*0.35);
+      path();
+      c2.stroke();
+
+      c2.restore();
+
+      // micro-sombra del borde (da separación sutil)
+      c2.save();
+      c2.globalAlpha = alpha * 0.05;
+      c2.strokeStyle = 'rgba(0,0,0,0.18)';
+      c2.lineWidth = Math.max(0.45, wid*0.024);
+      c2.translate(0.55, 0.85);
       path();
       c2.stroke();
       c2.restore();
@@ -4039,6 +4294,54 @@ const neb = (x,y,r, a, cr,cg,cb) => {
 
         c2.restore();
       }
+
+
+      // pliegues finos (más realista, especialmente en pétalos frontales)
+      if(!isBack && kind==='petal' && alpha > 0.05){
+        c2.save();
+        path();
+        c2.clip();
+
+        // sombra suave de pliegues
+        c2.globalCompositeOperation = 'multiply';
+        c2.globalAlpha = alpha * 0.028;
+        c2.strokeStyle = 'rgba(0,0,0,0.20)';
+        c2.lineWidth = Math.max(0.35, wid*0.016);
+        c2.lineCap='round';
+        c2.lineJoin='round';
+
+        const folds = 6;
+        for(let f=0; f<folds; f++){
+          const tt = (f+1)/(folds+1);
+          const y = -len*(0.18 + tt*0.28) * (0.95 + 0.06*rnd());
+          const span = wid*(0.14 + 0.08*rnd()) * (1.05 - tt*0.6);
+          const lift = len*(0.012 + 0.010*rnd()) * (1.0 - tt*0.7);
+          c2.beginPath();
+          c2.moveTo(-span, y);
+          c2.quadraticCurveTo(0, y - lift, span, y);
+          c2.stroke();
+        }
+
+        // luz mínima en esos pliegues (sensación cerosa)
+        c2.globalCompositeOperation = 'screen';
+        c2.globalAlpha = alpha * 0.020;
+        c2.strokeStyle = 'rgba(255,255,255,0.18)';
+        c2.lineWidth = Math.max(0.30, wid*0.013);
+
+        for(let f=0; f<4; f++){
+          const tt = (f+1)/5;
+          const y = -len*(0.24 + tt*0.22);
+          const span = wid*(0.12 + 0.06*rnd());
+          const lift = len*(0.010 + 0.008*rnd());
+          c2.beginPath();
+          c2.moveTo(-span, y);
+          c2.quadraticCurveTo(0, y - lift, span, y);
+          c2.stroke();
+        }
+
+        c2.restore();
+      }
+
 
       c2.restore();
     };
