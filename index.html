@@ -2632,17 +2632,14 @@ function drawSun(t){
 
 
     // Corazón hecho con estrellas (en lugar de "<3")
-    // Se coloca al final de la frase y se mantiene dentro de pantalla con clamp.
+    // Se coloca ARRIBA del texto para que no compita con la lectura.
     {
       const mtW = g.measureText(CONFIG.starText).width;
       const heartScale = fontSize * 0.42;
 
-      const hx = clamp(
-        x + Math.min(maxW*0.42, mtW*0.5 + heartScale*0.95),
-        heartScale*1.15,
-        tc.width - heartScale*1.15
-      );
-      const hy = y + fontSize*0.06;
+      // centrado sobre el mensaje
+      const hx = clamp(x, heartScale*1.15, tc.width - heartScale*1.15);
+      const hy = clamp(y - fontSize*0.95, heartScale*1.20, tc.height*0.55);
 
       const pushStar = (px, py, sizeMul, aMul)=>{
         const r = (0.62 + pr()*1.15) * (fontSize/46) * sizeMul;
@@ -4058,16 +4055,21 @@ const neb = (x,y,r, a, cr,cg,cb) => {
       c2.fill();
       c2.restore();
 
-      // gradiente principal (vertical)
-      const base = mix(deep, col, 0.22 + 0.22*tint);
-      const body = mix(col,  mid, 0.16 + 0.22*tint);
-      const tip  = mix(lite, {r:255,g:255,b:255}, 0.12 + 0.10*tint);
+      // gradiente principal (vertical) - mezcla blanco + rosado (más natural)
+      const whiteBase = {r:255,g:250,b:252};
+      const blushTone = mix(blushA, col, 0.35 + 0.10*tint);
+      const blushDeep2 = mix(blushB, col, 0.40 + 0.10*tint);
+
+      // centro ligeramente más rosado, tips más blancos
+      const base = mix(blushDeep2, whiteBase, 0.18);
+      const body = mix(whiteBase, blushTone, 0.38);
+      const tip  = mix(whiteBase, blushTone, 0.22);
 
       const g = c2.createLinearGradient(0, 0, 0, tipY);
-      g.addColorStop(0,   rgba(base.r,base.g,base.b, 0.58));
-      g.addColorStop(0.28,rgba(col.r,col.g,col.b,    0.98));
-      g.addColorStop(0.72,rgba(body.r,body.g,body.b,  0.98));
-      g.addColorStop(1,   rgba(tip.r,tip.g,tip.b,     0.98));
+      g.addColorStop(0,    rgba(base.r,base.g,base.b, 0.72));
+      g.addColorStop(0.24, rgba(blushTone.r,blushTone.g,blushTone.b, 0.96));
+      g.addColorStop(0.68, rgba(whiteBase.r,whiteBase.g,whiteBase.b, 0.98));
+      g.addColorStop(1,    rgba(tip.r,tip.g,tip.b,     0.98));
 
       c2.globalAlpha = alpha;
       c2.fillStyle = g;
@@ -4142,19 +4144,19 @@ const neb = (x,y,r, a, cr,cg,cb) => {
       // para que el pétalo sea mayormente blanco, pero con tintes rosados naturales.
       c2.save();
       c2.globalCompositeOperation = 'screen';
-      c2.globalAlpha = alpha * (isBack ? 0.030 : 0.075);
+      c2.globalAlpha = alpha * (isBack ? 0.038 : 0.095);
       path();
       c2.clip();
 
       const pg = c2.createRadialGradient(0, tipY*0.60, 0, 0, tipY*0.60, len*0.95);
       pg.addColorStop(0.00, 'rgba(255,255,255,0)');
-      pg.addColorStop(0.45, rgba(blushA.r, blushA.g, blushA.b, 0.12));
-      pg.addColorStop(1.00, rgba(blushB.r, blushB.g, blushB.b, 0.22));
+      pg.addColorStop(0.45, rgba(blushA.r, blushA.g, blushA.b, 0.16));
+      pg.addColorStop(1.00, rgba(blushB.r, blushB.g, blushB.b, 0.30));
       c2.fillStyle = pg;
       c2.fillRect(-wid*1.6, tipY-len*0.30, wid*3.2, len*1.75);
 
       // pequeño toque hacia el centro (muy sutil)
-      c2.globalAlpha = alpha * (isBack ? 0.015 : 0.040);
+      c2.globalAlpha = alpha * (isBack ? 0.018 : 0.052);
       const pg2 = c2.createRadialGradient(0, tipY*0.20, 0, 0, tipY*0.20, len*0.65);
       pg2.addColorStop(0.00, rgba(blushA.r, blushA.g, blushA.b, 0.10));
       pg2.addColorStop(0.55, 'rgba(255,255,255,0)');
