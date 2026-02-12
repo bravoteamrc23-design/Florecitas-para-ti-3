@@ -358,20 +358,20 @@
       height:100%;
       pointer-events:none;
       z-index: 0;
-      opacity: .34;
-      filter: blur(.10px);
-      color: rgba(70,40,30,.62);
+      opacity: .46;
+      filter: blur(.06px) contrast(1.08);
+      color: rgba(55,30,22,.78);
       mix-blend-mode: multiply;
       /* que el dibujo viva abajo del texto */
       -webkit-mask-image: linear-gradient(to bottom,
         rgba(0,0,0,0) 0%,
-        rgba(0,0,0,0) 30%,
-        rgba(0,0,0,1) 55%,
+        rgba(0,0,0,0) 36%,
+        rgba(0,0,0,1) 60%,
         rgba(0,0,0,1) 100%);
       mask-image: linear-gradient(to bottom,
         rgba(0,0,0,0) 0%,
-        rgba(0,0,0,0) 30%,
-        rgba(0,0,0,1) 55%,
+        rgba(0,0,0,0) 36%,
+        rgba(0,0,0,1) 60%,
         rgba(0,0,0,1) 100%);
     }
 
@@ -494,6 +494,58 @@
 
     <!-- bruma horizontal -->
     <rect x="56" y="470" width="488" height="190" rx="24" fill="url(#mist)" opacity=".55"/>
+
+    <!-- detalles románticos -->
+    <g opacity=".26" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <!-- corazón -->
+      <path class="med" d="M300 624
+        C292 612 272 614 272 632
+        C272 654 300 666 300 666
+        C300 666 328 654 328 632
+        C328 614 308 612 300 624 Z" />
+
+      <!-- cisnes (formando un corazón) -->
+      <path class="thin" d="M235 720
+        C220 710 220 692 236 684
+        C254 674 280 682 288 700
+        C295 718 268 734 235 720" />
+      <path class="thin" d="M365 720
+        C380 710 380 692 364 684
+        C346 674 320 682 312 700
+        C305 718 332 734 365 720" />
+      <path class="thin" d="M268 705
+        C254 682 260 652 282 642
+        C300 634 318 650 305 670
+        C296 684 286 690 280 690" />
+      <path class="thin" d="M332 705
+        C346 682 340 652 318 642
+        C300 634 282 650 295 670
+        C304 684 314 690 320 690" />
+
+      <!-- pareja mínima -->
+      <g opacity=".92">
+        <circle cx="92" cy="702" r="6" class="thin"/>
+        <circle cx="120" cy="704" r="6" class="thin"/>
+        <path class="thin" d="M92 708 l-3 26" />
+        <path class="thin" d="M120 710 l3 26" />
+        <path class="thin" d="M88 722 C98 716 110 716 122 724" />
+        <path class="thin" d="M106 718 l0 18" opacity=".65"/>
+        <path class="thin" d="M106 692
+          C103 688 98 690 98 695
+          C98 701 106 705 106 705
+          C106 705 114 701 114 695
+          C114 690 109 688 106 692 Z" opacity=".55" />
+      </g>
+
+      <!-- globito corazón -->
+      <path class="thin" d="M508 666
+        C503 658 492 660 492 670
+        C492 682 508 690 508 690
+        C508 690 524 682 524 670
+        C524 660 513 658 508 666 Z" opacity=".55"/>
+      <path class="thin" d="M508 690 C506 710 494 726 478 742" opacity=".45"/>
+    </g>
+
   </g>
 </svg>
 <div id="paperContent">
@@ -615,24 +667,24 @@
 
   // Color aleatorio pero estable por semilla (así cada orquídea "nace" con su propio tono)
   const colorFromSeed = (seed)=>{
-    // Blanco marfil estable por semilla (base) + micro variación,
-    // y el rubor rosado se aplica después como “toques” en el shader.
+    // Morados con tonos blancos (estable por semilla): cada orquídea nace con su “lila/violeta” propio.
     let s = (seed >>> 0) || 1;
     const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0, s / 4294967296);
 
-    // base marfil (ligeramente cálido)
-    const base = { r: 248, g: 246, b: 252 };   // off-white
-    const v  = -6 + Math.floor(rnd()*13);      // -6..6 (luz)
-    const w  = -3 + Math.floor(rnd()*7);       // -3..3 (cálido/frío)
-    const p  = rnd();                          // 0..1 (micro rosado)
-    const pr = Math.round(lerp(-2, 6, p));
-    const pg = Math.round(lerp(-4, 3, p));
-    const pb = Math.round(lerp( 0, 5, 1-p));
+    // rango morado (268..290°) con variación suave
+    const h   = lerp(268, 290, rnd()) / 360;
+    const sat = lerp(0.48, 0.70, rnd());
+    const lig = lerp(0.36, 0.52, rnd());
+
+    const rgb = hslToRgb(h, sat, lig);
+
+    // mezcla hacia blanco para “tonos” (no un morado plano)
+    const w = lerp(0.12, 0.26, rnd());
 
     return {
-      r: clamp(base.r + v + w + pr, 225, 255),
-      g: clamp(base.g + v + pg,     220, 255),
-      b: clamp(base.b + v - w + pb, 225, 255)
+      r: clamp(Math.round(lerp(rgb.r, 255, w)), 40, 255),
+      g: clamp(Math.round(lerp(rgb.g, 255, w)), 30, 255),
+      b: clamp(Math.round(lerp(rgb.b, 255, w)), 70, 255),
     };
   };
 
@@ -768,7 +820,7 @@ function restartIntro(){
     crownStrength: 0.008,
 
     // Texto “en estrellas”
-    starText: 'Día o noche, te veo con ojos de cariño',
+    starText: 'no importa el presente o el futuro, pero que sea contigo',
     starTextStrength: 0.95    ,
 
     // Rendimiento / calidad
@@ -3903,23 +3955,22 @@ const neb = (x,y,r, a, cr,cg,cb) => {
       g: Math.round(lerp(a.g,b.g,t)),
       b: Math.round(lerp(a.b,b.b,t))
     });
+    const lite = mix(col, {r:255,g:255,b:255}, 0.72);
+    const mid  = mix(col, {r:245,g:238,b:255}, 0.42);
+    const deep = mix(col, {r: 12,g:  8,b: 34}, 0.78);
+    const edge = mix(lite, {r:255,g:255,b:255}, 0.72);
 
-    const lite = mix(col, {r:255,g:255,b:255}, 0.62);
-    const mid  = mix(col, {r:220,g:238,b:255}, 0.28);
-    const deep = mix(col, {r:  2,g:  8,b: 24}, 0.70);
-    const edge = mix(lite, {r:255,g:255,b:255}, 0.55);
+    // Toques blancos/lilas (para que el morado tenga “vida” sin verse plano)
+    const frostA = {r:255,g:252,b:255};
+    const frostB = {r:232,g:220,b:255};
 
-    // Rubor rosado (toques) para pétalos blancos
-    const blushA = {r:255,g:175,b:210};
-    const blushB = {r:238,g:120,b:180};
+    // garganta/centro: marfil con violeta tenue
+    const throat = mix(frostB, {r:255,g:248,b:255}, 0.62);
+    const throatDeep = mix(deep, {r: 38,g: 12,b: 55}, 0.55);
 
-    // garganta/centro: blanco con rubor rosado
-    const throat = mix(blushA, {r:255,g:248,b:252}, 0.55);
-    const throatDeep = mix(blushB, {r: 60,g: 12,b: 45}, 0.55);
-
-    // labelo (centro) más rosado y con profundidad
-    const lipCol  = mix(blushA, {r:255,g:240,b:250}, 0.40);
-    const lipDeep = mix(blushB, {r: 64,g: 12,b: 42}, 0.62);
+    // labelo (centro) con profundidad (lavanda, sin saturarse)
+    const lipCol  = mix(frostB, {r:250,g:236,b:255}, 0.42);
+    const lipDeep = mix(deep, {r: 58,g: 16,b: 82}, 0.62);
 
     const centerY = -h*0.58;
 
@@ -4055,26 +4106,40 @@ const neb = (x,y,r, a, cr,cg,cb) => {
       c2.fill();
       c2.restore();
 
-      // gradiente principal (vertical) - mezcla blanco + rosado (más natural)
-      const whiteBase = {r:255,g:250,b:252};
-      const blushTone = mix(blushA, col, 0.35 + 0.10*tint);
-      const blushDeep2 = mix(blushB, col, 0.40 + 0.10*tint);
+      // gradiente principal (vertical) - morado con tonos blancos (más realista)
+      const whiteBase = {r:255,g:252,b:255};
 
-      // centro ligeramente más rosado, tips más blancos
-      const base = mix(blushDeep2, whiteBase, 0.18);
-      const body = mix(whiteBase, blushTone, 0.38);
-      const tip  = mix(whiteBase, blushTone, 0.22);
+      // base más profunda, tips más claros
+      const base = mix(col, deep, 0.22);
+      const body = mix(col, whiteBase, 0.22 + 0.18*tint);
+      const tip  = mix(col, whiteBase, 0.42 + 0.22*tint);
+      const hi   = mix(body, whiteBase, 0.55);
 
       const g = c2.createLinearGradient(0, 0, 0, tipY);
-      g.addColorStop(0,    rgba(base.r,base.g,base.b, 0.72));
-      g.addColorStop(0.24, rgba(blushTone.r,blushTone.g,blushTone.b, 0.96));
-      g.addColorStop(0.68, rgba(whiteBase.r,whiteBase.g,whiteBase.b, 0.98));
-      g.addColorStop(1,    rgba(tip.r,tip.g,tip.b,     0.98));
+      g.addColorStop(0.00, rgba(base.r, base.g, base.b, 0.86));
+      g.addColorStop(0.26, rgba(body.r, body.g, body.b, 0.98));
+      g.addColorStop(0.70, rgba(hi.r,   hi.g,   hi.b,   0.99));
+      g.addColorStop(1.00, rgba(tip.r,  tip.g,  tip.b,  0.99));
 
       c2.globalAlpha = alpha;
       c2.fillStyle = g;
       path();
       c2.fill();
+
+      // sombreado de curvatura (volumen por pétalo)
+      c2.save();
+      c2.globalCompositeOperation = 'multiply';
+      c2.globalAlpha = alpha * (isBack ? 0.045 : 0.080);
+      path();
+      c2.clip();
+      const sh = c2.createLinearGradient(-wid*0.95, tipY*0.05, wid*0.95, tipY*0.85);
+      sh.addColorStop(0.00, 'rgba(0,0,0,0.18)');
+      sh.addColorStop(0.35, 'rgba(0,0,0,0.06)');
+      sh.addColorStop(0.55, 'rgba(0,0,0,0)');
+      sh.addColorStop(1.00, 'rgba(0,0,0,0.12)');
+      c2.fillStyle = sh;
+      c2.fillRect(-wid*1.6, tipY-len*0.30, wid*3.2, len*1.75);
+      c2.restore();
 
       // AO suave hacia el centro (profundidad)
       c2.save();
@@ -4140,25 +4205,24 @@ const neb = (x,y,r, a, cr,cg,cb) => {
       c2.fillRect(-wid*1.4, tipY-len*0.25, wid*2.8, len*1.6);
       c2.restore();
 
-      // rubor rosado (toques): concentra un blush suave hacia los bordes y el tip
-      // para que el pétalo sea mayormente blanco, pero con tintes rosados naturales.
+      // toques blancos/lilas: aclara bordes y tips (mezcla morado↔blanco)
       c2.save();
       c2.globalCompositeOperation = 'screen';
-      c2.globalAlpha = alpha * (isBack ? 0.038 : 0.095);
+      c2.globalAlpha = alpha * (isBack ? 0.030 : 0.085);
       path();
       c2.clip();
 
-      const pg = c2.createRadialGradient(0, tipY*0.60, 0, 0, tipY*0.60, len*0.95);
+      const pg = c2.createRadialGradient(0, tipY*0.62, 0, 0, tipY*0.62, len*0.98);
       pg.addColorStop(0.00, 'rgba(255,255,255,0)');
-      pg.addColorStop(0.45, rgba(blushA.r, blushA.g, blushA.b, 0.16));
-      pg.addColorStop(1.00, rgba(blushB.r, blushB.g, blushB.b, 0.30));
+      pg.addColorStop(0.48, rgba(frostB.r, frostB.g, frostB.b, 0.14));
+      pg.addColorStop(1.00, rgba(frostA.r, frostA.g, frostA.b, 0.26));
       c2.fillStyle = pg;
       c2.fillRect(-wid*1.6, tipY-len*0.30, wid*3.2, len*1.75);
 
-      // pequeño toque hacia el centro (muy sutil)
-      c2.globalAlpha = alpha * (isBack ? 0.018 : 0.052);
-      const pg2 = c2.createRadialGradient(0, tipY*0.20, 0, 0, tipY*0.20, len*0.65);
-      pg2.addColorStop(0.00, rgba(blushA.r, blushA.g, blushA.b, 0.10));
+      // toque central muy leve (look “ceroso”)
+      c2.globalAlpha = alpha * (isBack ? 0.014 : 0.040);
+      const pg2 = c2.createRadialGradient(0, tipY*0.18, 0, 0, tipY*0.18, len*0.60);
+      pg2.addColorStop(0.00, rgba(frostA.r, frostA.g, frostA.b, 0.12));
       pg2.addColorStop(0.55, 'rgba(255,255,255,0)');
       pg2.addColorStop(1.00, 'rgba(255,255,255,0)');
       c2.fillStyle = pg2;
