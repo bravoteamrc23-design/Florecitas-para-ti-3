@@ -399,7 +399,7 @@
 </style>
 </head>
 <body>
-  <canvas id="c" role="img" aria-label="Animación de un ramo de orquídeas rosadas bajo un cielo estrellado con nubes, luna y la constelación de Capricornio"></canvas>
+  <canvas id="c" role="img" aria-label="Animación de un ramo de orquídeas rosadas bajo un cielo estrellado con nubes, luna y la constelación de Capricornio y Leo"></canvas>
 
   <div id="introScreen" role="dialog" aria-label="Mensaje de inicio">
     <div id="loveWrap">
@@ -667,26 +667,40 @@
 
   // Color aleatorio pero estable por semilla (así cada orquídea "nace" con su propio tono)
   const colorFromSeed = (seed)=>{
-    // Morados con tonos blancos (estable por semilla): cada orquídea nace con su “lila/violeta” propio.
+    // Mezcla naranja + rosa con toques blancos (estable por semilla)
     let s = (seed >>> 0) || 1;
     const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0, s / 4294967296);
 
-    // rango morado (268..290°) con variación suave
-    const h   = lerp(268, 290, rnd()) / 360;
-    const sat = lerp(0.48, 0.70, rnd());
-    const lig = lerp(0.36, 0.52, rnd());
+    // Alterna entre un rango rosa (330..350°) y uno naranja (18..36°)
+    const pick = rnd();
+    const hDeg = (pick < 0.52)
+      ? lerp(330, 350, rnd())
+      : lerp(18,  36,  rnd());
+
+    const h   = (hDeg % 360) / 360;
+    const sat = lerp(0.55, 0.82, rnd());
+    const lig = lerp(0.46, 0.62, rnd());
 
     const rgb = hslToRgb(h, sat, lig);
 
-    // mezcla hacia blanco para “tonos” (no un morado plano)
-    const w = lerp(0.12, 0.26, rnd());
+    // “Blush” cálido (coral) para romper el plano
+    const warm  = hslToRgb(lerp(12, 24, rnd())/360, lerp(0.70, 0.92, rnd()), lerp(0.48, 0.60, rnd()));
+    const blush = lerp(0.08, 0.22, rnd());
+
+    const rr = lerp(rgb.r, warm.r, blush);
+    const gg = lerp(rgb.g, warm.g, blush);
+    const bb = lerp(rgb.b, warm.b, blush);
+
+    // Mezcla hacia blanco para “tonos” (pétalos no planos)
+    const w = lerp(0.16, 0.34, rnd());
 
     return {
-      r: clamp(Math.round(lerp(rgb.r, 255, w)), 40, 255),
-      g: clamp(Math.round(lerp(rgb.g, 255, w)), 30, 255),
-      b: clamp(Math.round(lerp(rgb.b, 255, w)), 70, 255),
+      r: clamp(Math.round(lerp(rr, 255, w)), 40, 255),
+      g: clamp(Math.round(lerp(gg, 255, w)), 30, 255),
+      b: clamp(Math.round(lerp(bb, 255, w)), 40, 255),
     };
   };
+
 
 // ===== Intro: generación del ramo al abrir =====
 // master: 0..1 controla el “construir” tallo -> hojas -> pétalos.
@@ -820,7 +834,7 @@ function restartIntro(){
     crownStrength: 0.008,
 
     // Texto “en estrellas”
-    starText: 'no importa el presente o el futuro, pero que sea contigo',
+    starText: 'día o noche pienso en ti',
     starTextStrength: 0.95    ,
 
     // Rendimiento / calidad
@@ -3194,6 +3208,175 @@ function drawSun(t){
     g.restore();
   }
 
+  // ===== Constelaciones: Capricornio + Leo (mezcladas) =====
+  // Idea: no solo “poner otra”, sino que se vean como una sola composición.
+  function drawLeoCapricornBlendToCache(g){
+    // Paleta cálida: mezcla naranja + rosa (screen) para que se sienta romántico.
+    const COL_A = {r:255, g:150, b: 90};   // naranja suave
+    const COL_B = {r:255, g: 95, b:190};   // rosa
+    const warm = (a, t=0.5)=>{
+      const r = COL_A.r*(1-t) + COL_B.r*t;
+      const gg = COL_A.g*(1-t) + COL_B.g*t;
+      const b = COL_A.b*(1-t) + COL_B.b*t;
+      return `rgba(${r|0},${gg|0},${b|0},${a})`;
+    };
+
+    // Helper: dibuja una constelación estilizada y regresa coordenadas en pantalla.
+    function drawConst(P, E, xoff, yoff, hazeX, hazeY){
+      const toX = (p)=>clamp((1 - p.x) + xoff, 0.02, 0.98)*W;
+      const toY = (p)=>clamp(p.y + yoff, 0.02, 0.62)*H;
+      const pts = P.map(p=>({x:toX(p), y:toY(p), m:(p.m||1)}));
+
+      g.save();
+      g.globalCompositeOperation = 'screen';
+      g.lineCap = 'round';
+      g.lineJoin = 'round';
+
+      // Bruma suave para integrarlo en el cielo
+      const cx = hazeX, cy = hazeY;
+      const haze = g.createRadialGradient(cx, cy, 10, cx, cy, Math.min(W,H)*0.22);
+      haze.addColorStop(0, warm(0.075, 0.45));
+      haze.addColorStop(0.55, warm(0.030, 0.65));
+      haze.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = haze;
+      g.fillRect(0,0,W,H);
+
+      // Líneas con gradiente naranja->rosa
+      const lg = g.createLinearGradient(W*0.40, H*0.05, W*0.86, H*0.32);
+      lg.addColorStop(0, warm(0.65, 0.18));
+      lg.addColorStop(1, warm(0.62, 0.82));
+      g.strokeStyle = lg;
+      g.globalAlpha = 0.55;
+      g.lineWidth = 1.15;
+      g.shadowColor = warm(0.55, 0.70);
+      g.shadowBlur = 10;
+
+      for(const [a,b] of E){
+        const A = pts[a], B = pts[b];
+        g.beginPath();
+        g.moveTo(A.x, A.y);
+        g.lineTo(B.x, B.y);
+        g.stroke();
+      }
+
+      // Estrellas: glow cálido + núcleo más blanco para que “brille”
+      g.shadowBlur = 0;
+      for(const p of pts){
+        const x=p.x, y=p.y;
+        const r = 1.6 + p.m*1.25;
+        const glowR = 18 + p.m*10;
+
+        g.globalAlpha = 0.95;
+        const rg = g.createRadialGradient(x,y, 0, x,y, glowR);
+        rg.addColorStop(0, warm(0.28, 0.55));
+        rg.addColorStop(0.38, warm(0.12, 0.72));
+        rg.addColorStop(1, 'rgba(0,0,0,0)');
+        g.fillStyle = rg;
+        g.beginPath();
+        g.arc(x,y, glowR, 0, TAU);
+        g.fill();
+
+        g.globalAlpha = 0.55;
+        g.shadowColor = warm(0.45, 0.65);
+        g.shadowBlur = 12 + p.m*6;
+        g.fillStyle = 'rgba(255,255,255,1)';
+        g.beginPath();
+        g.arc(x,y, r, 0, TAU);
+        g.fill();
+        g.shadowBlur = 0;
+      }
+
+      g.restore();
+      return pts;
+    }
+
+    // Capricornio: mismo dibujo de antes (solo que con paleta cálida)
+    const PCAP = [
+      {x:0.12, y:0.23, m:1.25},
+      {x:0.21, y:0.17, m:1.10},
+      {x:0.31, y:0.20, m:1.20},
+      {x:0.39, y:0.26, m:1.05},
+      {x:0.31, y:0.31, m:1.00},
+      {x:0.23, y:0.30, m:0.95},
+      {x:0.15, y:0.31, m:0.90},
+      {x:0.18, y:0.37, m:0.85}
+    ];
+    const ECAP = [
+      [0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,0],
+      [5,7],[7,4]
+    ];
+
+    // Leo: “hoz” + triángulo trasero (estilizado). No es atlas, es vibe.
+    const PLEO = [
+      {x:0.12, y:0.15, m:1.30}, // Régulo (aprox)
+      {x:0.19, y:0.11, m:1.05},
+      {x:0.27, y:0.12, m:1.00},
+      {x:0.35, y:0.16, m:1.00},
+      {x:0.41, y:0.22, m:1.10},
+      {x:0.37, y:0.28, m:0.95},
+      {x:0.29, y:0.31, m:0.95},
+      {x:0.20, y:0.28, m:0.90},
+      // triángulo trasero
+      {x:0.48, y:0.25, m:1.00},
+      {x:0.56, y:0.29, m:0.95},
+      {x:0.52, y:0.35, m:0.90}
+    ];
+    const ELEO = [
+      [0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,0], // hoz
+      [4,8],[8,9],[9,10],[10,6]                        // trasero
+    ];
+
+    // Posicionamiento: que convivan y se “mezclen” a la derecha, arriba del texto.
+    const capPts = drawConst(PCAP, ECAP, -0.07, -0.12, W*0.70, H*0.13);
+    const leoPts = drawConst(PLEO, ELEO, -0.22, -0.08, W*0.60, H*0.18);
+
+    // Puente: une ambas constelaciones para que se vean como una composición
+    const capA = capPts[2];       // ancla en Capricornio
+    const leoA = leoPts[4];       // ancla en Leo
+    const bridge = {x:(capA.x+leoA.x)*0.5, y:(capA.y+leoA.y)*0.5, m:1.35};
+
+    g.save();
+    g.globalCompositeOperation = 'screen';
+
+    const lg2 = g.createLinearGradient(leoA.x, leoA.y, capA.x, capA.y);
+    lg2.addColorStop(0, warm(0.60, 0.82));
+    lg2.addColorStop(1, warm(0.60, 0.22));
+    g.strokeStyle = lg2;
+    g.lineWidth = 1.05;
+    g.globalAlpha = 0.50;
+    g.setLineDash([4,5]);
+
+    g.beginPath();
+    g.moveTo(leoA.x, leoA.y);
+    g.quadraticCurveTo(bridge.x, bridge.y-10, capA.x, capA.y);
+    g.stroke();
+    g.setLineDash([]);
+
+    // Estrella puente
+    const glowR = 28;
+    const rg = g.createRadialGradient(bridge.x, bridge.y, 0, bridge.x, bridge.y, glowR);
+    rg.addColorStop(0, warm(0.30, 0.55));
+    rg.addColorStop(0.45, warm(0.12, 0.75));
+    rg.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = rg;
+    g.beginPath();
+    g.arc(bridge.x, bridge.y, glowR, 0, TAU);
+    g.fill();
+
+    g.globalAlpha = 0.60;
+    g.shadowColor = warm(0.55, 0.65);
+    g.shadowBlur = 14;
+    g.fillStyle = 'rgba(255,255,255,1)';
+    g.beginPath();
+    g.arc(bridge.x, bridge.y, 2.6, 0, TAU);
+    g.fill();
+    g.shadowBlur = 0;
+
+    g.restore();
+  }
+
+
+
   function rebuildSkyCache(){
     const off = document.createElement('canvas');
     off.width  = Math.floor(W * DPR);
@@ -3421,8 +3604,8 @@ const neb = (x,y,r, a, cr,cg,cb) => {
     g.fillRect(0,0,W,H);
 
 
-    // Constelación Capricornio (derecha)
-    drawCapricornConstellationToCache(g);
+    // Constelaciones: Capricornio + Leo (mezcladas)
+    drawLeoCapricornBlendToCache(g);
     skyCache = off;
   }
 
