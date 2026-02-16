@@ -224,12 +224,20 @@
     #introTitle{
       font-family: "Dancing Script", cursive;
       font-weight: 700;
-      font-size: clamp(46px, 7.5vw, 66px);
+      font-size: clamp(36px, 7.2vw, 66px);
       line-height: 1.05;
       text-align: center;
       color: rgba(55,30,22,0.96);
       margin: 6px 0 8px;
       text-shadow: 0 1px 0 rgba(255,255,255,0.35);
+    
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: baseline;
+      justify-content: center;
+      gap: .12em;
+      max-width: 100%;
+      transform-origin: center top;
     }
 
     #introTextBlock{
@@ -372,14 +380,14 @@
       --doodleStart: 420px; /* fallback */
       -webkit-mask-image: linear-gradient(to bottom,
         rgba(0,0,0,0) 0,
-        rgba(0,0,0,0) calc(var(--doodleStart) - 14px),
-        rgba(0,0,0,1) calc(var(--doodleStart) + 20px),
+        rgba(0,0,0,0) calc(var(--doodleStart) - 60px),
+        rgba(0,0,0,1) calc(var(--doodleStart) + 44px),
         rgba(0,0,0,1) 100%
       );
               mask-image: linear-gradient(to bottom,
         rgba(0,0,0,0) 0,
-        rgba(0,0,0,0) calc(var(--doodleStart) - 14px),
-        rgba(0,0,0,1) calc(var(--doodleStart) + 20px),
+        rgba(0,0,0,0) calc(var(--doodleStart) - 60px),
+        rgba(0,0,0,1) calc(var(--doodleStart) + 44px),
         rgba(0,0,0,1) 100%
       );
     }
@@ -565,19 +573,34 @@
     const dr = doodleEl.getBoundingClientRect();
     const br = introBtn.getBoundingClientRect();
     // y en coordenadas del DOODLE (así respeta el inset/márgenes)
-    let y = (br.bottom - dr.top) + 18; // 18px debajo del botón
+    let y = (br.bottom - dr.top) + 68; // 68px debajo del botón (margen seguro móvil)
     y = Math.max(0, Math.min(dr.height - 20, y));
     doodleEl.style.setProperty('--doodleStart', y + 'px');
   }
-window.addEventListener('resize', () => requestAnimationFrame(layoutIntroDoodle), {passive:true});
+
+  const titleEl = document.getElementById('introTitle');
+
+  function fitIntroTitle(){
+    if(!titleEl || !paperEl) return;
+    // reset
+    titleEl.style.transform = '';
+    // available width inside margins
+    const framePad = parseFloat(getComputedStyle(paperEl).getPropertyValue('--framePad')) || 40;
+    const maxW = Math.max(120, paperEl.clientWidth - framePad*2 - 10);
+    // force no-wrap while measuring
+    const w = titleEl.scrollWidth || titleEl.getBoundingClientRect().width;
+    if(w > maxW){
+      const s = Math.max(0.80, maxW / w);
+      titleEl.style.transform = `scale(${s})`;
+    }
+  }
+window.addEventListener('resize', () => requestAnimationFrame(() => { layoutIntroDoodle(); fitIntroTitle(); }), {passive:true});
   try{
     if(document.fonts && document.fonts.ready){
-      document.fonts.ready.then(() => requestAnimationFrame(layoutIntroDoodle));
+      document.fonts.ready.then(() => requestAnimationFrame(() => { layoutIntroDoodle(); fitIntroTitle(); }));
     }
   }catch(_){}
-  requestAnimationFrame(layoutIntroDoodle);
-
-
+  requestAnimationFrame(() => { layoutIntroDoodle(); fitIntroTitle(); });
   // Mantén el canvas escondido hasta el toque/click
   canvas.classList.remove('show');
 
