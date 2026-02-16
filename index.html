@@ -424,7 +424,7 @@
             </g>
           </svg>
 
-<svg class="paperDoodle" viewBox="0 0 600 800" preserveAspectRatio="xMidYMid meet" aria-hidden="true" focusable="false">
+<svg class="paperDoodle" viewBox="0 200 600 600" preserveAspectRatio="xMidYMid meet" aria-hidden="true" focusable="false">
   <defs>
     <filter id="pencil">
       <feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="2" stitchTiles="stitch" result="n"/>
@@ -565,7 +565,7 @@
     const dr = doodleEl.getBoundingClientRect();
     const br = introBtn.getBoundingClientRect();
     // y en coordenadas del DOODLE (así respeta el inset/márgenes)
-    let y = (br.bottom - dr.top) + 8; // 8px debajo del botón
+    let y = (br.bottom - dr.top) + 18; // 18px debajo del botón
     y = Math.max(0, Math.min(dr.height - 20, y));
     doodleEl.style.setProperty('--doodleStart', y + 'px');
   }
@@ -4122,6 +4122,9 @@ const neb = (x,y,r, a, cr,cg,cb) => {
     const appear = pv / 6; // 0..1
     const op = clamp(open==null?1:open, 0, 1);
 
+    // Fuerza color base para pétalos (rojo difuminado)
+    col = {r:220,g:26,b:44};
+
     const mix = (a,b,t)=>({
   r: Math.round(lerp(a.r,b.r,t)),
   g: Math.round(lerp(a.g,b.g,t)),
@@ -4280,31 +4283,37 @@ const centerY = -h*0.58;
       c2.fill();
       c2.restore();
 
-      // gradiente principal (vertical) - rojo con mezcla blanco (más realista)
-const whiteBase = {r:255,g:252,b:248};
+      // gradiente principal (vertical) - rojo difuminado (todas las piezas)
+      // Fuerza paleta roja para evitar tonos residuales
+      const baseCol = {r:220,g:26,b:44};
 
-// base más profunda, tips más claros (look rojo↔blanco)
-const base = mix(col, deep, 0.32);
+      const deepR = mix(baseCol, {r:60,g:6,b:12}, 0.70);
+      const body  = mix(baseCol, {r:255,g:78,b:98}, 0.30 + 0.10*tint);
+      const tip   = mix(baseCol, {r:255,g:130,b:150}, 0.48 + 0.12*tint);
+      const hi    = mix(body,    {r:255,g:170,b:185}, 0.36);
 
-// Base uniforme para todas las piezas (mezcla en todos los pétalos)
-const baseCol = col;
-
-const body = mix(baseCol, whiteBase, 0.22 + 0.18*tint);
-const tip  = mix(baseCol, whiteBase, 0.52 + 0.26*tint);
-const hi   = mix(body, whiteBase, 0.62);
+      // capa difuminada para “bloom” suave (sin filtros pesados)
+      c2.save();
+      c2.globalAlpha = alpha * (isBack ? 0.34 : 0.42);
+      c2.shadowColor = 'rgba(255,30,55,0.38)';
+      c2.shadowBlur  = wid * (isBack ? 0.10 : 0.14);
+      c2.fillStyle   = rgba(baseCol.r, baseCol.g, baseCol.b, 0.40);
+      path();
+      c2.fill();
+      c2.restore();
 
       const g = c2.createLinearGradient(0, 0, 0, tipY);
-      g.addColorStop(0.00, rgba(base.r, base.g, base.b, 0.86));
-      g.addColorStop(0.26, rgba(body.r, body.g, body.b, 0.98));
-      g.addColorStop(0.70, rgba(hi.r,   hi.g,   hi.b,   0.99));
-      g.addColorStop(1.00, rgba(tip.r,  tip.g,  tip.b,  0.99));
+      g.addColorStop(0.00, rgba(deepR.r, deepR.g, deepR.b, 0.82));
+      g.addColorStop(0.28, rgba(body.r,  body.g,  body.b,  0.95));
+      g.addColorStop(0.72, rgba(hi.r,    hi.g,    hi.b,    0.94));
+      g.addColorStop(1.00, rgba(tip.r,   tip.g,   tip.b,   0.92));
 
       c2.globalAlpha = alpha;
       c2.fillStyle = g;
       path();
       c2.fill();
 
-      // sombreado de curvatura (volumen por pétalo)
+// sombreado de curvatura (volumen por pétalo)
       c2.save();
       c2.globalCompositeOperation = 'multiply';
       c2.globalAlpha = alpha * (isBack ? 0.045 : 0.080);
