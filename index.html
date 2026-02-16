@@ -170,6 +170,7 @@
       height: 100%;
       border-radius: 10px;
       overflow: hidden;
+      --framePad: clamp(32px, 5.8vmin, 58px);
       background:
         radial-gradient(260px 240px at 14% 18%, rgba(150,100,70,0.16), rgba(0,0,0,0) 60%),
         radial-gradient(340px 300px at 82% 12%, rgba(150,100,70,0.14), rgba(0,0,0,0) 60%),
@@ -210,7 +211,7 @@
     #paperContent{
       position: relative;
       height: 100%;
-      padding: 28px 22px 18px;
+      padding: calc(var(--framePad) - 4px) var(--framePad) 22px;
       display:flex;
       flex-direction: column;
       justify-content: flex-start;
@@ -243,9 +244,9 @@
       display:inline-flex;
       align-items: baseline;
       margin-left: .10em;
-      transform: translateY(-.02em);
-      color: rgba(170, 20, 60, 0.92);
-      text-shadow: 0 1px 0 rgba(255,255,255,0.35), 0 10px 24px rgba(170,20,60,0.18);
+      transform: translateY(0.14em);
+      color: rgba(220, 20, 60, 0.96);
+      text-shadow: 0 1px 0 rgba(255,255,255,0.35), 0 10px 24px rgba(220,20,60,0.22);
     }
     #introTitle .heartSvg{
       width: 0.95em;
@@ -353,27 +354,34 @@
     /* Dibujo dentro de la hoja (boceto sutil) */
     .paperDoodle{
       position:absolute;
-      inset: clamp(16px, 4.6vmin, 44px);
+      /* usa el mismo margen del marco para que quede dentro de los márgenes */
+      --pad: calc(var(--framePad) + 6px);
+      inset: var(--pad);
       border-radius: 18px;
-      width:100%;
-      height:100%;
+      overflow: hidden;
+      width:auto;
+      height:auto;
       pointer-events:none;
       z-index: 0;
-      opacity: .44;
-      filter: blur(.04px) contrast(1.10);
-      color: rgba(55,30,22,.78);
+      opacity: .54;
+      filter: blur(.05px) contrast(1.18);
+      color: rgba(55,30,22,.82);
       mix-blend-mode: multiply;
-      /* que el dibujo viva abajo del texto */
+
+      /* el dibujo aparece justo debajo del botón (se ajusta por JS) */
+      --doodleStart: 420px; /* fallback */
       -webkit-mask-image: linear-gradient(to bottom,
-        rgba(0,0,0,0) 0%,
-        rgba(0,0,0,0) 36%,
-        rgba(0,0,0,1) 60%,
-        rgba(0,0,0,1) 100%);
-      mask-image: linear-gradient(to bottom,
-        rgba(0,0,0,0) 0%,
-        rgba(0,0,0,0) 36%,
-        rgba(0,0,0,1) 60%,
-        rgba(0,0,0,1) 100%);
+        rgba(0,0,0,0) 0,
+        rgba(0,0,0,0) calc(var(--doodleStart) - 14px),
+        rgba(0,0,0,1) calc(var(--doodleStart) + 20px),
+        rgba(0,0,0,1) 100%
+      );
+              mask-image: linear-gradient(to bottom,
+        rgba(0,0,0,0) 0,
+        rgba(0,0,0,0) calc(var(--doodleStart) - 14px),
+        rgba(0,0,0,1) calc(var(--doodleStart) + 20px),
+        rgba(0,0,0,1) 100%
+      );
     }
 
     .paperFrame{
@@ -416,7 +424,7 @@
             </g>
           </svg>
 
-<svg class="paperDoodle" viewBox="0 0 600 800" aria-hidden="true" focusable="false">
+<svg class="paperDoodle" viewBox="0 0 600 800" preserveAspectRatio="xMidYMid meet" aria-hidden="true" focusable="false">
   <defs>
     <filter id="pencil">
       <feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="2" stitchTiles="stitch" result="n"/>
@@ -434,7 +442,7 @@
     </linearGradient>
   </defs>
 
-  <g filter="url(#pencil)" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+  <g filter="url(#pencil)" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" transform="translate(0 0)">
     <!-- línea de “mesa” / base -->
     <path class="thin fade" d="M58 520 C170 498 250 508 308 532 C366 556 446 566 542 546"/>
 
@@ -488,7 +496,7 @@
     </g>
 
     <!-- Sobre con sello -->
-    <g transform="translate(360 640)" opacity=".82">
+    <g transform="translate(330 640)" opacity=".82">
       <path class="med" d="M0 0 H190 V120 H0 Z"/>
       <path class="thin" d="M0 0 L95 70 L190 0" opacity=".9"/>
       <path class="thin" d="M0 120 L95 60 L190 120" opacity=".55"/>
@@ -502,7 +510,7 @@
     </g>
 
     <!-- Rosa minimalista -->
-    <g transform="translate(85 645)" opacity=".85">
+    <g transform="translate(120 645)" opacity=".85">
       <path class="med" d="M55 70
         C38 54 34 38 44 24
         C56 8 82 16 86 34
@@ -521,7 +529,7 @@
 <div id="paperContent">
             <div id="introTextBlock">
               <div id="introMsg">recuerda que son con mucho cariño</div>
-              <div id="introTitle">para ti <span class="heart" aria-hidden="true">
+              <div id="introTitle">para ti, preciosa <span class="heart" aria-hidden="true">
                 <svg class="heartSvg" viewBox="0 0 24 24" focusable="false" aria-hidden="true">
                   <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5C2 6 3.99 4 6.5 4c1.74 0 3.41.81 4.5 2.09C12.09 4.81 13.76 4 15.5 4C18.01 4 20 6 20 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
                 </svg>
@@ -547,6 +555,28 @@
   // ===== Intro overlay (móvil + desktop) =====
   const introScreen = document.getElementById('introScreen');
   const introBtn    = document.getElementById('introBtn');
+
+  // Mantén el doodle dentro de márgenes y empezando justo debajo del botón
+  const paperEl  = document.querySelector('#letter .paper');
+  const doodleEl = document.querySelector('#letter .paper .paperDoodle');
+
+  function layoutIntroDoodle(){
+    if(!paperEl || !doodleEl || !introBtn) return;
+    const dr = doodleEl.getBoundingClientRect();
+    const br = introBtn.getBoundingClientRect();
+    // y en coordenadas del DOODLE (así respeta el inset/márgenes)
+    let y = (br.bottom - dr.top) + 8; // 8px debajo del botón
+    y = Math.max(0, Math.min(dr.height - 20, y));
+    doodleEl.style.setProperty('--doodleStart', y + 'px');
+  }
+window.addEventListener('resize', () => requestAnimationFrame(layoutIntroDoodle), {passive:true});
+  try{
+    if(document.fonts && document.fonts.ready){
+      document.fonts.ready.then(() => requestAnimationFrame(layoutIntroDoodle));
+    }
+  }catch(_){}
+  requestAnimationFrame(layoutIntroDoodle);
+
 
   // Mantén el canvas escondido hasta el toque/click
   canvas.classList.remove('show');
@@ -634,32 +664,31 @@
       b: Math.round((b1+m)*255)
     };
   }
+// Color aleatorio pero estable por semilla (así cada orquídea "nace" con su propio tono)
+const colorFromSeed = (seed)=>{
+  // Mezcla rojo + blanco (estable por semilla)
+  let s = (seed >>> 0) || 1;
+  const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0, s / 4294967296);
 
-  // Color aleatorio pero estable por semilla (así cada orquídea "nace" con su propio tono)
-  const colorFromSeed = (seed)=>{
-    // Mezcla naranja + blanco (estable por semilla)
-    let s = (seed >>> 0) || 1;
-    const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0, s / 4294967296);
+  // Rojos: -10..14° (wrap) para evitar magentas/violetas
+  const hDeg = lerp(-10, 14, rnd());
+  const h   = (hDeg % 360) / 360;
 
-    // Naranjas cálidos 18..40° (sin rosados)
-    const hDeg = lerp(18, 40, rnd());
-    const h   = (hDeg % 360) / 360;
+  // Saturación moderada-alta y luminancia media-alta
+  const sat = lerp(0.52, 0.86, rnd());
+  const lig = lerp(0.50, 0.70, rnd());
 
-    // Saturación moderada (para que el blanco se note) y luminancia alta
-    const sat = lerp(0.38, 0.70, rnd());
-    const lig = lerp(0.56, 0.74, rnd());
+  const rgb = hslToRgb(h, sat, lig);
 
-    const rgb = hslToRgb(h, sat, lig);
+  // Empuja hacia blanco para lograr el look “rojo + blanco”
+  const w = lerp(0.22, 0.58, rnd());
 
-    // Empuja hacia blanco para lograr el look “naranja + blanco”
-    const w = lerp(0.18, 0.46, rnd());
-
-    return {
-      r: clamp(Math.round(lerp(rgb.r, 255, w)), 60, 255),
-      g: clamp(Math.round(lerp(rgb.g, 255, w)), 55, 255),
-      b: clamp(Math.round(lerp(rgb.b, 255, w)), 55, 255),
-    };
+  return {
+    r: clamp(Math.round(lerp(rgb.r, 255, w)), 80, 255),
+    g: clamp(Math.round(lerp(rgb.g, 255, w)), 40, 255),
+    b: clamp(Math.round(lerp(rgb.b, 255, w)), 40, 255),
   };
+};
 
 
 // ===== Intro: generación del ramo al abrir =====
@@ -794,7 +823,7 @@ function restartIntro(){
     crownStrength: 0.008,
 
     // Texto “en estrellas”
-    starText: 'día o noche pienso en ti',
+    starText: 'disfruto cada momento contigo',
     starTextStrength: 0.95    ,
 
     // Rendimiento / calidad
@@ -4094,28 +4123,30 @@ const neb = (x,y,r, a, cr,cg,cb) => {
     const op = clamp(open==null?1:open, 0, 1);
 
     const mix = (a,b,t)=>({
-      r: Math.round(lerp(a.r,b.r,t)),
-      g: Math.round(lerp(a.g,b.g,t)),
-      b: Math.round(lerp(a.b,b.b,t))
-    });
-    const lite = mix(col, {r:255,g:255,b:255}, 0.72);
-    const mid  = mix(col, {r:255,g:244,b:236}, 0.42);
-    const deep = mix(col, {r: 44,g: 22,b: 10}, 0.78);
-    const edge = mix(lite, {r:255,g:255,b:255}, 0.72);
+  r: Math.round(lerp(a.r,b.r,t)),
+  g: Math.round(lerp(a.g,b.g,t)),
+  b: Math.round(lerp(a.b,b.b,t))
+});
 
-    // Toques blancos/crema (para que el naranja tenga “vida” sin verse plano)
-    const frostA = {r:255,g:252,b:246};
-    const frostB = {r:255,g:238,b:226};
+// Paleta pétalos: rojo + blanco (sin morados)
+const lite = mix(col, {r:255,g:255,b:255}, 0.78);
+const mid  = mix(col, {r:255,g:235,b:238}, 0.52);
+const deep = mix(col, {r: 34,g:  8,b: 14}, 0.84);
+const edge = mix(lite, {r:255,g:255,b:255}, 0.78);
 
-    // garganta/centro: marfil con cálido tenue
-    const throat = mix(frostB, {r:255,g:250,b:240}, 0.62);
-    const throatDeep = mix(deep, {r: 92,g: 46,b: 24}, 0.55);
+// Toques blanco/crema + rubor rosado muy leve (más realista)
+const frostA = {r:255,g:252,b:248};
+const frostB = {r:255,g:236,b:240};
 
-    // labelo (centro) con profundidad (durazno, sin saturarse)
-    const lipCol  = mix(frostB, {r:255,g:220,b:190}, 0.42);
-    const lipDeep = mix(deep, {r:140,g: 70,b: 38}, 0.62);
+// garganta/centro: marfil cálido tenue
+const throat = mix(frostB, {r:255,g:250,b:242}, 0.66);
+const throatDeep = mix(deep, {r:120,g: 26,b: 40}, 0.55);
 
-    const centerY = -h*0.58;
+// labelo (centro): sigue siendo más cálido, pero dentro del tema rojo↔blanco
+const lipCol  = mix(col, {r:255,g:245,b:245}, 0.62);
+const lipDeep = mix(col, {r: 85,g: 14,b: 26}, 0.78);
+
+const centerY = -h*0.58;
 
     // halo sutil (bloom)
     c2.save();
@@ -4249,18 +4280,18 @@ const neb = (x,y,r, a, cr,cg,cb) => {
       c2.fill();
       c2.restore();
 
-      // gradiente principal (vertical) - naranja con tonos blancos (más realista)
-      const whiteBase = {r:255,g:252,b:246};
+      // gradiente principal (vertical) - rojo con mezcla blanco (más realista)
+const whiteBase = {r:255,g:252,b:248};
 
-      // base más profunda, tips más claros
-      const base = mix(col, deep, 0.22);
-      const warm = {r:255,g:150,b:60};
-      // Pétalos superiores (dorsal y sepales traseros): lavado cálido naranja
-      const baseCol = (kind==='dorsal' || (isBack && kind==='sepal')) ? mix(col, warm, 0.58) : col;
+// base más profunda, tips más claros (look rojo↔blanco)
+const base = mix(col, deep, 0.32);
 
-      const body = mix(baseCol, whiteBase, 0.22 + 0.18*tint);
-      const tip  = mix(baseCol, whiteBase, 0.42 + 0.22*tint);
-      const hi   = mix(body, whiteBase, 0.55);
+// Base uniforme para todas las piezas (mezcla en todos los pétalos)
+const baseCol = col;
+
+const body = mix(baseCol, whiteBase, 0.22 + 0.18*tint);
+const tip  = mix(baseCol, whiteBase, 0.52 + 0.26*tint);
+const hi   = mix(body, whiteBase, 0.62);
 
       const g = c2.createLinearGradient(0, 0, 0, tipY);
       g.addColorStop(0.00, rgba(base.r, base.g, base.b, 0.86));
@@ -4352,7 +4383,7 @@ const neb = (x,y,r, a, cr,cg,cb) => {
       c2.fillRect(-wid*1.4, tipY-len*0.25, wid*2.8, len*1.6);
       c2.restore();
 
-      // toques blancos/lilas: aclara bordes y tips (mezcla naranja↔blanco)
+      // toques blancos: aclara bordes y tips (mezcla rojo↔blanco)
       c2.save();
       c2.globalCompositeOperation = 'screen';
       c2.globalAlpha = alpha * (isBack ? 0.030 : 0.085);
@@ -4733,17 +4764,17 @@ const neb = (x,y,r, a, cr,cg,cb) => {
     const sepalLen = h*(0.98 + 0.08*rnd());
     const sepalWid = w*(0.50 + 0.08*rnd());
 
-    drawPetal( 0.00 + (rnd()*0.06-0.03), sepalLen*0.96, sepalWid*0.92, 0.70*a0, 0.05,  0.00, true, 'dorsal');
-    drawPetal( 0.98 + (rnd()*0.08-0.04), sepalLen*0.92, sepalWid*0.94, 0.62*a1, 0.03,  0.02, true, 'sepal');
-    drawPetal(-0.98 + (rnd()*0.08-0.04), sepalLen*0.92, sepalWid*0.94, 0.62*a2, 0.03, -0.02, true, 'sepal');
+    drawPetal( 0.00 + (rnd()*0.06-0.03), sepalLen*0.96, sepalWid*0.92, 0.70*a0, 0.14,  0.00, true, 'dorsal');
+    drawPetal( 0.98 + (rnd()*0.08-0.04), sepalLen*0.92, sepalWid*0.94, 0.62*a1, 0.14,  0.02, true, 'sepal');
+    drawPetal(-0.98 + (rnd()*0.08-0.04), sepalLen*0.92, sepalWid*0.94, 0.62*a2, 0.14, -0.02, true, 'sepal');
 
     // Pétalos (frente)
     const a3 = stage(3);
     const a4 = stage(4);
     const petLen = h*(0.96 + 0.12*rnd());
     const petWid = w*(0.56 + 0.12*rnd());
-    drawPetal( 0.42 + (rnd()*0.08-0.04), petLen, petWid, 0.82*a3, 0.18,  0.03, false, 'petal');
-    drawPetal(-0.42 + (rnd()*0.08-0.04), petLen, petWid, 0.82*a4, 0.18, -0.03, false, 'petal');
+    drawPetal( 0.42 + (rnd()*0.08-0.04), petLen, petWid, 0.82*a3, 0.14,  0.03, false, 'petal');
+    drawPetal(-0.42 + (rnd()*0.08-0.04), petLen, petWid, 0.82*a4, 0.14, -0.03, false, 'petal');
 
     // Labelo + columna
     const a5 = stage(5);
@@ -4778,7 +4809,6 @@ const neb = (x,y,r, a, cr,cg,cb) => {
     c2.fill();
     c2.restore();
   }
-
 
 function renderTulipBloomSprite(c2, w, h, col, seed, open, petalsVisible){
     // Gerbera mejorada (v3):
