@@ -61,6 +61,11 @@
     }
   
     #hud{display:none !important;}
+
+    /* FAILSAFE: asegurar que la primera interfaz (carta + texto + botón) SIEMPRE se vea */
+    #introScreen{ display:flex !important; opacity:1 !important; visibility:visible !important; }
+    #loveWrap, #letter, #paperContent, #introTextBlock, #introMsg, #introTitle, #introBtn{ opacity:1 !important; visibility:visible !important; }
+
   
     /* ===== Intro "carta de amor" (estilo sobre + rosa) ===== */
     canvas{ will-change: opacity, filter, transform; opacity:0; filter: blur(10px) saturate(0.92); transform: scale(1.02); transition: opacity 1200ms ease, filter 1200ms ease, transform 1200ms ease; }
@@ -214,8 +219,67 @@
       filter: blur(2px);
     }
 
-    #letter .paper{
+    
+    /* hoja secundaria detrás de la principal (da sensación de “stack” y profundidad) */
+    #letter .paperBack{
+      position:absolute;
+      inset: 0;
+      z-index: 0;
+      border-radius: 12px;
+      transform: rotate(-3deg) translate(14px, 14px);
+      background:
+        radial-gradient(240px 180px at 18% 22%, rgba(120,80,60,0.12), rgba(0,0,0,0) 66%),
+        radial-gradient(520px 340px at 50% 92%, rgba(70,45,35,0.14), rgba(0,0,0,0) 72%),
+        linear-gradient(180deg, #d8c9b4 0%, #cfb79a 58%, #c7a787 100%);
+      box-shadow:
+        0 18px 54px rgba(0,0,0,0.22),
+        inset 0 1px 0 rgba(255,255,255,0.55),
+        inset 0 -18px 26px rgba(0,0,0,0.08);
+      filter: saturate(0.95) contrast(1.02);
+      opacity: 0.95;
+      pointer-events:none;
+    }
+    #letter .paperBack::before{
+      content:"";
+      position:absolute;
+      inset:-18px;
+      border-radius: inherit;
+      background:
+        url("data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20width=%27140%27%20height=%27140%27%3E%3Cfilter%20id=%27n%27%3E%3CfeTurbulence%20type=%27fractalNoise%27%20baseFrequency=%27.75%27%20numOctaves=%272%27%20stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect%20width=%27140%27%20height=%27140%27%20filter=%27url(%23n)%27%20opacity=%27.55%27/%3E%3C/svg%3E") repeat,
+        repeating-linear-gradient(20deg, rgba(255,255,255,0.04) 0 2px, rgba(0,0,0,0) 2px 12px);
+      background-size: 140px 140px, auto;
+      opacity: 0.22;
+      mix-blend-mode: soft-light;
+      pointer-events:none;
+      transform: rotate(1deg);
+      filter: blur(0.35px);
+    }
+    #letter .paperBack::after{
+      content:"";
+      position:absolute;
+      right: 0;
+      top: 0;
+      width: 86px;
+      height: 86px;
+      background:
+        radial-gradient(70px 70px at 80% 20%, rgba(255,255,255,0.55), rgba(255,255,255,0) 70%),
+        linear-gradient(135deg, rgba(0,0,0,0.10), rgba(0,0,0,0));
+      clip-path: polygon(0 0, 100% 0, 100% 100%);
+      opacity: 0.45;
+      pointer-events:none;
+      border-top-right-radius: 12px;
+    }
+
+    @media (max-width: 420px){
+      #letter .paperBack{ transform: rotate(-2.4deg) translate(10px, 12px); }
+    }
+    @media (max-height: 700px){
+      #letter .paperBack{ transform: rotate(-2.2deg) translate(10px, 10px); }
+    }
+
+#letter .paper{
       position: relative;
+      z-index: 1;
       width: 100%;
       height: 100%;
       border-radius: 10px;
@@ -290,17 +354,43 @@
       mix-blend-mode: multiply;
       pointer-events:none;
     }
-    #letter .paper::after{
+    
+#letter .paper::before{
+      content:"";
+      position:absolute;
+      inset:-42px;
+      /* Manchas tipo acuarela (muy tenue) */
+      background:
+        radial-gradient(360px 280px at 22% 28%, rgba(255,160,70,0.28), rgba(255,160,70,0.12) 46%, rgba(255,160,70,0) 72%),
+        radial-gradient(420px 320px at 74% 62%, rgba(255,120,70,0.22), rgba(255,120,70,0.09) 48%, rgba(255,120,70,0) 76%),
+        radial-gradient(520px 380px at 52% 18%, rgba(255,205,140,0.18), rgba(255,205,140,0.06) 52%, rgba(255,205,140,0) 82%);
+      filter: blur(7px) saturate(1.05);
+      opacity: 0.55;
+      mix-blend-mode: multiply;
+      pointer-events:none;
+    }
+
+    @media (max-width: 420px){
+      #letter .paper::before{ opacity: 0.46; filter: blur(6px) saturate(1.04); }
+    }
+    @media (max-width: 360px){
+      #letter .paper::before{ opacity: 0.42; filter: blur(5px) saturate(1.03); }
+    }
+
+#letter .paper::after{
       content:"";
       position:absolute;
       inset:-20px;
       background:
-        repeating-linear-gradient(25deg, rgba(255,255,255,0.05) 0 2px, rgba(0,0,0,0) 2px 10px);
-      opacity: 0.35;
+        url("data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20width=%27160%27%20height=%27160%27%3E%0A%20%20%3Cfilter%20id=%27n%27%3E%0A%20%20%20%20%3CfeTurbulence%20type=%27fractalNoise%27%20baseFrequency=%27.85%27%20numOctaves=%273%27%20stitchTiles=%27stitch%27/%3E%0A%20%20%20%20%3CfeColorMatrix%20type=%27saturate%27%20values=%270%27/%3E%0A%20%20%3C/filter%3E%0A%20%20%3Crect%20width=%27160%27%20height=%27160%27%20filter=%27url(#n)%27%20opacity=%27.55%27/%3E%0A%3C/svg%3E") repeat,
+        repeating-linear-gradient(25deg, rgba(255,255,255,0.05) 0 2px, rgba(0,0,0,0) 2px 10px),
+        repeating-linear-gradient(-25deg, rgba(0,0,0,0.03) 0 1px, rgba(0,0,0,0) 1px 12px);
+      background-size: 160px 160px, auto, auto;
+      opacity: 0.32;
       mix-blend-mode: soft-light;
       pointer-events:none;
       transform: rotate(-2deg);
-      filter: blur(0.2px);
+      filter: blur(0.25px) contrast(1.05) brightness(1.02);
     }
 
     #paperContent{
@@ -424,7 +514,7 @@
       background-repeat: no-repeat;
       background-size: contain;
       background-position: center;
-      background-image: url("data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%20200%20200%22%3E%0A%20%20%3Cdefs%3E%0A%20%20%20%20%3CradialGradient%20id=%22petal%22%20cx=%220.35%22%20cy=%220.25%22%20r=%220.9%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset=%220%22%20stop-color=%22#ffd6e7%22/%3E%0A%20%20%20%20%20%20%3Cstop%20offset=%220.55%22%20stop-color=%22#d34b7a%22/%3E%0A%20%20%20%20%20%20%3Cstop%20offset=%221%22%20stop-color=%22#7b1636%22/%3E%0A%20%20%20%20%3C/radialGradient%3E%0A%20%20%20%20%3ClinearGradient%20id=%22leaf%22%20x1=%220%22%20y1=%220%22%20x2=%221%22%20y2=%221%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset=%220%22%20stop-color=%22#4fbf7a%22/%3E%0A%20%20%20%20%20%20%3Cstop%20offset=%221%22%20stop-color=%22#1b5f3d%22/%3E%0A%20%20%20%20%3C/linearGradient%3E%0A%20%20%20%20%3Cfilter%20id=%22s%22%20x=%22-20%%22%20y=%22-20%%22%20width=%22140%%22%20height=%22140%%22%3E%0A%20%20%20%20%20%20%3CfeGaussianBlur%20in=%22SourceAlpha%22%20stdDeviation=%222%22/%3E%0A%20%20%20%20%20%20%3CfeOffset%20dx=%221%22%20dy=%223%22%20result=%22o%22/%3E%0A%20%20%20%20%20%20%3CfeColorMatrix%20in=%22o%22%20type=%22matrix%22%0A%20%20%20%20%20%20%20%20values=%220%200%200%200%200%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%200%200%200%200%200%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%200%200%200%200%200%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%200%200%200%20.25%200%22/%3E%0A%20%20%20%20%20%20%3CfeMerge%3E%0A%20%20%20%20%20%20%20%20%3CfeMergeNode/%3E%0A%20%20%20%20%20%20%20%20%3CfeMergeNode%20in=%22SourceGraphic%22/%3E%0A%20%20%20%20%20%20%3C/feMerge%3E%0A%20%20%20%20%3C/filter%3E%0A%20%20%3C/defs%3E%0A%20%20%3C!--%20stem%20--%3E%0A%20%20%3Cpath%20d=%22M110%20150c-8%2010-18%2018-30%2024%22%20fill=%22none%22%20stroke=%22#2b7a4c%22%20stroke-width=%226%22%20stroke-linecap=%22round%22%20opacity=%220.9%22/%3E%0A%20%20%3Cpath%20d=%22M102%20150c-5%209-11%2015-18%2019%22%20fill=%22none%22%20stroke=%22#1d5d3a%22%20stroke-width=%223%22%20stroke-linecap=%22round%22%20opacity=%220.9%22/%3E%0A%20%20%3C!--%20leaves%20--%3E%0A%20%20%3Cpath%20d=%22M92%20152c-18-6-32-2-46%2010%2018%204%2034%201%2046-10z%22%20fill=%22url(#leaf)%22%20opacity=%220.95%22%20filter=%22url(#s)%22/%3E%0A%20%20%3Cpath%20d=%22M108%20148c20-2%2034%206%2044%2022-20-2-36-10-44-22z%22%20fill=%22url(#leaf)%22%20opacity=%220.95%22%20filter=%22url(#s)%22/%3E%0A%20%20%3C!--%20rose%20--%3E%0A%20%20%3Cg%20filter=%22url(#s)%22%3E%0A%20%20%20%20%3Cpath%20d=%22M114%2040c20%2010%2032%2026%2030%2046-2%2018-16%2032-34%2040-18%208-36%206-50-6-14-12-18-30-10-48%208-18%2026-30%2064-32z%22%20fill=%22url(#petal)%22/%3E%0A%20%20%20%20%3Cpath%20d=%22M118%2055c10%206%2016%2014%2014%2024-2%2012-12%2020-24%2026-12%206-24%206-34-2-10-8-12-18-6-30%206-12%2018-20%2050-18z%22%20fill=%22rgba(255,220,236,0.18)%22/%3E%0A%20%20%20%20%3Cpath%20d=%22M118%2062c6%204%208%208%207%2014-1%208-8%2014-16%2018-8%204-16%204-22-2-6-5-7-11-4-18%204-8%2012-13%2035-12z%22%20fill=%22rgba(255,255,255,0.16)%22/%3E%0A%20%20%20%20%3Cpath%20d=%22M116%2072c4%203%205%206%204%2010-1%205-6%209-11%2012-6%203-11%203-16-1-4-3-5-7-3-12%203-5%208-9%2026-9z%22%20fill=%22rgba(0,0,0,0.10)%22/%3E%0A%20%20%3C/g%3E%0A%3C/svg%3E");
+      background-image: url("data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%20200%20200%22%3E%0A%20%20%3Cdefs%3E%0A%20%20%20%20%3CradialGradient%20id=%22petal%22%20cx=%220.35%22%20cy=%220.25%22%20r=%220.9%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset=%220%22%20stop-color=%22#ffd0f0%22/%3E%0A%20%20%20%20%20%20%3Cstop%20offset=%220.55%22%20stop-color=%22#ff3fa8%22/%3E%0A%20%20%20%20%20%20%3Cstop%20offset=%221%22%20stop-color=%22#8a004b%22/%3E%0A%20%20%20%20%3C/radialGradient%3E%0A%20%20%20%20%3ClinearGradient%20id=%22leaf%22%20x1=%220%22%20y1=%220%22%20x2=%221%22%20y2=%221%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset=%220%22%20stop-color=%22#4fbf7a%22/%3E%0A%20%20%20%20%20%20%3Cstop%20offset=%221%22%20stop-color=%22#1b5f3d%22/%3E%0A%20%20%20%20%3C/linearGradient%3E%0A%20%20%20%20%3Cfilter%20id=%22s%22%20x=%22-20%%22%20y=%22-20%%22%20width=%22140%%22%20height=%22140%%22%3E%0A%20%20%20%20%20%20%3CfeGaussianBlur%20in=%22SourceAlpha%22%20stdDeviation=%222%22/%3E%0A%20%20%20%20%20%20%3CfeOffset%20dx=%221%22%20dy=%223%22%20result=%22o%22/%3E%0A%20%20%20%20%20%20%3CfeColorMatrix%20in=%22o%22%20type=%22matrix%22%0A%20%20%20%20%20%20%20%20values=%220%200%200%200%200%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%200%200%200%200%200%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%200%200%200%200%200%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%200%200%200%20.25%200%22/%3E%0A%20%20%20%20%20%20%3CfeMerge%3E%0A%20%20%20%20%20%20%20%20%3CfeMergeNode/%3E%0A%20%20%20%20%20%20%20%20%3CfeMergeNode%20in=%22SourceGraphic%22/%3E%0A%20%20%20%20%20%20%3C/feMerge%3E%0A%20%20%20%20%3C/filter%3E%0A%20%20%3C/defs%3E%0A%20%20%3C!--%20stem%20--%3E%0A%20%20%3Cpath%20d=%22M110%20150c-8%2010-18%2018-30%2024%22%20fill=%22none%22%20stroke=%22#2b7a4c%22%20stroke-width=%226%22%20stroke-linecap=%22round%22%20opacity=%220.9%22/%3E%0A%20%20%3Cpath%20d=%22M102%20150c-5%209-11%2015-18%2019%22%20fill=%22none%22%20stroke=%22#1d5d3a%22%20stroke-width=%223%22%20stroke-linecap=%22round%22%20opacity=%220.9%22/%3E%0A%20%20%3C!--%20leaves%20--%3E%0A%20%20%3Cpath%20d=%22M92%20152c-18-6-32-2-46%2010%2018%204%2034%201%2046-10z%22%20fill=%22url(#leaf)%22%20opacity=%220.95%22%20filter=%22url(#s)%22/%3E%0A%20%20%3Cpath%20d=%22M108%20148c20-2%2034%206%2044%2022-20-2-36-10-44-22z%22%20fill=%22url(#leaf)%22%20opacity=%220.95%22%20filter=%22url(#s)%22/%3E%0A%20%20%3C!--%20rose%20--%3E%0A%20%20%3Cg%20filter=%22url(#s)%22%3E%0A%20%20%20%20%3Cpath%20d=%22M114%2040c20%2010%2032%2026%2030%2046-2%2018-16%2032-34%2040-18%208-36%206-50-6-14-12-18-30-10-48%208-18%2026-30%2064-32z%22%20fill=%22url(#petal)%22/%3E%0A%20%20%20%20%3Cpath%20d=%22M118%2055c10%206%2016%2014%2014%2024-2%2012-12%2020-24%2026-12%206-24%206-34-2-10-8-12-18-6-30%206-12%2018-20%2050-18z%22%20fill=%22rgba(255,220,236,0.18)%22/%3E%0A%20%20%20%20%3Cpath%20d=%22M118%2062c6%204%208%208%207%2014-1%208-8%2014-16%2018-8%204-16%204-22-2-6-5-7-11-4-18%204-8%2012-13%2035-12z%22%20fill=%22rgba(255,255,255,0.16)%22/%3E%0A%20%20%20%20%3Cpath%20d=%22M116%2072c4%203%205%206%204%2010-1%205-6%209-11%2012-6%203-11%203-16-1-4-3-5-7-3-12%203-5%208-9%2026-9z%22%20fill=%22rgba(0,0,0,0.10)%22/%3E%0A%20%20%3C/g%3E%0A%3C/svg%3E");
     }
 
     #introScreen.hide{
@@ -454,32 +544,9 @@
       #introScreen, #introScreen.hide, canvas{ transition: none !important; }
     }
 
-
   
-    /* Dibujo dentro de la hoja (boceto sutil) */
     
-    .paperDoodle{
-      position:absolute;
-      /* dentro de márgenes, pero SOLO debajo del botón */
-      --pad: calc(var(--framePad) + 10px);
-      left: var(--pad);
-      right: var(--pad);
-      bottom: var(--pad);
-      top: var(--doodleTop, 420px);
-
-      border-radius: 18px;
-      overflow: hidden;
-      pointer-events:none;
-      z-index: 1;
-
-      /* visible en iPhone sin tapar el texto */
-      opacity: .80;
-      color: rgba(60, 34, 26, .78);
-      mix-blend-mode: multiply;
-      background: radial-gradient(520px 320px at 50% 18%, rgba(255,255,255,0.18), rgba(0,0,0,0) 70%);
-    }
-
-
+    /* Marco doble en la hoja (dos líneas) */
     .paperFrame{
       position:absolute;
       inset:0;
@@ -493,26 +560,14 @@
       filter: blur(.05px);
     }
     .paperFrame .thin{ stroke-width: 2.0; }
-    .paperDoodle .thin{ stroke-width:2.6; opacity:.92; }
-    .paperDoodle .med{ stroke-width:3.6; opacity:.92; }
-    .paperDoodle .bold{ stroke-width:4.6; opacity:.94; }
-    .paperDoodle .fade{ opacity:.62; }
 
-  
-    /* margen doble en toda la hoja (dos líneas tipo papelería) */
+/* margen doble en toda la hoja (dos líneas tipo papelería) */
 
 
     /* Texto seleccionable dentro de la hoja */
     #paperContent, #introMsg, #introTitle{
       user-select: text;
       -webkit-user-select: text;
-    }
-
-    #introHint{
-      margin-top: 10px;
-      font: 14px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      color: rgba(55,30,22,0.72);
-      text-align: center;
     }
 
     @media (max-width: 420px){
@@ -537,7 +592,74 @@
       #rose{ width: 104px; height: 104px; }
     }
 
-  </style>
+  
+
+/* === Papel "libreta vieja pero especial" (estático + pigmentos) === */
+#letter{ animation: none !important; }
+
+#letter .paper{
+  animation: none !important; /* quita paperPulse */
+  --pigA: 0.82;
+  --pigB: 0.60;
+  background:
+    radial-gradient(340px 280px at 16% 18%, rgba(140,95,65,0.14), rgba(0,0,0,0) 62%),
+    radial-gradient(420px 320px at 82% 16%, rgba(140,95,65,0.12), rgba(0,0,0,0) 64%),
+    radial-gradient(680px 520px at 50% 92%, rgba(90,60,45,0.15), rgba(0,0,0,0) 74%),
+    linear-gradient(180deg, #f2e9d7 0%, #e7d6bd 58%, #e1cdb1 100%);
+}
+
+#letter .paper .paperShimmer{
+  display: none !important;
+  animation: none !important;
+  opacity: 0 !important;
+}
+
+#letter .paper::before{
+  content:"";
+  position:absolute;
+  inset:-44px;
+  background:
+    radial-gradient(520px 360px at 18% 28%, rgba(235,165,90,0.18), rgba(235,165,90,0.08) 42%, rgba(235,165,90,0) 72%),
+    radial-gradient(560px 420px at 78% 64%, rgba(220,140,90,0.16), rgba(220,140,90,0.07) 44%, rgba(220,140,90,0) 76%),
+    radial-gradient(620px 440px at 52% 16%, rgba(255,215,150,0.14), rgba(255,215,150,0.05) 50%, rgba(255,215,150,0) 84%),
+    radial-gradient(220px 220px at 28% 72%, rgba(145,95,60,0) 52%, rgba(145,95,60,0.14) 56%, rgba(145,95,60,0) 66%),
+    repeating-linear-gradient(0deg, rgba(90,55,40,0.030) 0 1px, rgba(0,0,0,0) 1px 30px),
+    repeating-linear-gradient(90deg, rgba(90,55,40,0.012) 0 1px, rgba(0,0,0,0) 1px 42px);
+  z-index: 1;
+  filter: blur(5px) saturate(1.08) contrast(1.05);
+  opacity: var(--pigA);
+  mix-blend-mode: multiply;
+  pointer-events:none;
+}
+
+#letter .paper::after{
+  content:"";
+  position:absolute;
+  inset:-26px;
+  z-index: 2;
+  background:
+    radial-gradient(circle at 8px 8px, rgba(150,85,55,0.26) 0 1.1px, rgba(0,0,0,0) 2.4px),
+    radial-gradient(circle at 12px 18px, rgba(210,150,95,0.20) 0 0.9px, rgba(0,0,0,0) 2.2px),
+    url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22240%22%20height%3D%22240%22%3E%0A%20%20%3Cdefs%3E%0A%20%20%20%20%3Cfilter%20id%3D%22b%22%20x%3D%22-20%25%22%20y%3D%22-20%25%22%20width%3D%22140%25%22%20height%3D%22140%25%22%3E%0A%20%20%20%20%20%20%3CfeGaussianBlur%20stdDeviation%3D%220.35%22%2F%3E%0A%20%20%20%20%3C%2Ffilter%3E%0A%20%20%3C%2Fdefs%3E%0A%20%20%3Cg%20filter%3D%22url%28%23b%29%22%3E%0A%20%20%20%20%3Ccircle%20cx%3D%2277.7%22%20cy%3D%2236.2%22%20r%3D%221.90%22%20fill%3D%22%23c07a3a%22%20opacity%3D%220.18%22%2F%3E%3Ccircle%20cx%3D%22197.1%22%20cy%3D%2222.6%22%20r%3D%221.77%22%20fill%3D%22%23e2a06a%22%20opacity%3D%220.12%22%2F%3E%3Ccircle%20cx%3D%2251.5%22%20cy%3D%2220.6%22%20r%3D%221.44%22%20fill%3D%22%23b46b3e%22%20opacity%3D%220.16%22%2F%3E%3Ccircle%20cx%3D%2221.8%22%20cy%3D%22101.9%22%20r%3D%222.25%22%20fill%3D%22%23c07a3a%22%20opacity%3D%220.18%22%2F%3E%3Ccircle%20cx%3D%22227.4%22%20cy%3D%22151.4%22%20r%3D%221.77%22%20fill%3D%22%23c07a3a%22%20opacity%3D%220.18%22%2F%3E%3Ccircle%20cx%3D%22138.5%22%20cy%3D%2295.2%22%20r%3D%222.55%22%20fill%3D%22%23c07a3a%22%20opacity%3D%220.18%22%2F%3E%3Ccircle%20cx%3D%22133.6%22%20cy%3D%2232.0%22%20r%3D%221.44%22%20fill%3D%22%23e2a06a%22%20opacity%3D%220.12%22%2F%3E%3Ccircle%20cx%3D%2228.3%22%20cy%3D%2274.0%22%20r%3D%222.23%22%20fill%3D%22%23b46b3e%22%20opacity%3D%220.16%22%2F%3E%3Ccircle%20cx%3D%2224.7%22%20cy%3D%22137.1%22%20r%3D%220.98%22%20fill%3D%22%23c07a3a%22%20opacity%3D%220.18%22%2F%3E%3Ccircle%20cx%3D%22131.5%22%20cy%3D%2215.1%22%20r%3D%220.72%22%20fill%3D%22%23b46b3e%22%20opacity%3D%220.16%22%2F%3E%3Ccircle%20cx%3D%22119.1%22%20cy%3D%22127.6%22%20r%3D%222.15%22%20fill%3D%22%23a4633e%22%20opacity%3D%220.14%22%2F%3E%3Ccircle%20cx%3D%22140.5%22%20cy%3D%22108.8%22%20r%3D%221.20%22%20fill%3D%22%23b46b3e%22%20opacity%3D%220.16%22%2F%3E%3Ccircle%20cx%3D%22167.8%22%20cy%3D%2258.6%22%20r%3D%221.75%22%20fill%3D%22%23e2a06a%22%20opacity%3D%220.12%22%2F%3E%3Ccircle%20cx%3D%22118.8%22%20cy%3D%2282.4%22%20r%3D%221.50%22%20fill%3D%22%23e2a06a%22%20opacity%3D%220.12%22%2F%3E%3Ccircle%20cx%3D%22235.2%22%20cy%3D%2228.3%22%20r%3D%221.44%22%20fill%3D%22%23d88a4a%22%20opacity%3D%220.14%22%2F%3E%3Ccircle%20cx%3D%2236.5%22%20cy%3D%22117.4%22%20r%3D%220.68%22%20fill%3D%22%23c07a3a%22%20opacity%3D%220.18%22%2F%3E%3Ccircle%20cx%3D%22183.5%22%20cy%3D%22137.5%22%20r%3D%222.35%22%20fill%3D%22%23d88a4a%22%20opacity%3D%220.14%22%2F%3E%3Ccircle%20cx%3D%2281.6%22%20cy%3D%2284.0%22%20r%3D%221.59%22%20fill%3D%22%23a4633e%22%20opacity%3D%220.14%22%2F%3E%3Ccircle%20cx%3D%2216.5%22%20cy%3D%2222.5%22%20r%3D%221.14%22%20fill%3D%22%23c07a3a%22%20opacity%3D%220.18%22%2F%3E%3Ccircle%20cx%3D%2214.6%22%20cy%3D%22168.4%22%20r%3D%221.89%22%20fill%3D%22%23a4633e%22%20opacity%3D%220.14%22%2F%3E%3Ccircle%20cx%3D%2268.3%22%20cy%3D%2292.6%22%20r%3D%221.94%22%20fill%3D%22%23c07a3a%22%20opacity%3D%220.18%22%2F%3E%3Ccircle%20cx%3D%22225.8%22%20cy%3D%2285.3%22%20r%3D%221.82%22%20fill%3D%22%23a4633e%22%20opacity%3D%220.14%22%2F%3E%3Ccircle%20cx%3D%2214.1%22%20cy%3D%22184.4%22%20r%3D%220.86%22%20fill%3D%22%23b46b3e%22%20opacity%3D%220.16%22%2F%3E%3Ccircle%20cx%3D%2295.5%22%20cy%3D%22220.0%22%20r%3D%221.59%22%20fill%3D%22%23b46b3e%22%20opacity%3D%220.16%22%2F%3E%3Ccircle%20cx%3D%22107.8%22%20cy%3D%22131.9%22%20r%3D%222.37%22%20fill%3D%22%23a4633e%22%20opacity%3D%220.14%22%2F%3E%3Ccircle%20cx%3D%22207.4%22%20cy%3D%2266.8%22%20r%3D%221.43%22%20fill%3D%22%23d88a4a%22%20opacity%3D%220.14%22%2F%3E%3Ccircle%20cx%3D%22163.9%22%20cy%3D%2291.3%22%20r%3D%221.06%22%20fill%3D%22%23c07a3a%22%20opacity%3D%220.18%22%2F%3E%3Ccircle%20cx%3D%2242.3%22%20cy%3D%2255.7%22%20r%3D%221.07%22%20fill%3D%22%23a4633e%22%20opacity%3D%220.14%22%2F%3E%3Ccircle%20cx%3D%22199.5%22%20cy%3D%2243.8%22%20r%3D%221.16%22%20fill%3D%22%23b46b3e%22%20opacity%3D%220.16%22%2F%3E%3Ccircle%20cx%3D%22100.5%22%20cy%3D%2288.6%22%20r%3D%221.73%22%20fill%3D%22%23b46b3e%22%20opacity%3D%220.16%22%2F%3E%3Ccircle%20cx%3D%22165.7%22%20cy%3D%22123.7%22%20r%3D%221.84%22%20fill%3D%22%23c07a3a%22%20opacity%3D%220.18%22%2F%3E%3Ccircle%20cx%3D%22109.6%22%20cy%3D%22209.0%22%20r%3D%222.50%22%20fill%3D%22%23e2a06a%22%20opacity%3D%220.12%22%2F%3E%3Ccircle%20cx%3D%2294.2%22%20cy%3D%2295.8%22%20r%3D%220.81%22%20fill%3D%22%23a4633e%22%20opacity%3D%220.14%22%2F%3E%3Ccircle%20cx%3D%2214.9%22%20cy%3D%2216.2%22%20r%3D%221.02%22%20fill%3D%22%23b46b3e%22%20opacity%3D%220.16%22%2F%3E%3Ccircle%20cx%3D%2226.4%22%20cy%3D%22144.2%22%20r%3D%220.80%22%20fill%3D%22%23e2a06a%22%20opacity%3D%220.12%22%2F%3E%3Ccircle%20cx%3D%2236.3%22%20cy%3D%2224.4%22%20r%3D%221.33%22%20fill%3D%22%23c07a3a%22%20opacity%3D%220.18%22%2F%3E%3Ccircle%20cx%3D%2216.9%22%20cy%3D%2249.9%22%20r%3D%221.35%22%20fill%3D%22%23d88a4a%22%20opacity%3D%220.14%22%2F%3E%3Ccircle%20cx%3D%22229.3%22%20cy%3D%22144.5%22%20r%3D%221.55%22%20fill%3D%22%23c07a3a%22%20opacity%3D%220.18%22%2F%3E%3Ccircle%20cx%3D%22203.7%22%20cy%3D%22238.3%22%20r%3D%221.53%22%20fill%3D%22%23a4633e%22%20opacity%3D%220.14%22%2F%3E%3Ccircle%20cx%3D%2274.8%22%20cy%3D%2234.6%22%20r%3D%222.10%22%20fill%3D%22%23d88a4a%22%20opacity%3D%220.14%22%2F%3E%3Ccircle%20cx%3D%22114.9%22%20cy%3D%22166.1%22%20r%3D%221.63%22%20fill%3D%22%23b46b3e%22%20opacity%3D%220.16%22%2F%3E%3Ccircle%20cx%3D%22228.2%22%20cy%3D%22126.8%22%20r%3D%220.89%22%20fill%3D%22%23e2a06a%22%20opacity%3D%220.12%22%2F%3E%3Ccircle%20cx%3D%22219.4%22%20cy%3D%22182.0%22%20r%3D%221.20%22%20fill%3D%22%23c07a3a%22%20opacity%3D%220.18%22%2F%3E%3Ccircle%20cx%3D%22167.1%22%20cy%3D%2262.7%22%20r%3D%221.33%22%20fill%3D%22%23b46b3e%22%20opacity%3D%220.16%22%2F%3E%3Ccircle%20cx%3D%2285.4%22%20cy%3D%2253.5%22%20r%3D%221.68%22%20fill%3D%22%23e2a06a%22%20opacity%3D%220.12%22%2F%3E%3Ccircle%20cx%3D%2279.1%22%20cy%3D%2253.5%22%20r%3D%222.22%22%20fill%3D%22%23b46b3e%22%20opacity%3D%220.16%22%2F%3E%3Ccircle%20cx%3D%22193.5%22%20cy%3D%22196.4%22%20r%3D%222.08%22%20fill%3D%22%23b46b3e%22%20opacity%3D%220.16%22%2F%3E%3Ccircle%20cx%3D%2248.0%22%20cy%3D%22118.3%22%20r%3D%222.06%22%20fill%3D%22%23c07a3a%22%20opacity%3D%220.18%22%2F%3E%3Ccircle%20cx%3D%22189.6%22%20cy%3D%22113.3%22%20r%3D%220.99%22%20fill%3D%22%23e2a06a%22%20opacity%3D%220.12%22%2F%3E%3Ccircle%20cx%3D%22229.6%22%20cy%3D%22107.3%22%20r%3D%222.47%22%20fill%3D%22%23d88a4a%22%20opacity%3D%220.14%22%2F%3E%3Ccircle%20cx%3D%22229.2%22%20cy%3D%2287.5%22%20r%3D%221.04%22%20fill%3D%22%23b46b3e%22%20opacity%3D%220.16%22%2F%3E%3Ccircle%20cx%3D%22112.8%22%20cy%3D%2281.1%22%20r%3D%221.57%22%20fill%3D%22%23e2a06a%22%20opacity%3D%220.12%22%2F%3E%3Ccircle%20cx%3D%22201.7%22%20cy%3D%22115.1%22%20r%3D%221.91%22%20fill%3D%22%23c07a3a%22%20opacity%3D%220.18%22%2F%3E%3Ccircle%20cx%3D%22200.3%22%20cy%3D%2228.8%22%20r%3D%221.38%22%20fill%3D%22%23b46b3e%22%20opacity%3D%220.16%22%2F%3E%3Ccircle%20cx%3D%22114.7%22%20cy%3D%2242.8%22%20r%3D%222.18%22%20fill%3D%22%23d88a4a%22%20opacity%3D%220.14%22%2F%3E%3Ccircle%20cx%3D%2220.8%22%20cy%3D%22227.1%22%20r%3D%226.75%22%20fill%3D%22%23b86a43%22%20opacity%3D%220.10%22%2F%3E%3Ccircle%20cx%3D%2296.3%22%20cy%3D%22227.2%22%20r%3D%226.76%22%20fill%3D%22%23d77b3f%22%20opacity%3D%220.10%22%2F%3E%3Ccircle%20cx%3D%22238.3%22%20cy%3D%226.6%22%20r%3D%226.16%22%20fill%3D%22%23b86a43%22%20opacity%3D%220.10%22%2F%3E%3Ccircle%20cx%3D%22193.6%22%20cy%3D%2235.1%22%20r%3D%227.22%22%20fill%3D%22%23b86a43%22%20opacity%3D%220.10%22%2F%3E%3Ccircle%20cx%3D%22157.7%22%20cy%3D%2284.1%22%20r%3D%225.97%22%20fill%3D%22%23d77b3f%22%20opacity%3D%220.10%22%2F%3E%3Ccircle%20cx%3D%225.1%22%20cy%3D%22191.8%22%20r%3D%226.77%22%20fill%3D%22%23d77b3f%22%20opacity%3D%220.10%22%2F%3E%3Ccircle%20cx%3D%22126.4%22%20cy%3D%22224.1%22%20r%3D%225.45%22%20fill%3D%22%23d77b3f%22%20opacity%3D%220.10%22%2F%3E%3Ccircle%20cx%3D%22198.3%22%20cy%3D%2250.7%22%20r%3D%224.63%22%20fill%3D%22%23b86a43%22%20opacity%3D%220.10%22%2F%3E%3Ccircle%20cx%3D%22120.3%22%20cy%3D%22183.3%22%20r%3D%224.97%22%20fill%3D%22%23e4a16a%22%20opacity%3D%220.08%22%2F%3E%3Ccircle%20cx%3D%22100.6%22%20cy%3D%2231.5%22%20r%3D%227.60%22%20fill%3D%22%23b86a43%22%20opacity%3D%220.10%22%2F%3E%0A%20%20%3C%2Fg%3E%0A%3C%2Fsvg%3E") repeat,
+    url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22180%22%20height%3D%22180%22%3E%0A%20%20%3Cfilter%20id%3D%22n%22%3E%0A%20%20%20%20%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%220.85%22%20numOctaves%3D%223%22%20stitchTiles%3D%22stitch%22%2F%3E%0A%20%20%20%20%3CfeColorMatrix%20type%3D%22saturate%22%20values%3D%220%22%2F%3E%0A%20%20%3C%2Ffilter%3E%0A%20%20%3Crect%20width%3D%22180%22%20height%3D%22180%22%20filter%3D%22url%28%23n%29%22%20opacity%3D%220.6%22%2F%3E%0A%3C%2Fsvg%3E") repeat,
+    repeating-linear-gradient(25deg, rgba(255,255,255,0.045) 0 2px, rgba(0,0,0,0) 2px 10px),
+    repeating-linear-gradient(-25deg, rgba(0,0,0,0.028) 0 1px, rgba(0,0,0,0) 1px 12px);
+  background-size: 26px 26px, 34px 34px, 240px 240px, 180px 180px, auto, auto;
+  background-position: 0 0, 12px 20px, 0 0, 40px 60px, 0 0, 0 0;
+  opacity: var(--pigB);
+  mix-blend-mode: multiply;
+  pointer-events:none;
+  transform: rotate(-2deg);
+  filter: blur(0.20px) contrast(1.12) brightness(1.02);
+}
+
+@media (max-width: 420px){
+  #letter .paper{ --pigA: 0.74; --pigB: 0.54; }
+  #letter .paper::before{ filter: blur(4.6px) saturate(1.06) contrast(1.05); }
+}
+
+
+</style>
 </head>
 <body>
   <canvas id="c" role="img" aria-label="Animación de un ramo de orquídeas bajo un cielo estrellado con nubes, luna y la constelación de Capricornio y Leo"></canvas>
@@ -547,6 +669,7 @@
       <div id="envelope" aria-hidden="true"></div>
 
       <div id="letter" aria-hidden="false">
+        <div class="paperBack" aria-hidden="true"></div>
         <div class="paper">
 
           <div class="paperShimmer" aria-hidden="true"></div>
@@ -559,93 +682,6 @@
             </g>
           </svg>
 
-<svg class="paperDoodle" viewBox="0 0 600 520" aria-hidden="true" focusable="false" preserveAspectRatio="xMidYMid meet">
-  <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-
-    <!-- Cielo suave (alba) -->
-    <path class="thin fade" d="M10 90 C120 62 236 70 320 94 C410 120 505 112 590 86"/>
-    <path class="thin fade" d="M0 126 C150 92 280 102 386 138 C495 176 565 178 600 166" opacity=".55"/>
-
-    <!-- Montañas (capas) -->
-    <path class="med" d="M-20 238 C60 152 132 150 214 236 C286 158 362 154 442 236 C510 178 566 178 640 236"/>
-    <path class="thin fade" d="M-20 266 C78 210 152 210 242 266 C318 206 392 206 486 266 C544 232 590 232 640 266" opacity=".62"/>
-
-    <!-- Horizonte -->
-    <path class="thin fade" d="M0 304 C160 294 310 296 442 310 C520 318 570 316 600 310" opacity=".60"/>
-
-    <!-- Sol (asomando) -->
-    <path class="thin fade" d="M298 304 a40 40 0 0 0 80 0" opacity=".65"/>
-
-    <!-- Río -->
-    <path class="med" d="M345 310 C320 350 308 388 330 430 C350 468 346 498 332 520" opacity=".82"/>
-    <path class="thin fade" d="M362 310 C338 350 330 388 350 430 C368 470 364 500 352 520" opacity=".55"/>
-
-    <!-- Campo -->
-    <path class="bold" d="M0 414 C150 388 270 398 360 428 C460 460 540 470 600 462" opacity=".78"/>
-    <path class="thin fade" d="M0 452 C150 432 280 444 380 472 C492 500 560 506 600 500" opacity=".60"/>
-
-    <!-- Flores (simples, espaciadas para que no se amontonen) -->
-    <g opacity=".78">
-      <g transform="translate(80 452) scale(0.95)">
-        <path class="thin" d="M0 0 C-8 -18 -6 -34 0 -46 C6 -34 8 -18 0 0"/>
-        <ellipse class="thin" cx="0" cy="-54" rx="10" ry="6"/>
-        <ellipse class="thin" cx="0" cy="-54" rx="10" ry="6" transform="rotate(60)"/>
-        <ellipse class="thin" cx="0" cy="-54" rx="10" ry="6" transform="rotate(120)"/>
-        <circle class="thin" cx="0" cy="-54" r="3.2"/>
-      </g>
-
-      <g transform="translate(150 466) scale(0.80)">
-        <path class="thin" d="M0 0 C-7 -16 -6 -30 0 -42 C6 -30 7 -16 0 0"/>
-        <ellipse class="thin" cx="0" cy="-50" rx="9" ry="5.5"/>
-        <ellipse class="thin" cx="0" cy="-50" rx="9" ry="5.5" transform="rotate(60)"/>
-        <ellipse class="thin" cx="0" cy="-50" rx="9" ry="5.5" transform="rotate(120)"/>
-        <circle class="thin" cx="0" cy="-50" r="3"/>
-      </g>
-
-      <g transform="translate(230 448) scale(1.02)">
-        <path class="thin" d="M0 0 C-9 -18 -7 -34 0 -46 C7 -34 9 -18 0 0"/>
-        <ellipse class="thin" cx="0" cy="-54" rx="11" ry="6.5"/>
-        <ellipse class="thin" cx="0" cy="-54" rx="11" ry="6.5" transform="rotate(60)"/>
-        <ellipse class="thin" cx="0" cy="-54" rx="11" ry="6.5" transform="rotate(120)"/>
-        <circle class="thin" cx="0" cy="-54" r="3.4"/>
-      </g>
-
-      <g transform="translate(305 468) scale(0.78)">
-        <path class="thin" d="M0 0 C-7 -16 -6 -30 0 -42 C6 -30 7 -16 0 0"/>
-        <ellipse class="thin" cx="0" cy="-50" rx="9" ry="5.5"/>
-        <ellipse class="thin" cx="0" cy="-50" rx="9" ry="5.5" transform="rotate(60)"/>
-        <ellipse class="thin" cx="0" cy="-50" rx="9" ry="5.5" transform="rotate(120)"/>
-        <circle class="thin" cx="0" cy="-50" r="3"/>
-      </g>
-
-      <g transform="translate(380 450) scale(1.00)">
-        <path class="thin" d="M0 0 C-9 -18 -7 -34 0 -46 C7 -34 9 -18 0 0"/>
-        <ellipse class="thin" cx="0" cy="-54" rx="10.5" ry="6.2"/>
-        <ellipse class="thin" cx="0" cy="-54" rx="10.5" ry="6.2" transform="rotate(60)"/>
-        <ellipse class="thin" cx="0" cy="-54" rx="10.5" ry="6.2" transform="rotate(120)"/>
-        <circle class="thin" cx="0" cy="-54" r="3.3"/>
-      </g>
-
-      <g transform="translate(462 466) scale(0.82)">
-        <path class="thin" d="M0 0 C-7 -16 -6 -30 0 -42 C6 -30 7 -16 0 0"/>
-        <ellipse class="thin" cx="0" cy="-50" rx="9" ry="5.5"/>
-        <ellipse class="thin" cx="0" cy="-50" rx="9" ry="5.5" transform="rotate(60)"/>
-        <ellipse class="thin" cx="0" cy="-50" rx="9" ry="5.5" transform="rotate(120)"/>
-        <circle class="thin" cx="0" cy="-50" r="3"/>
-      </g>
-
-      <g transform="translate(535 452) scale(0.94)">
-        <path class="thin" d="M0 0 C-8 -18 -6 -34 0 -46 C6 -34 8 -18 0 0"/>
-        <ellipse class="thin" cx="0" cy="-54" rx="10" ry="6"/>
-        <ellipse class="thin" cx="0" cy="-54" rx="10" ry="6" transform="rotate(60)"/>
-        <ellipse class="thin" cx="0" cy="-54" rx="10" ry="6" transform="rotate(120)"/>
-        <circle class="thin" cx="0" cy="-54" r="3.2"/>
-      </g>
-    </g>
-
-  </g>
-</svg>
-
 <div id="paperContent">
             <div id="introTextBlock">
               <div id="introMsg">recuerda que son con mucho cariño</div>
@@ -656,9 +692,8 @@
               </span></div>
             </div>
 
-            <button id="introBtn" type="button" aria-label="Abrir la carta">Abrir la carta</button>
-            <div id="introHint">Toca el sello o la carta</div>
-          </div>
+            <button id="introBtn" type="button" aria-label="Abrir la carta">Toca aquí</button>
+</div>
         </div>
       </div>
 
@@ -682,30 +717,7 @@
     try { introBtn && introBtn.focus({ preventScroll:true }); } catch(_){}
   });
 
-  // Mantén el doodle dentro de márgenes y empezando justo debajo del botón
   const paperEl  = document.querySelector('#letter .paper');
-  const doodleEl = document.querySelector('#letter .paper .paperDoodle');
-
-  function layoutIntroDoodle(){
-    if(!paperEl || !doodleEl || !introBtn) return;
-
-    const pr = paperEl.getBoundingClientRect();
-    const br = introBtn.getBoundingClientRect();
-
-    const framePad = parseFloat(getComputedStyle(paperEl).getPropertyValue('--framePad')) || 40;
-    const pad = framePad + 10; // debe coincidir con --pad en .paperDoodle
-    const gap = 26;            // separación segura debajo del botón (móvil)
-
-    let top = (br.bottom - pr.top) + gap; // en coordenadas de la hoja
-    top = Math.max(pad, top);
-
-    // asegura espacio para que el paisaje se vea completo
-    const minH = 210;
-    const maxTop = (paperEl.clientHeight || (pr.height||0)) - pad - minH;
-    if(isFinite(maxTop)) top = Math.min(maxTop, top);
-
-    doodleEl.style.setProperty('--doodleTop', top + 'px');
-  }
 
   const titleEl = document.getElementById('introTitle');
 
@@ -723,13 +735,13 @@
       titleEl.style.transform = `scale(${s})`;
     }
   }
-window.addEventListener('resize', () => requestAnimationFrame(() => { layoutIntroDoodle(); fitIntroTitle(); }), {passive:true});
+window.addEventListener('resize', () => requestAnimationFrame(() => { fitIntroTitle(); }), {passive:true});
   try{
     if(document.fonts && document.fonts.ready){
-      document.fonts.ready.then(() => requestAnimationFrame(() => { layoutIntroDoodle(); fitIntroTitle(); }));
+      document.fonts.ready.then(() => requestAnimationFrame(() => { fitIntroTitle(); }));
     }
   }catch(_){}
-  requestAnimationFrame(() => { layoutIntroDoodle(); fitIntroTitle(); });
+  requestAnimationFrame(() => { fitIntroTitle(); });
   // Mantén el canvas escondido hasta el toque/click
   canvas.classList.remove('show');
 
@@ -822,31 +834,30 @@ window.addEventListener('resize', () => requestAnimationFrame(() => { layoutIntr
       b: Math.round((b1+m)*255)
     };
   }
-// Color estable por semilla (naranja difuminado)
+// Color estable por semilla (rosa intenso difuminado)
 // Nota: hslToRgb usa grados y s/l en 0..100
 const colorFromSeed = (seed)=>{
   let s = (seed >>> 0) || 1;
   const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0, s / 4294967296);
 
-  // Naranjas: 22..38° (cálido)
-  const hDeg = lerp(22, 38, rnd());
+  // Rosas: 320..345° (magenta)
+  const hDeg = lerp(320, 345, rnd());
 
   // Saturación y luminancia en rangos agradables
-  const satP = lerp(55, 88, rnd());
-  const ligP = lerp(52, 78, rnd());
+  const satP = lerp(70, 96, rnd());
+  const ligP = lerp(44, 68, rnd());
 
   const rgb = hslToRgb(hDeg, satP, ligP);
 
   // Empuja hacia blanco para que se vea “difuminado” (pastel)
-  const w = lerp(0.22, 0.55, rnd());
+  const w = lerp(0.08, 0.32, rnd());
 
   return {
-    r: clamp(Math.round(lerp(rgb.r, 255, w)), 120, 255),
-    g: clamp(Math.round(lerp(rgb.g, 255, w)), 70, 255),
-    b: clamp(Math.round(lerp(rgb.b, 255, w)), 25, 220),
+    r: clamp(Math.round(lerp(rgb.r, 255, w)), 150, 255),
+    g: clamp(Math.round(lerp(rgb.g, 255, w)), 45, 230),
+    b: clamp(Math.round(lerp(rgb.b, 255, w)), 110, 255),
   };
 };
-
 
 // ===== Intro: generación del ramo al abrir =====
 // master: 0..1 controla el “construir” tallo -> hojas -> pétalos.
