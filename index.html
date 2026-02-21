@@ -62,13 +62,18 @@
   
     #hud{display:none !important;}
 
-    /* FAILSAFE: asegurar que la primera interfaz (carta + texto + botón) SIEMPRE se vea */
-    #introScreen{ display:flex !important; opacity:1 !important; visibility:visible !important; }
-    #loveWrap, #letter, #paperContent, #introTextBlock, #introMsg, #introTitle, #introBtn{ opacity:1 !important; visibility:visible !important; }
+    /* FAILSAFE: asegurar que la primera interfaz (carta + texto + botón) SIEMPRE se vea
+       PERO sin sabotear la transición cuando ya empezaste. */
+    body:not(.started) #introScreen{ display:flex !important; opacity:1 !important; visibility:visible !important; }
+    body:not(.started) #loveWrap, body:not(.started) #letter, body:not(.started) #paperContent, body:not(.started) #introTextBlock, body:not(.started) #introMsg, body:not(.started) #introTitle, body:not(.started) #introBtn{ opacity:1 !important; visibility:visible !important; }
 
   
     /* ===== Intro "carta de amor" (estilo sobre + rosa) ===== */
-    canvas{ will-change: opacity, filter, transform; opacity:0; filter: blur(10px) saturate(0.92); transform: scale(1.02); transition: opacity 1200ms ease, filter 1200ms ease, transform 1200ms ease; }
+    canvas{ will-change: opacity, filter, transform; opacity:0; filter: blur(14px) saturate(0.92); transform: scale(1.03);
+      transition: opacity 1500ms cubic-bezier(.16,1,.3,1), filter 1500ms cubic-bezier(.16,1,.3,1), transform 1500ms cubic-bezier(.16,1,.3,1);
+      transition-delay: 0ms;
+    }
+    body.transitioning canvas{ transition-delay: 180ms; }
     canvas.show{ opacity:1; filter:none; transform: none; }
 
     #introScreen{
@@ -129,6 +134,7 @@
       align-items:center;
       justify-content:center;
       filter: drop-shadow(0 22px 46px rgba(0,0,0,0.35));
+      transition: filter 1120ms ease;
     }
 
     
@@ -187,10 +193,12 @@
 
 
     /* Transición “pasar página”: la carta sale del sobre y el sello se desvanece */
-    #loveWrap.go #letter{
+        #loveWrap.go{ filter: drop-shadow(0 22px 46px rgba(0,0,0,0.35)) brightness(0.92) saturate(0.88); }
+
+#loveWrap.go #letter{
       animation: none;
       transform-origin: 50% 85%;
-      transition: transform 920ms cubic-bezier(.18,.95,.18,1), opacity 920ms ease, filter 920ms ease;
+      transition: transform 1120ms cubic-bezier(.18,.95,.18,1), opacity 1120ms ease, filter 1120ms ease;
       filter: blur(0px);
       opacity: 1;
     }
@@ -200,7 +208,7 @@
       filter: blur(3px);
     }
     #loveWrap.go #envelope{
-      transition: transform 920ms cubic-bezier(.18,.95,.18,1), opacity 920ms ease, filter 920ms ease;
+      transition: transform 1120ms cubic-bezier(.18,.95,.18,1), opacity 1120ms ease, filter 1120ms ease;
       transform-origin: 50% 80%;
       filter: blur(0px);
     }
@@ -210,7 +218,7 @@
       filter: blur(1px);
     }
     #loveWrap.go #rose{
-      transition: transform 920ms cubic-bezier(.18,.95,.18,1), opacity 920ms ease, filter 920ms ease;
+      transition: transform 1120ms cubic-bezier(.18,.95,.18,1), opacity 1120ms ease, filter 1120ms ease;
       transform-origin: 50% 50%;
     }
     #loveWrap.go #rose{
@@ -495,7 +503,7 @@
     #introBtn:hover{ filter: brightness(1.03) saturate(1.05); }
     #introBtn:active{ transform: translateY(1px) scale(0.99); }
     #introBtn:focus-visible{
-      outline: 3px solid rgba(255,220,235,0.55);
+      outline: 3px solid rgba(190,255,250,0.55);
       outline-offset: 4px;
     }
 
@@ -514,7 +522,7 @@
       background-repeat: no-repeat;
       background-size: contain;
       background-position: center;
-      background-image: url("data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%20200%20200%22%3E%0A%20%20%3Cdefs%3E%0A%20%20%20%20%3CradialGradient%20id=%22petal%22%20cx=%220.35%22%20cy=%220.25%22%20r=%220.9%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset=%220%22%20stop-color=%22#fff6c9%22/%3E%0A%20%20%20%20%20%20%3Cstop%20offset=%220.55%22%20stop-color=%22#ffd31a%22/%3E%0A%20%20%20%20%20%20%3Cstop%20offset=%221%22%20stop-color=%22#b87400%22/%3E%0A%20%20%20%20%3C/radialGradient%3E%0A%20%20%20%20%3ClinearGradient%20id=%22leaf%22%20x1=%220%22%20y1=%220%22%20x2=%221%22%20y2=%221%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset=%220%22%20stop-color=%22#4fbf7a%22/%3E%0A%20%20%20%20%20%20%3Cstop%20offset=%221%22%20stop-color=%22#1b5f3d%22/%3E%0A%20%20%20%20%3C/linearGradient%3E%0A%20%20%20%20%3Cfilter%20id=%22s%22%20x=%22-20%%22%20y=%22-20%%22%20width=%22140%%22%20height=%22140%%22%3E%0A%20%20%20%20%20%20%3CfeGaussianBlur%20in=%22SourceAlpha%22%20stdDeviation=%222%22/%3E%0A%20%20%20%20%20%20%3CfeOffset%20dx=%221%22%20dy=%223%22%20result=%22o%22/%3E%0A%20%20%20%20%20%20%3CfeColorMatrix%20in=%22o%22%20type=%22matrix%22%0A%20%20%20%20%20%20%20%20values=%220%200%200%200%200%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%200%200%200%200%200%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%200%200%200%200%200%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%200%200%200%20.25%200%22/%3E%0A%20%20%20%20%20%20%3CfeMerge%3E%0A%20%20%20%20%20%20%20%20%3CfeMergeNode/%3E%0A%20%20%20%20%20%20%20%20%3CfeMergeNode%20in=%22SourceGraphic%22/%3E%0A%20%20%20%20%20%20%3C/feMerge%3E%0A%20%20%20%20%3C/filter%3E%0A%20%20%3C/defs%3E%0A%20%20%3C!--%20stem%20--%3E%0A%20%20%3Cpath%20d=%22M110%20150c-8%2010-18%2018-30%2024%22%20fill=%22none%22%20stroke=%22#2b7a4c%22%20stroke-width=%226%22%20stroke-linecap=%22round%22%20opacity=%220.9%22/%3E%0A%20%20%3Cpath%20d=%22M102%20150c-5%209-11%2015-18%2019%22%20fill=%22none%22%20stroke=%22#1d5d3a%22%20stroke-width=%223%22%20stroke-linecap=%22round%22%20opacity=%220.9%22/%3E%0A%20%20%3C!--%20leaves%20--%3E%0A%20%20%3Cpath%20d=%22M92%20152c-18-6-32-2-46%2010%2018%204%2034%201%2046-10z%22%20fill=%22url(#leaf)%22%20opacity=%220.95%22%20filter=%22url(#s)%22/%3E%0A%20%20%3Cpath%20d=%22M108%20148c20-2%2034%206%2044%2022-20-2-36-10-44-22z%22%20fill=%22url(#leaf)%22%20opacity=%220.95%22%20filter=%22url(#s)%22/%3E%0A%20%20%3C!--%20rose%20--%3E%0A%20%20%3Cg%20filter=%22url(#s)%22%3E%0A%20%20%20%20%3Cpath%20d=%22M114%2040c20%2010%2032%2026%2030%2046-2%2018-16%2032-34%2040-18%208-36%206-50-6-14-12-18-30-10-48%208-18%2026-30%2064-32z%22%20fill=%22url(#petal)%22/%3E%0A%20%20%20%20%3Cpath%20d=%22M118%2055c10%206%2016%2014%2014%2024-2%2012-12%2020-24%2026-12%206-24%206-34-2-10-8-12-18-6-30%206-12%2018-20%2050-18z%22%20fill=%22rgba(255,245,205,0.18)%22/%3E%0A%20%20%20%20%3Cpath%20d=%22M118%2062c6%204%208%208%207%2014-1%208-8%2014-16%2018-8%204-16%204-22-2-6-5-7-11-4-18%204-8%2012-13%2035-12z%22%20fill=%22rgba(255,255,255,0.16)%22/%3E%0A%20%20%20%20%3Cpath%20d=%22M116%2072c4%203%205%206%204%2010-1%205-6%209-11%2012-6%203-11%203-16-1-4-3-5-7-3-12%203-5%208-9%2026-9z%22%20fill=%22rgba(0,0,0,0.10)%22/%3E%0A%20%20%3C/g%3E%0A%3C/svg%3E");
+      background-image: url("data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%20200%20200%22%3E%0A%20%20%3Cdefs%3E%0A%20%20%20%20%3CradialGradient%20id=%22petal%22%20cx=%220.35%22%20cy=%220.25%22%20r=%220.9%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset=%220%22%20stop-color=%22#eaffff%22/%3E%0A%20%20%20%20%20%20%3Cstop%20offset=%220.55%22%20stop-color=%22#39d8d0%22/%3E%0A%20%20%20%20%20%20%3Cstop%20offset=%221%22%20stop-color=%22#0a5c73%22/%3E%0A%20%20%20%20%3C/radialGradient%3E%0A%20%20%20%20%3ClinearGradient%20id=%22leaf%22%20x1=%220%22%20y1=%220%22%20x2=%221%22%20y2=%221%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset=%220%22%20stop-color=%22#4fbf7a%22/%3E%0A%20%20%20%20%20%20%3Cstop%20offset=%221%22%20stop-color=%22#1b5f3d%22/%3E%0A%20%20%20%20%3C/linearGradient%3E%0A%20%20%20%20%3Cfilter%20id=%22s%22%20x=%22-20%%22%20y=%22-20%%22%20width=%22140%%22%20height=%22140%%22%3E%0A%20%20%20%20%20%20%3CfeGaussianBlur%20in=%22SourceAlpha%22%20stdDeviation=%222%22/%3E%0A%20%20%20%20%20%20%3CfeOffset%20dx=%221%22%20dy=%223%22%20result=%22o%22/%3E%0A%20%20%20%20%20%20%3CfeColorMatrix%20in=%22o%22%20type=%22matrix%22%0A%20%20%20%20%20%20%20%20values=%220%200%200%200%200%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%200%200%200%200%200%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%200%200%200%200%200%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%200%200%200%20.25%200%22/%3E%0A%20%20%20%20%20%20%3CfeMerge%3E%0A%20%20%20%20%20%20%20%20%3CfeMergeNode/%3E%0A%20%20%20%20%20%20%20%20%3CfeMergeNode%20in=%22SourceGraphic%22/%3E%0A%20%20%20%20%20%20%3C/feMerge%3E%0A%20%20%20%20%3C/filter%3E%0A%20%20%3C/defs%3E%0A%20%20%3C!--%20stem%20--%3E%0A%20%20%3Cpath%20d=%22M110%20150c-8%2010-18%2018-30%2024%22%20fill=%22none%22%20stroke=%22#2b7a4c%22%20stroke-width=%226%22%20stroke-linecap=%22round%22%20opacity=%220.9%22/%3E%0A%20%20%3Cpath%20d=%22M102%20150c-5%209-11%2015-18%2019%22%20fill=%22none%22%20stroke=%22#1d5d3a%22%20stroke-width=%223%22%20stroke-linecap=%22round%22%20opacity=%220.9%22/%3E%0A%20%20%3C!--%20leaves%20--%3E%0A%20%20%3Cpath%20d=%22M92%20152c-18-6-32-2-46%2010%2018%204%2034%201%2046-10z%22%20fill=%22url(#leaf)%22%20opacity=%220.95%22%20filter=%22url(#s)%22/%3E%0A%20%20%3Cpath%20d=%22M108%20148c20-2%2034%206%2044%2022-20-2-36-10-44-22z%22%20fill=%22url(#leaf)%22%20opacity=%220.95%22%20filter=%22url(#s)%22/%3E%0A%20%20%3C!--%20rose%20--%3E%0A%20%20%3Cg%20filter=%22url(#s)%22%3E%0A%20%20%20%20%3Cpath%20d=%22M114%2040c20%2010%2032%2026%2030%2046-2%2018-16%2032-34%2040-18%208-36%206-50-6-14-12-18-30-10-48%208-18%2026-30%2064-32z%22%20fill=%22url(#petal)%22/%3E%0A%20%20%20%20%3Cpath%20d=%22M118%2055c10%206%2016%2014%2014%2024-2%2012-12%2020-24%2026-12%206-24%206-34-2-10-8-12-18-6-30%206-12%2018-20%2050-18z%22%20fill=%22rgba(235,255,255,0.18)%22/%3E%0A%20%20%20%20%3Cpath%20d=%22M118%2062c6%204%208%208%207%2014-1%208-8%2014-16%2018-8%204-16%204-22-2-6-5-7-11-4-18%204-8%2012-13%2035-12z%22%20fill=%22rgba(255,255,255,0.16)%22/%3E%0A%20%20%20%20%3Cpath%20d=%22M116%2072c4%203%205%206%204%2010-1%205-6%209-11%2012-6%203-11%203-16-1-4-3-5-7-3-12%203-5%208-9%2026-9z%22%20fill=%22rgba(0,0,0,0.10)%22/%3E%0A%20%20%3C/g%3E%0A%3C/svg%3E");
     }
 
     #introScreen.hide{
@@ -572,10 +580,10 @@
       height: 220px;
       z-index: 1;
       pointer-events:none;
-      opacity: 0.22;
+      opacity: 0.26;
       color: rgba(90,55,40,0.62);
       mix-blend-mode: multiply;
-      filter: blur(0.15px);
+      filter: blur(0.10px);
     }
     .paperLandscape .ln{
       fill:none;
@@ -722,30 +730,81 @@
           <svg class="paperLandscape" viewBox="0 0 520 220" aria-hidden="true" focusable="false" preserveAspectRatio="none">
             <defs>
               <filter id="plBlur_1" x="-10%" y="-10%" width="120%" height="120%">
-                <feGaussianBlur stdDeviation="2.2"/>
+                <feGaussianBlur stdDeviation="2.0"/>
+              </filter>
+              <!-- pequeña distorsión tipo acuarela (muy sutil) -->
+              <filter id="plPaper_1" x="-12%" y="-12%" width="124%" height="124%">
+                <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="7" result="n"/>
+                <feDisplacementMap in="SourceGraphic" in2="n" scale="3.2" xChannelSelector="R" yChannelSelector="G"/>
               </filter>
               <linearGradient id="plFade_1" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0" stop-color="currentColor" stop-opacity="0.00"/>
-                <stop offset="1" stop-color="currentColor" stop-opacity="0.18"/>
+                <stop offset="1" stop-color="currentColor" stop-opacity="0.20"/>
               </linearGradient>
+              <linearGradient id="plSky_1" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="currentColor" stop-opacity="0.10"/>
+                <stop offset="1" stop-color="currentColor" stop-opacity="0.00"/>
+              </linearGradient>
+              <radialGradient id="plSun_1" cx="0.0" cy="0.0" r="1.0">
+                <stop offset="0" stop-color="currentColor" stop-opacity="0.18"/>
+                <stop offset="1" stop-color="currentColor" stop-opacity="0.00"/>
+              </radialGradient>
             </defs>
 
-            <!-- niebla / acuarela muy tenue -->
-            <path d="M0 148 C 80 118, 150 172, 240 138 C 325 105, 392 170, 520 132 L 520 220 L 0 220 Z"
-                  fill="url(#plFade_1)" filter="url(#plBlur_1)" opacity="0.95"/>
+            <!-- cielo / lavado -->
+            <rect x="0" y="0" width="520" height="120" fill="url(#plSky_1)" filter="url(#plBlur_1)" opacity="0.9"/>
 
-            <!-- montañas lejanas -->
-            <path class="ln2" d="M0 150 L 70 124 L 130 140 L 190 110 L 250 146 L 320 96 L 392 140 L 450 116 L 520 150" opacity="0.56"/>
+            <!-- halo tenue -->
+            <circle cx="90" cy="60" r="38" fill="url(#plSun_1)" filter="url(#plBlur_1)" opacity="0.95"/>
 
-            <!-- colinas -->
-            <path class="ln" d="M0 168 C 92 154, 168 192, 260 168 C 352 144, 426 196, 520 170" opacity="0.78"/>
+            <!-- niebla / acuarela -->
+            <path d="M0 150 C 80 118, 150 174, 240 140 C 330 104, 398 172, 520 134 L 520 220 L 0 220 Z"
+                  fill="url(#plFade_1)" filter="url(#plPaper_1)" opacity="0.95"/>
+
+            <!-- montañas lejanas (capa 1) -->
+            <path class="ln2" d="M0 152 L 58 132 L 118 144 L 176 118 L 232 148 L 298 104 L 360 146 L 418 122 L 468 138 L 520 152"
+                  opacity="0.50"/>
+
+            <!-- montañas lejanas (capa 2, más suave) -->
+            <path class="ln2" d="M0 160 L 64 146 L 128 156 L 190 136 L 246 160 L 314 126 L 378 160 L 442 144 L 520 160"
+                  opacity="0.24"/>
+
+            <!-- colinas medias -->
+            <path class="ln" d="M0 172 C 92 156, 168 198, 260 172 C 352 146, 426 202, 520 174"
+                  opacity="0.78"/>
+
+            <!-- loma frontal -->
+            <path class="ln2" d="M0 196 C 104 186, 164 212, 260 198 C 356 184, 430 214, 520 202"
+                  opacity="0.38" style="stroke-width:2.4"/>
 
             <!-- río -->
-            <path class="ln2" d="M334 220 C 314 198, 350 178, 334 150 C 318 122, 288 114, 306 92" opacity="0.62"/>
+            <path class="ln2" d="M336 220 C 316 202, 346 182, 334 156 C 322 130, 292 120, 310 98"
+                  opacity="0.64"/>
+            <path class="ln2" d="M330 180 C 340 176, 350 178, 360 172" opacity="0.22"/>
+            <path class="ln2" d="M320 156 C 330 152, 344 154, 352 148" opacity="0.18"/>
 
-            <!-- arbolitos simples -->
-            <path class="ln2" d="M92 170 L 92 208 M84 180 L 92 170 L 100 180 M86 190 L 92 182 L 98 190" opacity="0.46"/>
-            <path class="ln2" d="M430 172 L 430 210 M422 182 L 430 172 L 438 182 M424 192 L 430 184 L 436 192" opacity="0.42"/>
+            <!-- arbolitos -->
+            <g opacity="0.55">
+              <path class="ln2" d="M88 172 L 88 210 M80 184 L 88 172 L 96 184 M82 196 L 88 186 L 94 196" opacity="0.46"/>
+              <path class="ln2" d="M118 176 L 118 212 M110 188 L 118 176 L 126 188 M112 200 L 118 190 L 124 200" opacity="0.34"/>
+              <path class="ln2" d="M428 172 L 428 210 M420 184 L 428 172 L 436 184 M422 196 L 428 186 L 434 196" opacity="0.42"/>
+              <path class="ln2" d="M454 176 L 454 212 M446 188 L 454 176 L 462 188 M448 200 L 454 190 L 460 200" opacity="0.30"/>
+            </g>
+
+            <!-- aves -->
+            <path class="ln2" d="M208 78 q 10 -8 20 0 q 10 -8 20 0" opacity="0.20"/>
+            <path class="ln2" d="M260 70 q 9 -7 18 0 q 9 -7 18 0" opacity="0.16"/>
+
+            <!-- puntitos de textura -->
+            <g opacity="0.12">
+              <circle cx="52" cy="156" r="1.2" fill="currentColor"/>
+              <circle cx="98" cy="150" r="1.0" fill="currentColor"/>
+              <circle cx="156" cy="162" r="1.1" fill="currentColor"/>
+              <circle cx="214" cy="154" r="0.9" fill="currentColor"/>
+              <circle cx="292" cy="160" r="1.0" fill="currentColor"/>
+              <circle cx="378" cy="154" r="1.1" fill="currentColor"/>
+              <circle cx="442" cy="162" r="0.9" fill="currentColor"/>
+            </g>
           </svg>
 
 <div id="paperContent">
@@ -773,6 +832,9 @@
 
   const canvas = document.getElementById('c');
   const ctx = canvas.getContext('2d', { alpha:false });
+  // Mejor suavizado al escalar sprites (pétalos/hojas)
+  try{ ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high'; }catch(_){ ctx.imageSmoothingEnabled = true; }
+
 
   // ===== Intro overlay (móvil + desktop) =====
   const introScreen = document.getElementById('introScreen');
@@ -816,20 +878,41 @@ window.addEventListener('resize', () => requestAnimationFrame(() => { fitIntroTi
     if(_started) return;
     _started = true;
 
-    // Inicia la “generación” del ramo a partir del toque
-    // La retrasamos un poco para que no te pierdas el inicio mientras se desvanece la carta.
-    try{ restartIntro(380); }catch(_){}
+    // Marca el estado para que el FAILSAFE no bloquee el fade-out
+    try{ document.body.classList.add('started','transitioning'); }catch(_){}
+
+    // Inicia la “generación” del ramo a partir del toque.
+    // La retrasamos un poco para que la transición (carta -> noche) se sienta suave.
+    try{ restartIntro(520); }catch(_){}
 
     // Transición visual (tipo “pasar página”)
     try{ document.getElementById('loveWrap')?.classList.add('go'); }catch(_){}
-    canvas.classList.add('show');
-    if(introScreen) setTimeout(()=>{ try{ introScreen.classList.add('hide'); }catch(_){} }, 180);
 
-    // Arranca la animación
+    // Dispara el cross-fade en el siguiente frame (evita saltos de estilo)
+    requestAnimationFrame(() => {
+      try{ canvas.classList.add('show'); }catch(_){}
+      try{ introScreen && introScreen.classList.add('hide'); }catch(_){}
+    });
+
+    // Arranca la animación del canvas
     start();
 
-    // Limpia overlay al final del fade
-    setTimeout(()=>{ try{ introScreen && introScreen.remove(); }catch(_){} }, 1450);
+    // Limpieza: quita el overlay justo cuando termine la transición (con fallback)
+    if(introScreen){
+      const cleanup = ()=>{
+        try{ introScreen.remove(); }catch(_){}
+        try{ document.body.classList.remove('transitioning'); }catch(_){}
+      };
+      const onEnd = (ev)=>{
+        if(ev && ev.target !== introScreen) return;
+        try{ introScreen.removeEventListener('transitionend', onEnd); }catch(_){}
+        cleanup();
+      };
+      try{ introScreen.addEventListener('transitionend', onEnd); }catch(_){}
+      setTimeout(cleanup, 1900);
+    }else{
+      setTimeout(()=>{ try{ document.body.classList.remove('transitioning'); }catch(_){} }, 1200);
+    }
   }
 
   // En móvil, NO confíes solo en "click". Usa pointer y touch también.
@@ -900,30 +983,31 @@ window.addEventListener('resize', () => requestAnimationFrame(() => { fitIntroTi
       b: Math.round((b1+m)*255)
     };
   }
-// Color estable por semilla (amarillo + blanco cremoso)
+// Color estable por semilla (azul verdoso + blanco suave)
 // Nota: hslToRgb usa grados y s/l en 0..100
 const colorFromSeed = (seed)=>{
   let s = (seed >>> 0) || 1;
   const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0, s / 4294967296);
 
-  // Amarillos: 46..60° (limón -> dorado suave)
-  const hDeg = lerp(46, 60, rnd());
+  // Teales: 168..196° (turquesa -> azul verdoso)
+  const hDeg = lerp(168, 196, rnd());
 
-  // Saturación y luminancia en rangos agradables
-  const satP = lerp(62, 96, rnd());
-  const ligP = lerp(46, 70, rnd());
+  // Saturación y luminancia (vivos pero con aire)
+  const satP = lerp(55, 92, rnd());
+  const ligP = lerp(34, 62, rnd());
 
   const rgb = hslToRgb(hDeg, satP, ligP);
 
-  // Mezcla con blanco para que se vea “cremoso / difuminado”
-  const w = lerp(0.18, 0.55, rnd());
+  // Mezcla con blanco para ese look “suave / difuminado”
+  const w = lerp(0.14, 0.58, rnd());
 
   return {
-    r: clamp(Math.round(lerp(rgb.r, 255, w)), 190, 255),
-    g: clamp(Math.round(lerp(rgb.g, 255, w)), 170, 255),
-    b: clamp(Math.round(lerp(rgb.b, 255, w)), 60, 245),
+    r: clamp(Math.round(lerp(rgb.r, 255, w)),  40, 235),
+    g: clamp(Math.round(lerp(rgb.g, 255, w)), 110, 255),
+    b: clamp(Math.round(lerp(rgb.b, 255, w)), 125, 255),
   };
 };
+
 
 // ===== Intro: generación del ramo al abrir =====
 // master: 0..1 controla el “construir” tallo -> hojas -> pétalos.
@@ -1130,7 +1214,7 @@ function restartIntro(delayMs=0){
     crownStrength: 0.008,
 
     // Texto “en estrellas”
-    starText: 'dias sin verte, pero sigues preciosa',
+    starText: 'espero y hayas tenido un bonito día, amore mio',
     starTextStrength: 0.95    ,
 
     // Rendimiento / calidad
@@ -1229,6 +1313,8 @@ function applyQuality(level, doResize=true){
   CONFIG.grassAnimFactor = q.grass;
   CONFIG.grassDetail = (typeof q.grassDetail === 'number') ? q.grassDetail : 1;
   CONFIG.maxFPS = q.fps;
+  // Limpia caches dependientes de resolución/calidad para que se note el cambio.
+  try{ if(typeof bloomCache !== 'undefined') bloomCache.clear(); }catch(_){ }
   if(doResize) requestResize();
   saveSettings();
   updateHUD(true);
@@ -2766,9 +2852,9 @@ function drawSun(t){
       const alpha = (0.06 + 0.10*(1-depth)) * (0.65 + 0.55*rnd());
 
       const pick = rnd();
-      let c = 'rgba(255,220,235,';        // rosa suave
-      if(pick < 0.33) c = 'rgba(230,235,255,';      // lavanda frío
-      else if(pick < 0.66) c = 'rgba(255,240,215,'; // crema
+      let c = 'rgba(190,255,250,';        // rosa suave
+      if(pick < 0.33) c = 'rgba(210,250,255,';      // lavanda frío
+      else if(pick < 0.66) c = 'rgba(230,255,255,'; // crema
 
       g.globalAlpha = alpha;
       g.fillStyle = c + (0.42 + 0.28*rnd()) + ')';
@@ -2780,7 +2866,7 @@ function drawSun(t){
         g.fill();
       }
       g.globalAlpha = alpha*0.9;
-      g.fillStyle = 'rgba(255,215,140,0.40)';
+      g.fillStyle = 'rgba(235,255,255,0.32)';
       g.beginPath();
       g.arc(x, y, 0.90*size, 0, TAU);
       g.fill();
@@ -4474,10 +4560,11 @@ const neb = (x,y,r, a, cr,cg,cb) => {
     const pvRaw = (petalsVisible==null ? 6 : petalsVisible);
     const pvQ = clamp(Math.round(pvRaw * 4), 0, 24); // 0..24
     const pv = pvQ / 4; // 0..6 (float)
-    const key = `${Math.round(w)}x${Math.round(h)}_${col.r},${col.g},${col.b}_${seed}_o${oQ}_p${pvQ}`;
+    // Super-sampling del sprite (mejora bordes/gradientes de pétalos)
+    const ss = (CONFIG.quality>=2 ? 3 : 2);
+    const key = `${Math.round(w)}x${Math.round(h)}_${col.r},${col.g},${col.b}_${seed}_o${oQ}_p${pvQ}_ss${ss}`;
     const cached = bloomCache.get(key);
     if(cached) return cached;
-    const ss = (CONFIG.quality>=3 ? 3 : 2);
 
     // ===== FIX “pétalos cortados” =====
     // El sprite anterior era un poco pequeño en la parte superior: algunos pétalos (len ~ h*1.0
@@ -4526,23 +4613,24 @@ const neb = (x,y,r, a, cr,cg,cb) => {
       b: Math.round(lerp(a.b,b.b,t))
     });
 
-    // Paleta pétalos: amarillo con blanco (cremoso, suave)
-    const lite = mix(col, {r:255,g:255,b:255}, 0.78);
-    const mid  = mix(col, {r:255,g:253,b:235}, 0.52);
-    const deep = mix(col, {r:110,g: 85,b:  0}, 0.72);
-    const edge = mix(lite,{r:255,g:255,b:245}, 0.86);
+    // Paleta pétalos: azul verdoso con blancos fríos (tipo “sea glass”)
+    const lite = mix(col, {r:255,g:255,b:255}, 0.82);
+    const mid  = mix(col, {r:240,g:255,b:255}, 0.55);
+    const deep = mix(col, {r:  6,g: 54,b: 78}, 0.78);
+    const edge = mix(lite,{r:255,g:255,b:255}, 0.92);
 
     // neutros para micro-variación
     const frostA = {r:255,g:255,b:255};
     const frostB = mix(col, {r:255,g:255,b:255}, 0.92);
 
-    // garganta/centro: marfil cálido tenue
-    const throat = mix({r:255,g:250,b:220}, {r:255,g:255,b:255}, 0.60);
-    const throatDeep = mix(deep, {r:150,g:120,b: 30}, 0.22);
+    // garganta/centro: blanco frío tenue
+    const throat = mix({r:245,g:255,b:255}, {r:255,g:255,b:255}, 0.55);
+    const throatDeep = mix(deep, {r: 18,g: 90,b:110}, 0.25);
 
-    // labelo (centro): crema a dorado suave (sin volverse naranja)
-    const lipCol  = mix(col, {r:255,g:255,b:255}, 0.62);
-    const lipDeep = mix(col, {r:160,g:120,b:  0}, 0.48);
+    // labelo (centro): blanco con toque turquesa
+    const lipCol  = mix(col, {r:255,g:255,b:255}, 0.58);
+    const lipDeep = mix(col, {r: 10,g: 92,b:120}, 0.52);
+
 
     const centerY = -h*0.58;
 
@@ -4607,7 +4695,7 @@ const neb = (x,y,r, a, cr,cg,cb) => {
       const path = ()=>{
         // Silueta más “phalaenopsis”: base estrecha, hombro amplio y punta redondeada,
         // con ondulación fina en el borde (ruffle) que se intensifica hacia el tip.
-        const steps = 26;
+        const steps = (CONFIG.quality>=2 ? 34 : 26);
         const sCurve = (t)=> t*t*(3-2*t);
 
         const baseHalf = wid * (kind==='petal' ? 0.080 : 0.065) * (0.95 + 0.10*rndLocal(9));
@@ -4908,10 +4996,10 @@ const hi    = mix(body,    {r:255,g:255,b:255}, 0.42);
       }
 
       
-      // glaze amarillo (muy sutil, pero visible): hace que las venas “agarren” el color del pétalo
+      // glaze frío (muy sutil, pero visible): hace que las venas “agarren” el color del pétalo
       c2.globalCompositeOperation = 'screen';
       c2.globalAlpha = alpha * (isBack ? 0.018 : 0.040);
-      c2.strokeStyle = 'rgba(255,235,165,0.28)';
+      c2.strokeStyle = 'rgba(215,255,255,0.26)';
       c2.lineWidth = Math.max(0.55, wid*0.045);
       for(let k=0;k<3;k++){
         const o = (k-1) * wid*0.18;
@@ -5343,10 +5431,10 @@ function renderTulipBloomSprite(c2, w, h, col, seed, open, petalsVisible){
     });
 
     // Paleta del pétalo (base -> cuerpo -> punta)
-    const lite = mix(col, {r:255,g:255,b:255}, 0.50);
-    const mid  = mix(col, {r:255,g:248,b:236}, 0.24);
-    const deep = mix(col, {r:85,g:60,b:0},      0.70);
-    const edge = mix(col, {r:255,g:252,b:245},  0.18);
+    const lite = mix(col, {r:255,g:255,b:255}, 0.54);
+    const mid  = mix(col, {r:238,g:255,b:255}, 0.28);
+    const deep = mix(col, {r:  5,g: 42,b: 64}, 0.76);
+    const edge = mix(col, {r:255,g:255,b:255}, 0.22);
 
     const centerY = -h*0.62;
 
@@ -5656,10 +5744,10 @@ function renderTulipBloomSprite(c2, w, h, col, seed, open, petalsVisible){
     c2.restore();
 
     const core = c2.createRadialGradient(0, centerY, discR*0.10, 0, centerY, discR*1.50);
-    core.addColorStop(0,   rgba(255, 246, 190, 0.98));
-    core.addColorStop(0.45,rgba(245, 205, 120, 0.98));
-    core.addColorStop(0.78,rgba(195, 110,  55, 0.96));
-    core.addColorStop(1,   rgba(105,  55,  32, 0.96));
+    core.addColorStop(0,   rgba(245, 255, 255, 0.98));
+    core.addColorStop(0.45,rgba(205, 250, 252, 0.98));
+    core.addColorStop(0.78,rgba(110, 190, 200, 0.96));
+    core.addColorStop(1,   rgba( 32,  78,  88, 0.96));
 
     c2.save();
     c2.globalAlpha = 0.26 + 0.76*discGrow;
@@ -5670,7 +5758,7 @@ function renderTulipBloomSprite(c2, w, h, col, seed, open, petalsVisible){
 
     // anillo exterior
     c2.globalAlpha *= 0.70;
-    c2.strokeStyle = rgba(255, 238, 175, 0.45);
+    c2.strokeStyle = rgba(210, 255, 255, 0.40);
     c2.lineWidth = Math.max(0.9, discR*0.11);
     c2.beginPath();
     c2.ellipse(0, centerY, discR*1.07*discGrow, discR*0.94*discGrow, 0, 0, TAU);
@@ -5715,9 +5803,9 @@ function renderTulipBloomSprite(c2, w, h, col, seed, open, petalsVisible){
       const Wd = discR*(0.07 + 0.03*rnd())*discGrow;
 
       const gg = c2.createLinearGradient(0, 0, 0, -L);
-      gg.addColorStop(0, 'rgba(85,45,26,0.75)');
-      gg.addColorStop(0.55, 'rgba(210,125,70,0.80)');
-      gg.addColorStop(1, 'rgba(255,230,150,0.78)');
+      gg.addColorStop(0, 'rgba(18,62,76,0.75)');
+      gg.addColorStop(0.55, 'rgba(80,190,200,0.80)');
+      gg.addColorStop(1, 'rgba(240,255,255,0.78)');
 
       c2.globalAlpha = 0.26 + 0.34*rnd();
       c2.fillStyle = gg;
@@ -5753,9 +5841,9 @@ function renderTulipBloomSprite(c2, w, h, col, seed, open, petalsVisible){
       const Wd = discR*(0.055 + 0.025*rnd())*discGrow;
 
       const gg = c2.createLinearGradient(0, 0, 0, -L);
-      gg.addColorStop(0, 'rgba(70,34,22,0.70)');
-      gg.addColorStop(0.55, 'rgba(190,110,62,0.78)');
-      gg.addColorStop(1, 'rgba(255,228,145,0.70)');
+      gg.addColorStop(0, 'rgba(16,52,66,0.70)');
+      gg.addColorStop(0.55, 'rgba(65,165,180,0.78)');
+      gg.addColorStop(1, 'rgba(235,255,255,0.70)');
 
       c2.globalAlpha = 0.18 + 0.26*rnd();
       c2.fillStyle = gg;
@@ -5785,7 +5873,7 @@ function renderTulipBloomSprite(c2, w, h, col, seed, open, petalsVisible){
 
       const r0 = discR*(0.010 + 0.020*rnd())*discGrow;
       const dark = 0.26 + 0.32*rnd();
-      c2.fillStyle = rgba(70, 35, 22, dark);
+      c2.fillStyle = rgba(18, 70, 82, dark);
       c2.beginPath();
       c2.ellipse(x, y, r0*1.25, r0, rnd()*TAU, 0, TAU);
       c2.fill();
@@ -5795,7 +5883,7 @@ function renderTulipBloomSprite(c2, w, h, col, seed, open, petalsVisible){
         c2.save();
         c2.globalCompositeOperation = 'screen';
         c2.globalAlpha = 0.06 + 0.06*rnd();
-        c2.fillStyle = 'rgba(255,220,140,0.22)';
+        c2.fillStyle = 'rgba(210,255,255,0.18)';
         c2.beginPath();
         c2.arc(x + r0*0.15, y - r0*0.15, r0*(0.55 + 0.45*rnd()), 0, TAU);
         c2.fill();
@@ -6703,7 +6791,7 @@ rebuildBouquetShadeCache();
     console.assert(bouquet.every(f=>Number.isFinite(f.bloomX) && Number.isFinite(f.bloomY)), 'bloomX/bloomY no calculados');
 
     const spr = getBloomSprite(60, 100, {r:235,g:55,b:70}, 42, 0.95);
-    console.assert(spr && spr.canvas && spr.ss === 2 && spr.canvas.width>0, 'Sprite inválido');
+    console.assert(spr && spr.canvas && spr.ss >= 2 && spr.canvas.width>0, 'Sprite inválido');
   }
   requestResize();
 
