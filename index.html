@@ -1174,6 +1174,60 @@ function drawBloomGlow(x, y, col, u, scale){
 }
 
 
+function drawBloomUpGlow(x, y, col, scale, strength, t){
+  const a = clamp(strength, 0, 1);
+  if(a <= 0) return;
+
+  // No invadir el mensaje: limita altura del haz (deja respirar constelaciones/texto)
+  const stopY = H * (SCENE.msgY + 0.16);
+  const len = 240 * scale;
+  const topY = Math.max(stopY, y - len);
+
+  const pulse = (CONFIG.reduceMotion && !CONFIG.forceFlowerMotion) ? 1 : (0.78 + 0.22*Math.sin(t*0.0017 + x*0.01));
+  const alpha = 0.20 * a * pulse;
+
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  ctx.globalAlpha = alpha;
+
+  const warm = {r:255,g:220,b:150};
+  const g = ctx.createLinearGradient(x, y, x, topY);
+  g.addColorStop(0.0, `rgba(${warm.r},${warm.g},${warm.b},0.00)`);
+  g.addColorStop(0.12, `rgba(${col.r},${col.g},${col.b},0.22)`);
+  g.addColorStop(0.55, `rgba(${col.r},${col.g},${col.b},0.08)`);
+  g.addColorStop(1.0, 'rgba(0,0,0,0)');
+
+  const wBase = 16 * scale;
+  const wTop  = 92 * scale;
+  const midY  = lerp(y, topY, 0.45);
+  const wMid  = lerp(wBase, wTop, 0.60);
+
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.moveTo(x - wBase, y);
+  ctx.quadraticCurveTo(x - wMid, midY, x - wTop, topY);
+  ctx.lineTo(x + wTop, topY);
+  ctx.quadraticCurveTo(x + wMid, midY, x + wBase, y);
+  ctx.closePath();
+  ctx.fill();
+
+  // Halo cerca de la flor (sutil)
+  ctx.globalAlpha = alpha * 0.85;
+  const rr = 44 * scale;
+  const rg = ctx.createRadialGradient(x, y, 0, x, y, rr);
+  rg.addColorStop(0, `rgba(255,255,255,0.10)`);
+  rg.addColorStop(0.25, `rgba(${col.r},${col.g},${col.b},0.12)`);
+  rg.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = rg;
+  ctx.beginPath();
+  ctx.arc(x, y, rr, 0, TAU);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+
+
 
 function restartIntro(delayMs=0){
   INTRO.active = true;
@@ -1216,7 +1270,7 @@ function restartIntro(delayMs=0){
 
     // Texto “en estrellas”
     starText: 'Disfruta tu noche, preciosa',
-    starTextStrength: 0.95    ,
+    starTextStrength: 1.05    ,
 
     
     starTextGlyph: 'o',
@@ -1424,7 +1478,7 @@ window.addEventListener('keydown', (e) => {
   const glyphCache = new Map();
   function getGlyphSprite(r){
     // tamaño del glifo en px (caché por talla)
-    const s = Math.round(clamp(r*7.0, 9, 18));
+    const s = Math.round(clamp(r*8.6, 10, 22));
     if(glyphCache.has(s)) return glyphCache.get(s);
 
     const pad = Math.max(5, Math.round(s*0.55));
@@ -3246,8 +3300,8 @@ function drawSun(t){
 
     // Más densidad en móvil para que las letras se lean
     const isSmall = Math.min(W,H) < 520;
-    const step = clamp(Math.round(fontSize / (isSmall ? 12.2 : 11.2)), 2, 5);
-    const maxPts = clamp(Math.floor((W*H) / (isSmall ? 900 : 1150)), 1200, isSmall ? 3800 : 2800);
+    const step = clamp(Math.round(fontSize / (isSmall ? 18.0 : 14.0)), 2, 4);
+    const maxPts = clamp(Math.floor((W*H) / (isSmall ? 760 : 980)), 1800, isSmall ? 5200 : 3600);
 
     const pr = makePRNG((W*73856093) ^ (H*19349663) ^ 0xC0FFEE);
 
@@ -3275,8 +3329,8 @@ function drawSun(t){
 
     for(const p of chosen){
       const sizeJ = pr();
-      const r = (0.70 + sizeJ*1.35) * (fontSize/46);
-      const alpha = (0.20 + p.a*0.50) * CONFIG.starTextStrength;
+      const r = (0.78 + sizeJ*1.55) * (fontSize/44);
+      const alpha = (0.26 + p.a*0.64) * CONFIG.starTextStrength;
 
       // Color: mayormente blanco, algunas estrellas frías (teal) para estética
       const temp = pr();
@@ -3372,17 +3426,36 @@ function drawSun(t){
     const gx = W*0.5, gy = H*SCENE.msgY;
     const fontHint = clamp(Math.min(W,H)*0.09, 26, 58);
 
-    // Bruma clara muy sutil detrás del mensaje (sin panel oscuro)
+    // Bruma clara detrás del mensaje (sin panel negro)
     ctx.save();
     ctx.globalCompositeOperation = 'screen';
-    ctx.globalAlpha = 0.14;
-    const haze = ctx.createRadialGradient(gx, gy, 0, gx, gy, fontHint*3.4);
-    haze.addColorStop(0.0, 'rgba(235,245,255,0.10)');
-    haze.addColorStop(0.45,'rgba(205,230,255,0.05)');
+    ctx.globalAlpha = 0.19;
+    const haze = ctx.createRadialGradient(gx, gy, 0, gx, gy, fontHint*3.9);
+    haze.addColorStop(0.0, 'rgba(245,250,255,0.16)');
+    haze.addColorStop(0.50,'rgba(215,235,255,0.07)');
     haze.addColorStop(1.0, 'rgba(0,0,0,0)');
     ctx.fillStyle = haze;
     ctx.fillRect(0,0,W,H);
     ctx.restore();
+
+    // Contraste suave (no “panel”, solo sombra difusa para que se lea sobre nubes claras)
+    if(textLayout && textLayout.bounds){
+      const b = textLayout.bounds;
+      const bx = (b.l + b.r) * 0.5 * W;
+      const by = (b.t + b.b) * 0.5 * H;
+      const bw = Math.max(90, (b.r - b.l) * W);
+      const bh = Math.max(60, (b.b - b.t) * H);
+      ctx.save();
+      ctx.globalCompositeOperation = 'multiply';
+      ctx.globalAlpha = 0.12;
+      const sh = ctx.createRadialGradient(bx, by, Math.min(bw,bh)*0.18, bx, by, Math.max(bw,bh)*0.85);
+      sh.addColorStop(0, 'rgba(0,0,0,0.55)');
+      sh.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = sh;
+      ctx.fillRect(0,0,W,H);
+      ctx.restore();
+    }
+
 const glow = ctx.createRadialGradient(gx, gy, 10, gx, gy, fontHint*7.5);
     glow.addColorStop(0, 'rgba(210,230,255,0.12)');
     glow.addColorStop(1, 'rgba(210,230,255,0)');
@@ -3404,10 +3477,10 @@ const glow = ctx.createRadialGradient(gx, gy, 10, gx, gy, fontHint*7.5);
       // Sombra/contorno sutil para contraste (sobre nubes claras)
       ctx.save();
       ctx.globalCompositeOperation = 'multiply';
-      ctx.globalAlpha = alpha * 0.26;
+      ctx.globalAlpha = alpha * 0.32;
       ctx.fillStyle = 'rgba(0,0,0,0.85)';
       ctx.beginPath();
-      ctx.arc(x, y, st.r*1.80, 0, TAU);
+      ctx.arc(x, y, st.r*2.10, 0, TAU);
       ctx.fill();
       ctx.restore();
 
@@ -6703,6 +6776,17 @@ ctx.restore();
 for(const f of bloomOrder){
       const bu = (f._bloomU ?? 1);
       if(bu <= 0.001) continue;
+
+      // Brillo que emana hacia arriba desde cada flor (sutil, sin invadir el texto)
+      {
+        const ttg = t * 0.001;
+        const bobXg = (CONFIG.reduceMotion && !CONFIG.forceFlowerMotion) ? 0 : Math.sin(ttg*1.6 + f.phase*4.1) * (5.0*f.scale) * CONFIG.sway;
+        const bobYg = (CONFIG.reduceMotion && !CONFIG.forceFlowerMotion) ? 0 : Math.sin(ttg*1.9 + f.phase*2.0) * (3.6*f.scale) * CONFIG.sway;
+        const nyg = f.bloomY / H;
+        const depthg = clamp((nyg - 0.34) / 0.34, 0, 1);
+        const glowA = bu * (0.42 + 0.38*depthg);
+        drawBloomUpGlow(f.bloomX + bobXg, f.bloomY + bobYg, f.col, f.scale, glowA, t);
+      }
 
       ctx.save();
       ctx.translate(f.bloomX, f.bloomY);
