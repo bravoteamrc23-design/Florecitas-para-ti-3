@@ -4751,7 +4751,10 @@ const neb = (x,y,r, a, cr,cg,cb) => {
       b: Math.round(lerp(a.b,b.b,t))
     });
 
-    // Paleta pétalos: azul verdoso con blancos fríos (tipo “sea glass”)
+        // Forzamos pétalos rojos (ignoramos la paleta por semilla para evitar piezas azules)
+    col = { r: 214, g: 10, b: 34 };
+
+// Paleta pétalos: rojos cálidos (con luces suaves)
     const lite = mix(col, {r:255,g:255,b:255}, 0.82);
     const mid  = mix(col, {r:240,g:255,b:255}, 0.55);
     const deep = mix(col, {r:  6,g: 54,b: 78}, 0.78);
@@ -4761,13 +4764,13 @@ const neb = (x,y,r, a, cr,cg,cb) => {
     const frostA = {r:255,g:255,b:255};
     const frostB = mix(col, {r:255,g:255,b:255}, 0.92);
 
-    // garganta/centro: blanco frío tenue
-    const throat = mix({r:245,g:255,b:255}, {r:255,g:255,b:255}, 0.55);
-    const throatDeep = mix(deep, {r: 18,g: 90,b:110}, 0.25);
+    // garganta/centro: crema cálida
+    const throat = { r: 255, g: 245, b: 210 }; // crema cálida
+    const throatDeep = mix(deep, {r: 90,g: 20,b: 20}, 0.35);
 
-    // labelo (centro): blanco con toque turquesa
-    const lipCol  = mix(col, {r:255,g:255,b:255}, 0.58);
-    const lipDeep = mix(col, {r: 10,g: 92,b:120}, 0.52);
+    // labelo (centro): rojo con garganta cálida
+    const lipCol  = mix(col, {r:255,g:255,b:220}, 0.42);
+    const lipDeep = mix(col, {r: 30,g:  0,b:  0}, 0.55);
 
 
     const centerY = -h*0.58;
@@ -4778,9 +4781,9 @@ const neb = (x,y,r, a, cr,cg,cb) => {
     c2.globalAlpha = 0.10;
     const haloR = Math.max(w*1.65, h*1.22);
     const halo = c2.createRadialGradient(0, centerY, 6, 0, centerY, haloR);
-    halo.addColorStop(0, rgba(col.r,col.g,col.b,0.22));
-    halo.addColorStop(0.55, rgba(col.r,col.g,col.b,0.06));
-    halo.addColorStop(1, rgba(col.r,col.g,col.b,0));
+    halo.addColorStop(0, 'rgba(255,85,75,0.22)');
+    halo.addColorStop(0.55, 'rgba(255,85,75,0.06)');
+    halo.addColorStop(1, 'rgba(255,85,75,0)');
     c2.fillStyle = halo;
     c2.beginPath();
     c2.ellipse(0, centerY, w*1.26, h*1.10, 0, 0, TAU);
@@ -4904,41 +4907,25 @@ const neb = (x,y,r, a, cr,cg,cb) => {
       c2.fill();
       c2.restore();
 
-      // gradiente principal (vertical) - naranja difuminado (todas las piezas)
-// (un poco más orgánico: micro-variación por pétalo para que no se vea “plástico uniforme”)
-const j1 = (rndLocal(31) - 0.5) * 2; // -1..1
-const j2 = (rndLocal(32) - 0.5) * 2; // -1..1
+      // Relleno principal: rojo sólido (con un micro “bloom” para que no se vea plano)
+      const red = { r: 214, g: 10, b: 34 }; // rojo intenso
+      c2.globalAlpha = alpha;
+      c2.fillStyle = rgba(red.r, red.g, red.b, 0.98);
+      path();
+      c2.fill();
 
-const baseT = clamp(0.12 + 0.08*tint + 0.03*j1, 0.08, 0.28);
-const baseCol = mix(col, {r:255,g:255,b:255}, baseT);
-
-const deepR = mix(baseCol, {r:145,g:60,b:14}, clamp(0.66 + 0.06*j2, 0.56, 0.78));
-const body  = mix(baseCol, {r:255,g:255,b:255}, clamp(0.34 + 0.10*tint, 0.30, 0.52));
-const tip   = mix(baseCol, {r:255,g:255,b:255}, clamp(0.64 + 0.12*tint, 0.56, 0.86));
-const hi    = mix(body,    {r:255,g:255,b:255}, 0.42);
-
-      // capa difuminada para “bloom” suave (sin filtros pesados)
+      // bloom suave (sutil)
       c2.save();
-      c2.globalAlpha = alpha * (isBack ? 0.34 : 0.42);
-      c2.shadowColor = 'rgba(255,165,70,0.30)';
+      c2.globalCompositeOperation = 'screen';
+      c2.globalAlpha = alpha * (isBack ? 0.10 : 0.16);
+      c2.shadowColor = 'rgba(255,140,60,0.18)';
       c2.shadowBlur  = wid * (isBack ? 0.10 : 0.14);
-      c2.fillStyle   = rgba(baseCol.r, baseCol.g, baseCol.b, 0.40);
+      c2.fillStyle   = 'rgba(255,80,80,0.08)';
       path();
       c2.fill();
       c2.restore();
 
-      const g = c2.createLinearGradient(0, 0, 0, tipY);
-      g.addColorStop(0.00, rgba(deepR.r, deepR.g, deepR.b, 0.82));
-      g.addColorStop(0.28, rgba(body.r,  body.g,  body.b,  0.95));
-      g.addColorStop(0.72, rgba(hi.r,    hi.g,    hi.b,    0.94));
-      g.addColorStop(1.00, rgba(tip.r,   tip.g,   tip.b,   0.92));
-
-      c2.globalAlpha = alpha;
-      c2.fillStyle = g;
-      path();
-      c2.fill();
-
-// sombreado de curvatura (volumen por pétalo)
+      // sombreado de curvatura (volumen por pétalo)
       c2.save();
       c2.globalCompositeOperation = 'multiply';
       c2.globalAlpha = alpha * (isBack ? 0.045 : 0.080);
@@ -5047,7 +5034,11 @@ const hi    = mix(body,    {r:255,g:255,b:255}, 0.42);
       // borde iluminado (más fino y “natural”)
       c2.save();
       c2.globalAlpha = alpha * 0.14;
-      c2.strokeStyle = rgba(edge.r,edge.g,edge.b, 0.92);
+      const yg = c2.createLinearGradient(0, -len*0.05, 0, tipY);
+      yg.addColorStop(0.00, 'rgba(255,210,80,0.30)');
+      yg.addColorStop(0.55, 'rgba(255,220,90,0.92)');
+      yg.addColorStop(1.00, 'rgba(255,245,160,0.55)');
+      c2.strokeStyle = yg;
       c2.lineWidth = Math.max(0.75, wid*0.085);
       c2.lineJoin = 'round';
       c2.lineCap  = 'round';
@@ -5063,10 +5054,9 @@ const hi    = mix(body,    {r:255,g:255,b:255}, 0.42);
       c2.lineCap  = 'round';
 
       const rg = c2.createLinearGradient(0, -len*0.10, 0, tipY);
-      rg.addColorStop(0.00, 'rgba(255,255,255,0.08)');
-      rg.addColorStop(0.55, 'rgba(255,255,255,0.24)');
-      rg.addColorStop(1.00, 'rgba(255,255,255,0.06)');
-
+      rg.addColorStop(0.00, 'rgba(255,220,120,0.10)');
+      rg.addColorStop(0.55, 'rgba(255,220,90,0.38)');
+      rg.addColorStop(1.00, 'rgba(255,240,160,0.14)');
       c2.globalAlpha = alpha * (kind==='petal' ? 0.16 : 0.12);
       c2.strokeStyle = rg;
       c2.lineWidth = Math.max(0.55, wid*0.030);
@@ -5361,24 +5351,34 @@ c2.restore();
       c2.fill();
       c2.restore();
 
-      // relleno (gradiente)
-      const g = c2.createLinearGradient(0, 0, 0, len);
-      g.addColorStop(0,   rgba(lipDeep.r,lipDeep.g,lipDeep.b, 0.70));
-      g.addColorStop(0.32,rgba(throatDeep.r,throatDeep.g,throatDeep.b, 0.92));
-      g.addColorStop(0.72,rgba(lipCol.r,lipCol.g,lipCol.b,  0.98));
-      g.addColorStop(1,   rgba(255,255,255,               0.94));
-
+      // relleno principal: rojo sólido (para que no queden “pétalos” azules)
+      const red = { r: 214, g: 10, b: 34 }; // mismo rojo que el resto
       c2.globalAlpha = alpha;
-      c2.fillStyle = g;
+      c2.fillStyle = rgba(red.r, red.g, red.b, 0.98);
       lipPath();
       c2.fill();
 
-      // garganta más definida (blanco rosado)
+      // contorno amarillo suave (toques en el borde)
+      c2.save();
+      const edge = c2.createLinearGradient(0, 0, 0, len);
+      edge.addColorStop(0.00, 'rgba(255,245,160,0.55)');
+      edge.addColorStop(0.55, 'rgba(255,210,80,0.38)');
+      edge.addColorStop(1.00, 'rgba(255,170,40,0.26)');
+      c2.globalAlpha = alpha * 0.70;
+      c2.strokeStyle = edge;
+      c2.lineWidth = Math.max(1.1, wid*0.060);
+      c2.lineJoin = 'round';
+      c2.lineCap  = 'round';
+      lipPath();
+      c2.stroke();
+      c2.restore();
+
+// garganta más definida (blanco rosado)
       c2.save();
       c2.globalCompositeOperation = 'screen';
       c2.globalAlpha = alpha * 0.16;
       const th = c2.createRadialGradient(0, len*0.18, 0, 0, len*0.22, Math.max(22, wid*0.50));
-      th.addColorStop(0, rgba(throat.r, throat.g, throat.b, 0.38));
+      th.addColorStop(0, 'rgba(255,245,200,0.40)');
       th.addColorStop(0.55, 'rgba(255,255,255,0.10)');
       th.addColorStop(1, 'rgba(255,255,255,0)');
       c2.fillStyle = th;
@@ -5390,7 +5390,7 @@ c2.restore();
       // ruffles/borde ondulado (más natural)
       c2.save();
       c2.globalAlpha = alpha * 0.24;
-      c2.strokeStyle = 'rgba(255,255,255,0.38)';
+      c2.strokeStyle = 'rgba(255,210,80,0.45)';
       c2.lineWidth = Math.max(0.9, wid*0.055);
       c2.lineJoin = 'round';
       c2.lineCap  = 'round';
@@ -5410,7 +5410,7 @@ c2.restore();
       // pliegues internos (ridges)
       c2.save();
       c2.globalAlpha = alpha * 0.10;
-      c2.strokeStyle = 'rgba(255,255,255,0.22)';
+      c2.strokeStyle = 'rgba(255,240,180,0.24)';
       c2.lineWidth = Math.max(0.65, wid*0.028);
       c2.lineCap = 'round';
       for(let i=0;i<6;i++){
@@ -5673,7 +5673,7 @@ function renderTulipBloomSprite(c2, w, h, col, seed, open, petalsVisible){
       // Estrías (textura del pétalo)
       c2.save();
       c2.globalAlpha = alpha * 0.06;
-      c2.strokeStyle = 'rgba(255,255,255,0.22)';
+      c2.strokeStyle = 'rgba(255,240,180,0.24)';
       c2.lineWidth = Math.max(0.7, wid*0.05);
       for(let k=0;k<3;k++){
         const o = (k-1) * wid*0.18;
@@ -6716,7 +6716,7 @@ for(const f of bloomOrder){
       ctx.scale(breathe, breathe);
       ctx.rotate(f.angle + headWobble);
 
-      ctx.shadowColor = `rgba(${f.col.r},${f.col.g},${f.col.b},0.16)`;
+      ctx.shadowColor = 'rgba(255,80,80,0.16)';
       ctx.shadowBlur = (10 + 12*f.scale) * bScale;
 
       drawTulipBloom(f.bw, f.bh, f.col, f.seed, (f._openNow ?? f.open), (f._petals ?? 6));
