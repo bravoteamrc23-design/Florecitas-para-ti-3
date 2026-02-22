@@ -1420,6 +1420,12 @@ window.addEventListener('keydown', (e) => {
 
   // Luz “luna” coherente (arriba-derecha)
   const LIGHT = { x:0.18, y:0.14 };
+  const SCENE = {
+    // Posiciones normalizadas (0..1) para que en móvil/desktop la composición respire
+    msgY: 0.265,          // bloque del mensaje (texto de estrellas)
+    bouquetBaseY: 0.985,  // ancla del ramo (más abajo)
+  };
+
   const LIGHT_DIR = (() => {
     const dx = 0.74, dy = -0.52;
     const inv = 1 / Math.max(1e-6, Math.hypot(dx,dy));
@@ -3099,7 +3105,7 @@ function drawSun(t){
     textLayout = null;
 
     const sMin = Math.min(W, H);
-    let fontSize = clamp(sMin * 0.092, 26, 62);
+    let fontSize = clamp(sMin * 0.085, 24, 58);
 
     const tc = document.createElement('canvas');
     tc.width = Math.floor(W);
@@ -3107,9 +3113,9 @@ function drawSun(t){
     const g = tc.getContext('2d', {alpha:true});
 
     const x = tc.width * 0.5;
-    const yCenter = tc.height * 0.28;
+    const yCenter = tc.height * SCENE.msgY;
 
-    const family = 'system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif';
+    const family = `'Dancing Script', 'Cormorant Garamond', cursive`;
     const maxW = tc.width * 0.86;
     const maxLines = (Math.min(W,H) < 520) ? 3 : 2;
 
@@ -3201,8 +3207,8 @@ function drawSun(t){
 
     // Más densidad en móvil para que las letras se lean
     const isSmall = Math.min(W,H) < 520;
-    const step = clamp(Math.round(fontSize / (isSmall ? 10.2 : 9.2)), 2, 6);
-    const maxPts = clamp(Math.floor((W*H) / (isSmall ? 980 : 1250)), 1100, isSmall ? 3200 : 2400);
+    const step = clamp(Math.round(fontSize / (isSmall ? 12.2 : 11.2)), 2, 5);
+    const maxPts = clamp(Math.floor((W*H) / (isSmall ? 900 : 1150)), 1200, isSmall ? 3800 : 2800);
 
     const pr = makePRNG((W*73856093) ^ (H*19349663) ^ 0xC0FFEE);
 
@@ -3324,22 +3330,22 @@ function drawSun(t){
     ctx.save();
     ctx.globalCompositeOperation = 'screen';
 
-    const gx = W*0.5, gy = H*0.28;
+    const gx = W*0.5, gy = H*SCENE.msgY;
     const fontHint = clamp(Math.min(W,H)*0.09, 26, 58);
 
-    // Backdrop oscuro suave para que el mensaje se lea sobre nubes/estrellas
+    // Bruma clara muy sutil detrás del mensaje (sin panel oscuro)
     ctx.save();
-    ctx.globalCompositeOperation = 'multiply';
-    ctx.globalAlpha = 0.28;
-    const bg = ctx.createRadialGradient(gx, gy, 0, gx, gy, fontHint*3.2);
-    bg.addColorStop(0.0, 'rgba(0,0,0,0.70)');
-    bg.addColorStop(0.55,'rgba(0,0,0,0.20)');
-    bg.addColorStop(1.0, 'rgba(0,0,0,0)');
-    ctx.fillStyle = bg;
+    ctx.globalCompositeOperation = 'screen';
+    ctx.globalAlpha = 0.11;
+    const haze = ctx.createRadialGradient(gx, gy, 0, gx, gy, fontHint*3.4);
+    haze.addColorStop(0.0, 'rgba(235,245,255,0.10)');
+    haze.addColorStop(0.45,'rgba(205,230,255,0.05)');
+    haze.addColorStop(1.0, 'rgba(0,0,0,0)');
+    ctx.fillStyle = haze;
     ctx.fillRect(0,0,W,H);
     ctx.restore();
-    const glow = ctx.createRadialGradient(gx, gy, 10, gx, gy, fontHint*7.5);
-    glow.addColorStop(0, 'rgba(210,230,255,0.16)');
+const glow = ctx.createRadialGradient(gx, gy, 10, gx, gy, fontHint*7.5);
+    glow.addColorStop(0, 'rgba(210,230,255,0.12)');
     glow.addColorStop(1, 'rgba(210,230,255,0)');
     ctx.globalAlpha = 1;
     ctx.fillStyle = glow;
@@ -3477,66 +3483,37 @@ function drawSun(t){
     const g = off.getContext('2d', {alpha:true});
     g.setTransform(DPR,0,0,DPR,0,0);
 
-    const gx = W*0.5, gy = H*0.28;
+    const gx = W*0.5, gy = H*SCENE.msgY;
     const fontHint = clamp(Math.min(W,H)*0.09, 26, 58);
 
-    // Backdrop principal: panel suave (tipo glass) detrás del mensaje
-    const rrPath = (x,y,w,h,r)=>{
-      r = Math.max(6, Math.min(r, Math.min(w,h)/2));
-      g.beginPath();
-      g.moveTo(x+r, y);
-      g.arcTo(x+w, y,   x+w, y+h, r);
-      g.arcTo(x+w, y+h, x,   y+h, r);
-      g.arcTo(x,   y+h, x,   y,   r);
-      g.arcTo(x,   y,   x+w, y,   r);
-      g.closePath();
-    };
-
+    // Backdrop del mensaje: sin panel negro, solo una bruma clara muy sutil para legibilidad
     const b = (textLayout && textLayout.bounds) ? textLayout.bounds : {l:0.18,r:0.82,t:0.22,b:0.34};
     const l = b.l*W, r = b.r*W, t = b.t*H, bb = b.b*H;
-    const padX = fontHint*0.72;
-    const padY = fontHint*0.50;
-    const px = clamp(l - padX, 14, W-14);
-    const py = clamp(t - padY, 14, H-14);
-    const pw = clamp((r - l) + padX*2, 180, W - px - 14);
-    const ph = clamp((bb - t) + padY*2, fontHint*1.3, H - py - 14);
-    const radius = fontHint*0.62;
 
-    // Capa blur (solo una vez, está cacheada)
-    g.save();
-    g.filter = `blur(${Math.round(fontHint*0.34)}px)`;
-    g.globalAlpha = 0.92;
-    rrPath(px, py, pw, ph, radius);
-    g.fillStyle = 'rgba(0,0,0,0.34)';
-    g.fill();
-    g.restore();
+    const cx = (l + r) * 0.5;
+    const cy = (t + bb) * 0.5;
 
-    // Capa nítida con gradiente
+    // Bruma clara (screen) detrás del texto: ayuda a leer sin “caja”
     g.save();
-    rrPath(px, py, pw, ph, radius);
-    const pane = g.createLinearGradient(0, py, 0, py+ph);
-    pane.addColorStop(0, 'rgba(12,14,22,0.46)');
-    pane.addColorStop(1, 'rgba(6,8,14,0.22)');
-    g.fillStyle = pane;
-    g.fill();
-    // highlight superior mínimo
     g.globalCompositeOperation = 'screen';
-    g.globalAlpha = 0.10;
-    rrPath(px+1, py+1, pw-2, ph*0.55, radius*0.92);
-    g.fillStyle = 'rgba(210,235,255,0.20)';
-    g.fill();
+    const haze = g.createRadialGradient(cx, cy, 0, cx, cy, fontHint*3.1);
+    haze.addColorStop(0.0, 'rgba(235,245,255,0.095)');
+    haze.addColorStop(0.45,'rgba(205,230,255,0.045)');
+    haze.addColorStop(1.0, 'rgba(0,0,0,0)');
+    g.fillStyle = haze;
+    g.fillRect(0,0,W,H);
     g.restore();
 
-    // Texto fantasma MUY sutil (rellena huecos entre estrellas y ayuda en móvil)
+// Texto fantasma MUY sutil (rellena huecos entre estrellas y ayuda en móvil)
     if(textLayout && textLayout.lines && textLayout.lines.length){
-      const family = 'system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif';
+      const family = `'Dancing Script', 'Cormorant Garamond', cursive`;
       g.save();
       g.textAlign = 'center';
       g.textBaseline = 'middle';
       g.font = `700 ${Math.round(textLayout.fontSize)}px ${family}`;
-      g.fillStyle = 'rgba(255,255,255,0.095)';
-      g.shadowColor = 'rgba(255,255,255,0.22)';
-      g.shadowBlur = 7;
+      g.fillStyle = 'rgba(255,255,255,0.075)';
+      g.shadowColor = 'rgba(255,255,255,0.18)';
+      g.shadowBlur = 6;
       const y0 = textLayout.y0*H;
       for(let i=0;i<textLayout.lines.length;i++){
         g.fillText(textLayout.lines[i], gx, y0 + i*(textLayout.lineHeight));
@@ -3545,9 +3522,9 @@ function drawSun(t){
     }
 
     // Glow ambiental para integrarlo al cielo
-    const bg = g.createRadialGradient(gx, gy, 0, gx, gy, fontHint*3.2);
-    bg.addColorStop(0.0, 'rgba(0,0,0,0.26)');
-    bg.addColorStop(0.55,'rgba(0,0,0,0.10)');
+    const bg = g.createRadialGradient(gx, gy, 0, gx, gy, fontHint*3.4);
+    bg.addColorStop(0.0, 'rgba(220,240,255,0.080)');
+    bg.addColorStop(0.55,'rgba(190,220,255,0.035)');
     bg.addColorStop(1.0, 'rgba(0,0,0,0)');
     g.fillStyle = bg;
     g.fillRect(0,0,W,H);
@@ -3750,8 +3727,8 @@ function drawSun(t){
       [5,7],[7,4]
     ];
 
-    const XOFF = -0.08; // desplaza a la izquierda (evita chocar con la luna)
-    const YOFF = -0.12; // sube la constelación (por encima del mensaje)
+    const XOFF = -0.04; // desplaza ligeramente a la izquierda
+    const YOFF = -0.16; // sube la constelación (por encima del mensaje)
 
     const toX = (p)=>clamp((1 - p.x) + XOFF, 0.02, 0.98)*W;
     const toY = (p)=>clamp(p.y + YOFF, 0.02, 0.60)*H;
@@ -3938,8 +3915,8 @@ function drawSun(t){
     ];
 
     // Posicionamiento: que convivan y se “mezclen” a la derecha, arriba del texto.
-    const capPts = drawConst(PCAP, ECAP, -0.07, -0.12, W*0.70, H*0.13);
-    const leoPts = drawConst(PLEO, ELEO, -0.22, -0.08, W*0.60, H*0.18);
+    const capPts = drawConst(PCAP, ECAP, -0.03, -0.16, W*0.74, H*0.11);
+    const leoPts = drawConst(PLEO, ELEO, -0.16, -0.12, W*0.64, H*0.15);
 
     // Puente: une ambas constelaciones para que se vean como una composición
     const capA = capPts[2];       // ancla en Capricornio
@@ -6369,12 +6346,12 @@ function renderTulipBloomSprite(c2, w, h, col, seed, open, petalsVisible){
   function seedBouquet(){
     const cx = W*0.5;
     // Un pelín más abajo para que en móviles no “tope” arriba y se sienta centrado.
-    const baseY = H*0.955;
+    const baseY = H*SCENE.bouquetBaseY;
 
     // Ajuste: bajar el ramo para no tapar el mensaje (especialmente en móvil).
 
     // Escala un poquito más generosa (sin pasarse) para que el ramo se vea “presente”.
-    const scaleBase = lerp(0.74, 1.14, clamp(Math.min(W, H)/820, 0, 1));
+    const scaleBase = lerp(0.68, 1.06, clamp(Math.min(W, H)/820, 0, 1));
 
     // Un poco más de apertura lateral para que respire.
     const spread = Math.min(W*0.56, 310 + W*0.07);
@@ -6401,7 +6378,7 @@ function renderTulipBloomSprite(c2, w, h, col, seed, open, petalsVisible){
         x: cx + p.dx*spread,
         baseY,
         scale,
-        height: (200 * scaleBase) * p.hf * (0.94 + rnd()*0.10),
+        height: (170 * scaleBase) * p.hf * (0.94 + rnd()*0.10),
         phase: i*0.83 + rnd()*0.35,
         bw, bh,
         twist,
