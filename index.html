@@ -145,18 +145,25 @@
     #envelope{
       position:absolute;
       bottom: 8%;
-      width: 94%;
-      height: 44%;
+      width: min(660px, 92%);
+      height: 48%;
       border-radius: 18px;
+      /* mismo "papel" base que la hoja vertical */
       background:
+        repeating-linear-gradient(0deg, rgba(90,55,40,0.040) 0 1px, rgba(0,0,0,0) 1px 28px),
+        radial-gradient(240px 170px at 18% 18%, rgba(110,70,50,0.14), rgba(0,0,0,0) 65%),
+        radial-gradient(260px 200px at 80% 12%, rgba(110,70,50,0.12), rgba(0,0,0,0) 68%),
+        radial-gradient(420px 260px at 50% 92%, rgba(80,50,38,0.14), rgba(0,0,0,0) 72%),
         linear-gradient(180deg, rgba(255,255,255,0.40), rgba(0,0,0,0) 42%),
         linear-gradient(180deg, #d8c2ab, #b79b84);
       box-shadow:
+        0 0 0 2px rgba(0,0,0,0.55),
         inset 0 1px 0 rgba(255,255,255,0.55),
         inset 0 -18px 30px rgba(0,0,0,0.18),
         0 30px 70px rgba(0,0,0,0.30);
       transform: rotate(-4deg);
       overflow: hidden;
+      isolation: isolate;
     }
     #envelope::before{
       content:"";
@@ -173,10 +180,18 @@
     #envelope::after{
       content:"";
       position:absolute;
-      inset:0;
+      inset:-20px;
       border-radius: 18px;
-      box-shadow: inset 0 0 0 1px rgba(60,35,28,0.20);
+      background:
+        url("data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20width=%27160%27%20height=%27160%27%3E%0A%20%20%3Cfilter%20id=%27n%27%3E%0A%20%20%20%20%3CfeTurbulence%20type=%27fractalNoise%27%20baseFrequency=%27.85%27%20numOctaves=%273%27%20stitchTiles=%27stitch%27/%3E%0A%20%20%20%20%3CfeColorMatrix%20type=%27saturate%27%20values=%270%27/%3E%0A%20%20%3C/filter%3E%0A%20%20%3Crect%20width=%27160%27%20height=%27160%27%20filter=%27url(#n)%27%20opacity=%27.55%27/%3E%0A%3C/svg%3E") repeat,
+        repeating-linear-gradient(25deg, rgba(255,255,255,0.05) 0 2px, rgba(0,0,0,0) 2px 10px),
+        repeating-linear-gradient(-25deg, rgba(0,0,0,0.03) 0 1px, rgba(0,0,0,0) 1px 12px);
+      background-size: 160px 160px, auto, auto;
+      opacity: 0.30;
+      mix-blend-mode: soft-light;
       pointer-events:none;
+      transform: rotate(-2deg);
+      filter: blur(0.25px) contrast(1.05) brightness(1.02);
     }
 
     /* carta */
@@ -247,36 +262,52 @@
       opacity: 0.95;
       pointer-events:none;
     }
-    #letter .paperBack::before{
-      content:"";
-      position:absolute;
-      inset:-18px;
-      border-radius: inherit;
-      background:
-        url("data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20width=%27140%27%20height=%27140%27%3E%3Cfilter%20id=%27n%27%3E%3CfeTurbulence%20type=%27fractalNoise%27%20baseFrequency=%27.75%27%20numOctaves=%272%27%20stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect%20width=%27140%27%20height=%27140%27%20filter=%27url(%23n)%27%20opacity=%27.55%27/%3E%3C/svg%3E") repeat,
-        repeating-linear-gradient(20deg, rgba(255,255,255,0.04) 0 2px, rgba(0,0,0,0) 2px 12px);
-      background-size: 140px 140px, auto;
-      opacity: 0.22;
-      mix-blend-mode: soft-light;
-      pointer-events:none;
-      transform: rotate(1deg);
-      filter: blur(0.35px);
-    }
-    #letter .paperBack::after{
-      content:"";
-      position:absolute;
-      right: 0;
-      top: 0;
-      width: 86px;
-      height: 86px;
-      background:
-        radial-gradient(70px 70px at 80% 20%, rgba(255,255,255,0.55), rgba(255,255,255,0) 70%),
-        linear-gradient(135deg, rgba(0,0,0,0.10), rgba(0,0,0,0));
-      clip-path: polygon(0 0, 100% 0, 100% 100%);
-      opacity: 0.45;
-      pointer-events:none;
-      border-top-right-radius: 12px;
-    }
+
+
+/* Intro: hoja trasera con textura (similar a la vertical) */
+#letter .paperBack{ display:none; }
+/* “corte” negro suave también en la hoja trasera, para que no se vea sin definición */
+#letter .paperBack{
+  box-shadow:
+    0 0 0 2px rgba(0,0,0,0.35),
+    0 18px 54px rgba(0,0,0,0.22),
+    inset 0 1px 0 rgba(255,255,255,0.55),
+    inset 0 -18px 26px rgba(0,0,0,0.08);
+}
+#letter .paperBack::before{
+  content:"";
+  position:absolute;
+  inset:-42px;
+  border-radius: inherit;
+  /* Textura “papel + acuarela” parecida a la hoja principal */
+  background:
+    radial-gradient(360px 280px at 22% 28%, rgba(255,160,70,0.22), rgba(255,160,70,0.09) 46%, rgba(255,160,70,0) 72%),
+    radial-gradient(420px 320px at 74% 62%, rgba(255,120,70,0.18), rgba(255,120,70,0.07) 48%, rgba(255,120,70,0) 76%),
+    radial-gradient(520px 380px at 52% 18%, rgba(255,205,140,0.14), rgba(255,205,140,0.05) 52%, rgba(255,205,140,0) 82%),
+    url("data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20width=%27140%27%20height=%27140%27%3E%3Cfilter%20id=%27n%27%3E%3CfeTurbulence%20type=%27fractalNoise%27%20baseFrequency=%27.75%27%20numOctaves=%272%27%20stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect%20width=%27140%27%20height=%27140%27%20filter=%27url(%23n)%27%20opacity=%27.55%27/%3E%3C/svg%3E") repeat,
+    repeating-linear-gradient(0deg, rgba(90,55,40,0.030) 0 1px, rgba(0,0,0,0) 1px 28px);
+  background-size: auto, auto, auto, 140px 140px, auto;
+  filter: blur(7px) saturate(1.03);
+  opacity: 0.52;
+  mix-blend-mode: multiply;
+  pointer-events:none;
+}
+#letter .paperBack::after{
+  content:"";
+  position:absolute;
+  right: 0;
+  top: 0;
+  width: 86px;
+  height: 86px;
+  background:
+    radial-gradient(70px 70px at 80% 20%, rgba(255,255,255,0.55), rgba(255,255,255,0) 70%),
+    linear-gradient(135deg, rgba(0,0,0,0.10), rgba(0,0,0,0));
+  clip-path: polygon(0 0, 100% 0, 100% 100%);
+  opacity: 0.45;
+  pointer-events:none;
+  border-top-right-radius: 12px;
+}
+
 
     @media (max-width: 420px){
       #letter .paperBack{ transform: rotate(-2.4deg) translate(10px, 12px); }
@@ -300,6 +331,7 @@
         linear-gradient(180deg, #e3d7c3 0%, #d9c3a6 56%, #d3b798 100%);
       border: none;
       box-shadow:
+        0 0 0 2px rgba(0,0,0,0.55),
         0 26px 70px rgba(0,0,0,0.24),
         inset 0 1px 0 rgba(255,255,255,0.72);
       isolation: isolate;
@@ -571,7 +603,19 @@
 
 
 
-    /* Paisaje tenue dentro de los márgenes (primera hoja) */
+    
+    /* Márgenes internos también en la hoja horizontal (sobre) */
+    #envelope .envelopeFrame{
+      z-index: 1;
+      opacity: 0.62;
+      color: rgba(70,40,30,.72);
+      mix-blend-mode: multiply;
+      filter: blur(.05px);
+      pointer-events:none;
+    }
+    #envelope::before{ z-index: 2; }
+    #envelope::after{ z-index: 3; }
+/* Paisaje tenue dentro de los márgenes (primera hoja) */
     .paperLandscape{
       position:absolute;
       /* más adentro para que el dibujo no toque el marco */
@@ -698,12 +742,10 @@
   filter: blur(0.20px) contrast(1.12) brightness(1.02);
 }
 
+
 @media (max-width: 420px){
   #letter .paper{ --pigA: 0.74; --pigB: 0.54; }
-  #letter .paper::before{ filter: blur(4.6px) saturate(1.06) contrast(1.05); }
 }
-
-
 </style>
 </head>
 <body>
@@ -711,14 +753,21 @@
 
   <div id="introScreen" role="dialog" aria-modal="true" aria-labelledby="introTitle" aria-describedby="introMsg">
     <div id="loveWrap">
-      <div id="envelope" aria-hidden="true"></div>
+      <div id="envelope" aria-hidden="true">
+        <!-- Marco de "márgenes" como la hoja vertical -->
+        <svg class="paperFrame envelopeFrame" viewBox="0 0 600 400" aria-hidden="true" focusable="false" preserveAspectRatio="none">
+          <g>
+            <rect x="28" y="28" width="544" height="344" rx="22" fill="none" stroke="currentColor" opacity=".20" class="thin"/>
+            <rect x="44" y="44" width="512" height="312" rx="18" fill="none" stroke="currentColor" opacity=".14" class="thin"/>
+          </g>
+        </svg>
+      </div>
 
       <div id="letter" aria-hidden="false">
         <div class="paperBack" aria-hidden="true"></div>
         <div class="paper">
 
           <div class="paperShimmer" aria-hidden="true"></div>
-
 
           <svg class="paperFrame" viewBox="0 0 600 800" aria-hidden="true" focusable="false" preserveAspectRatio="none">
             <g>
@@ -727,88 +776,7 @@
             </g>
           </svg>
 
-
-          <svg class="paperLandscape" viewBox="0 0 520 220" aria-hidden="true" focusable="false" preserveAspectRatio="none">
-            <defs>
-              <filter id="plBlur_1" x="-10%" y="-10%" width="120%" height="120%">
-                <feGaussianBlur stdDeviation="2.0"/>
-              </filter>
-              <!-- pequeña distorsión tipo acuarela (muy sutil) -->
-              <filter id="plPaper_1" x="-12%" y="-12%" width="124%" height="124%">
-                <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="7" result="n"/>
-                <feDisplacementMap in="SourceGraphic" in2="n" scale="3.2" xChannelSelector="R" yChannelSelector="G"/>
-              </filter>
-              <linearGradient id="plFade_1" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stop-color="currentColor" stop-opacity="0.00"/>
-                <stop offset="1" stop-color="currentColor" stop-opacity="0.20"/>
-              </linearGradient>
-              <linearGradient id="plSky_1" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stop-color="currentColor" stop-opacity="0.10"/>
-                <stop offset="1" stop-color="currentColor" stop-opacity="0.00"/>
-              </linearGradient>
-              <radialGradient id="plSun_1" cx="0.0" cy="0.0" r="1.0">
-                <stop offset="0" stop-color="currentColor" stop-opacity="0.18"/>
-                <stop offset="1" stop-color="currentColor" stop-opacity="0.00"/>
-              </radialGradient>
-            </defs>
-
-            <!-- cielo / lavado -->
-            <rect x="0" y="0" width="520" height="120" fill="url(#plSky_1)" filter="url(#plBlur_1)" opacity="0.9"/>
-
-            <!-- halo tenue -->
-            <circle cx="90" cy="60" r="38" fill="url(#plSun_1)" filter="url(#plBlur_1)" opacity="0.95"/>
-
-            <!-- niebla / acuarela -->
-            <path d="M0 150 C 80 118, 150 174, 240 140 C 330 104, 398 172, 520 134 L 520 220 L 0 220 Z"
-                  fill="url(#plFade_1)" filter="url(#plPaper_1)" opacity="0.95"/>
-
-            <!-- montañas lejanas (capa 1) -->
-            <path class="ln2" d="M0 152 L 58 132 L 118 144 L 176 118 L 232 148 L 298 104 L 360 146 L 418 122 L 468 138 L 520 152"
-                  opacity="0.50"/>
-
-            <!-- montañas lejanas (capa 2, más suave) -->
-            <path class="ln2" d="M0 160 L 64 146 L 128 156 L 190 136 L 246 160 L 314 126 L 378 160 L 442 144 L 520 160"
-                  opacity="0.24"/>
-
-            <!-- colinas medias -->
-            <path class="ln" d="M0 172 C 92 156, 168 198, 260 172 C 352 146, 426 202, 520 174"
-                  opacity="0.78"/>
-
-            <!-- loma frontal -->
-            <path class="ln2" d="M0 196 C 104 186, 164 212, 260 198 C 356 184, 430 214, 520 202"
-                  opacity="0.38" style="stroke-width:2.4"/>
-
-            <!-- río -->
-            <path class="ln2" d="M336 220 C 316 202, 346 182, 334 156 C 322 130, 292 120, 310 98"
-                  opacity="0.64"/>
-            <path class="ln2" d="M330 180 C 340 176, 350 178, 360 172" opacity="0.22"/>
-            <path class="ln2" d="M320 156 C 330 152, 344 154, 352 148" opacity="0.18"/>
-
-            <!-- arbolitos -->
-            <g opacity="0.55">
-              <path class="ln2" d="M88 172 L 88 210 M80 184 L 88 172 L 96 184 M82 196 L 88 186 L 94 196" opacity="0.46"/>
-              <path class="ln2" d="M118 176 L 118 212 M110 188 L 118 176 L 126 188 M112 200 L 118 190 L 124 200" opacity="0.34"/>
-              <path class="ln2" d="M428 172 L 428 210 M420 184 L 428 172 L 436 184 M422 196 L 428 186 L 434 196" opacity="0.42"/>
-              <path class="ln2" d="M454 176 L 454 212 M446 188 L 454 176 L 462 188 M448 200 L 454 190 L 460 200" opacity="0.30"/>
-            </g>
-
-            <!-- aves -->
-            <path class="ln2" d="M208 78 q 10 -8 20 0 q 10 -8 20 0" opacity="0.20"/>
-            <path class="ln2" d="M260 70 q 9 -7 18 0 q 9 -7 18 0" opacity="0.16"/>
-
-            <!-- puntitos de textura -->
-            <g opacity="0.12">
-              <circle cx="52" cy="156" r="1.2" fill="currentColor"/>
-              <circle cx="98" cy="150" r="1.0" fill="currentColor"/>
-              <circle cx="156" cy="162" r="1.1" fill="currentColor"/>
-              <circle cx="214" cy="154" r="0.9" fill="currentColor"/>
-              <circle cx="292" cy="160" r="1.0" fill="currentColor"/>
-              <circle cx="378" cy="154" r="1.1" fill="currentColor"/>
-              <circle cx="442" cy="162" r="0.9" fill="currentColor"/>
-            </g>
-          </svg>
-
-<div id="paperContent">
+          <div id="paperContent">
             <div id="introTextBlock">
               <div id="introMsg">recuerda que son con mucho cariño</div>
               <div id="introTitle">para ti, preciosa <span class="heart" aria-hidden="true">
@@ -990,22 +958,22 @@ const colorFromSeed = (seed)=>{
   let s = (seed >>> 0) || 1;
   const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0, s / 4294967296);
 
-  // Teales: 168..196° (turquesa -> azul verdoso)
-  const hDeg = lerp(168, 196, rnd());
+  // Morados: 275..305° (violeta -> magenta suave)
+  const hDeg = lerp(275, 305, rnd());
 
   // Saturación y luminancia (vivos pero con aire)
-  const satP = lerp(55, 92, rnd());
-  const ligP = lerp(34, 62, rnd());
+  const satP = lerp(58, 90, rnd());
+  const ligP = lerp(28, 56, rnd());
 
   const rgb = hslToRgb(hDeg, satP, ligP);
 
-  // Mezcla con blanco para ese look “suave / difuminado”
-  const w = lerp(0.14, 0.58, rnd());
+  // Mezcla con blanco para un look “suave / difuminado”
+  const w = lerp(0.10, 0.44, rnd());
 
   return {
-    r: clamp(Math.round(lerp(rgb.r, 255, w)),  40, 235),
-    g: clamp(Math.round(lerp(rgb.g, 255, w)), 110, 255),
-    b: clamp(Math.round(lerp(rgb.b, 255, w)), 125, 255),
+    r: clamp(Math.round(lerp(rgb.r, 255, w)),  55, 245),
+    g: clamp(Math.round(lerp(rgb.g, 255, w)),  35, 235),
+    b: clamp(Math.round(lerp(rgb.b, 255, w)), 110, 255),
   };
 };
 
@@ -1178,29 +1146,53 @@ function drawBloomUpGlow(x, y, col, scale, strength, t){
   const a = clamp(strength, 0, 1);
   if(a <= 0) return;
 
-  // No invadir el mensaje: limita altura del haz (deja respirar constelaciones/texto)
-  const stopY = H * (SCENE.msgY + 0.16);
-  const len = 240 * scale;
+  // Aura cálida (blanco al centro con halo amarillo alrededor) + un pequeño "aliento" hacia arriba.
+  // Mantén todo contenido para no tapar el mensaje/constelaciones.
+  const stopY = H * (SCENE.msgY + 0.17);
+  const len = 190 * scale;
   const topY = Math.max(stopY, y - len);
 
-  const pulse = (CONFIG.reduceMotion && !CONFIG.forceFlowerMotion) ? 1 : (0.78 + 0.22*Math.sin(t*0.0017 + x*0.01));
-  const alpha = 0.20 * a * pulse;
+  const pulse = (CONFIG.reduceMotion && !CONFIG.forceFlowerMotion) ? 1 : (0.80 + 0.20*Math.sin(t*0.0016 + x*0.012));
+  const p = a * pulse;
 
   ctx.save();
   ctx.globalCompositeOperation = 'screen';
-  ctx.globalAlpha = alpha;
 
-  const warm = {r:255,g:220,b:150};
+  // 1) Aura circular alrededor de cada flor
+  const rr = 66 * scale;
+  const rg = ctx.createRadialGradient(x, y, 0, x, y, rr);
+  rg.addColorStop(0.00, `rgba(255,255,255,${0.24*p})`);
+  rg.addColorStop(0.22, `rgba(255,255,255,${0.16*p})`);
+  rg.addColorStop(0.52, `rgba(255,235,155,${0.18*p})`);
+  rg.addColorStop(0.78, `rgba(255,210,85,${0.12*p})`);
+  rg.addColorStop(1.00, 'rgba(0,0,0,0)');
+  ctx.fillStyle = rg;
+  ctx.beginPath();
+  ctx.arc(x, y, rr, 0, TAU);
+  ctx.fill();
+
+  // 2) Halo externo amarillo (más grande y más suave)
+  const rr2 = 92 * scale;
+  const rg2 = ctx.createRadialGradient(x, y, rr*0.15, x, y, rr2);
+  rg2.addColorStop(0.00, `rgba(255,250,210,${0.10*p})`);
+  rg2.addColorStop(0.55, `rgba(255,220,110,${0.10*p})`);
+  rg2.addColorStop(1.00, 'rgba(0,0,0,0)');
+  ctx.fillStyle = rg2;
+  ctx.beginPath();
+  ctx.arc(x, y, rr2, 0, TAU);
+  ctx.fill();
+
+  // 3) "Aliento" hacia arriba (muy sutil) para que parezca que emana sin invadir
   const g = ctx.createLinearGradient(x, y, x, topY);
-  g.addColorStop(0.0, `rgba(${warm.r},${warm.g},${warm.b},0.00)`);
-  g.addColorStop(0.12, `rgba(${col.r},${col.g},${col.b},0.22)`);
-  g.addColorStop(0.55, `rgba(${col.r},${col.g},${col.b},0.08)`);
-  g.addColorStop(1.0, 'rgba(0,0,0,0)');
+  g.addColorStop(0.00, `rgba(255,255,255,0.00)`);
+  g.addColorStop(0.12, `rgba(255,245,200,${0.14*p})`);
+  g.addColorStop(0.55, `rgba(255,215,95,${0.08*p})`);
+  g.addColorStop(1.00, 'rgba(0,0,0,0)');
 
-  const wBase = 16 * scale;
-  const wTop  = 92 * scale;
-  const midY  = lerp(y, topY, 0.45);
-  const wMid  = lerp(wBase, wTop, 0.60);
+  const wBase = 18 * scale;
+  const wTop  = 86 * scale;
+  const midY  = lerp(y, topY, 0.46);
+  const wMid  = lerp(wBase, wTop, 0.62);
 
   ctx.fillStyle = g;
   ctx.beginPath();
@@ -1211,22 +1203,98 @@ function drawBloomUpGlow(x, y, col, scale, strength, t){
   ctx.closePath();
   ctx.fill();
 
-  // Halo cerca de la flor (sutil)
-  ctx.globalAlpha = alpha * 0.85;
-  const rr = 44 * scale;
-  const rg = ctx.createRadialGradient(x, y, 0, x, y, rr);
-  rg.addColorStop(0, `rgba(255,255,255,0.10)`);
-  rg.addColorStop(0.25, `rgba(${col.r},${col.g},${col.b},0.12)`);
-  rg.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = rg;
-  ctx.beginPath();
-  ctx.arc(x, y, rr, 0, TAU);
-  ctx.fill();
-
   ctx.restore();
 }
 
 
+
+
+
+// Orbes de luz: pequeñas esferas amarillas flotando alrededor de cada flor (sin aura/halo ni haz)
+function hash11(n){
+  const x = Math.sin(n) * 43758.5453123;
+  return x - Math.floor(x);
+}
+
+function drawBouquetOrbs(cx, cy, rx, ry, strength, t, seed){
+  const a = clamp(strength, 0, 1);
+  if(a <= 0) return;
+
+  const count = (CONFIG && typeof CONFIG.orbCount === 'number') ? Math.max(0, Math.min(42, CONFIG.orbCount|0)) : 18;
+
+  // Evitar que las esferas invadan la zona del texto/constelaciones
+  const stopY = H * (SCENE.msgY + 0.14);
+
+  const tt = t * 0.001;
+  const baseScale = clamp(Math.min(rx, ry) / 120, 0.65, 1.85);
+
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+
+  for(let i=0;i<count;i++){
+    const si = (seed*0.00073) + i*19.97;
+    const u = hash11(si + 1.23);
+    const v = hash11(si + 4.56);
+    const w = hash11(si + 7.89);
+    const q = hash11(si + 9.87);
+
+    const ang0 = TAU * u;
+    const phase = TAU * w;
+
+    const wobA = (CONFIG.reduceMotion && !CONFIG.forceFlowerMotion) ? 0 : (0.40 * Math.sin(tt*1.05 + phase + seed*0.001));
+    const wobR = (CONFIG.reduceMotion && !CONFIG.forceFlowerMotion) ? 1 : (0.92 + 0.08*Math.sin(tt*1.55 + phase*1.7));
+
+    // “Anillo” alrededor del conjunto (más afuera que adentro)
+    const ring = (0.88 + 0.55*v) * wobR;
+
+    const ex = rx * ring;
+    const ey = ry * ring * (0.94 + 0.06*Math.sin(tt*0.75 + phase*0.9));
+
+    let fx = cx + Math.cos(ang0 + wobA) * ex;
+    let fy = cy + Math.sin(ang0 + wobA) * ey;
+
+    // Sesgo hacia arriba (como si flotaran)
+    fy -= (8 + 18*q) * baseScale;
+
+    // Flotación suave extra
+    const lift = (CONFIG.reduceMotion && !CONFIG.forceFlowerMotion) ? 0 : (Math.sin(tt*1.10 + phase*1.9) * (5.0 + 3.5*q) * baseScale);
+    fy -= lift;
+
+    if(fy < stopY) continue;
+
+    const size = (1.2 + 2.2*hash11(si + 2.34)) * baseScale; // radio del núcleo
+    const intensity = a * (0.55 + 0.45*hash11(si + 5.43));
+
+    // Halo amarillo
+    const R = size * 6.2;
+    const g = ctx.createRadialGradient(fx, fy, 0, fx, fy, R);
+    g.addColorStop(0.00, `rgba(255,255,255,${0.34*intensity})`);
+    g.addColorStop(0.16, `rgba(255,250,215,${0.26*intensity})`);
+    g.addColorStop(0.44, `rgba(255,225,120,${0.20*intensity})`);
+    g.addColorStop(0.72, `rgba(255,200,70,${0.12*intensity})`);
+    g.addColorStop(1.00, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(fx, fy, R, 0, TAU);
+    ctx.fill();
+
+    // Núcleo
+    ctx.fillStyle = `rgba(255,255,255,${0.62*intensity})`;
+    ctx.beginPath();
+    ctx.arc(fx, fy, size, 0, TAU);
+    ctx.fill();
+
+    // Mini brillo desplazado (sensación esfera)
+    ctx.globalAlpha *= 0.92;
+    ctx.fillStyle = `rgba(255,255,255,${0.40*intensity})`;
+    ctx.beginPath();
+    ctx.arc(fx - size*0.28, fy - size*0.30, size*0.55, 0, TAU);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  ctx.restore();
+}
 
 
 function restartIntro(delayMs=0){
@@ -1269,12 +1337,15 @@ function restartIntro(delayMs=0){
     crownStrength: 0.008,
 
     // Texto “en estrellas”
-    starText: 'Disfruta tu noche, preciosa',
+    starText: 'have a great week, darling',
     starTextStrength: 1.05    ,
 
     
     starTextGlyph: 'o',
     starGlyphFont: "Georgia, 'Times New Roman', serif",
+
+    // Esferas de luz alrededor de las flores
+    orbCount: 18,
 // Rendimiento / calidad
     maxFPS: 60,
     dprCap: 1.8,
@@ -4839,13 +4910,17 @@ const neb = (x,y,r, a, cr,cg,cb) => {
       b: Math.round(lerp(a.b,b.b,t))
     });
 
-        // Forzamos pétalos rojos (ignoramos la paleta por semilla para evitar piezas azules)
-    col = { r: 214, g: 10, b: 34 };
+        // Pétalos morados (base) con micro-variación por semilla para que no se vean “clonados”.
+    const basePurple = { r: 152, g: 72, b: 216 };
+    const v1 = (rnd()*2-1) * 10;
+    const v2 = (rnd()*2-1) * 8;
+    const v3 = (rnd()*2-1) * 12;
+    col = { r: clamp(basePurple.r + v1, 90, 220), g: clamp(basePurple.g + v2, 40, 170), b: clamp(basePurple.b + v3, 140, 255) };
 
-// Paleta pétalos: rojos cálidos (con luces suaves)
+// Paleta pétalos: morados (con luces suaves)
     const lite = mix(col, {r:255,g:255,b:255}, 0.82);
-    const mid  = mix(col, {r:240,g:255,b:255}, 0.55);
-    const deep = mix(col, {r:  6,g: 54,b: 78}, 0.78);
+    const mid  = mix(col, {r:255,g:240,b:255}, 0.55);
+    const deep = mix(col, {r: 26,g: 10,b: 58}, 0.78);
     const edge = mix(lite,{r:255,g:255,b:255}, 0.92);
 
     // neutros para micro-variación
@@ -4856,7 +4931,7 @@ const neb = (x,y,r, a, cr,cg,cb) => {
     const throat = { r: 255, g: 245, b: 210 }; // crema cálida
     const throatDeep = mix(deep, {r: 90,g: 20,b: 20}, 0.35);
 
-    // labelo (centro): rojo con garganta cálida
+    // labelo (centro): morado con garganta cálida
     const lipCol  = mix(col, {r:255,g:255,b:220}, 0.42);
     const lipDeep = mix(col, {r: 30,g:  0,b:  0}, 0.55);
 
@@ -4869,9 +4944,9 @@ const neb = (x,y,r, a, cr,cg,cb) => {
     c2.globalAlpha = 0.10;
     const haloR = Math.max(w*1.65, h*1.22);
     const halo = c2.createRadialGradient(0, centerY, 6, 0, centerY, haloR);
-    halo.addColorStop(0, 'rgba(255,85,75,0.22)');
-    halo.addColorStop(0.55, 'rgba(255,85,75,0.06)');
-    halo.addColorStop(1, 'rgba(255,85,75,0)');
+    halo.addColorStop(0, 'rgba(210,160,255,0.22)');
+    halo.addColorStop(0.55, 'rgba(210,160,255,0.06)');
+    halo.addColorStop(1, 'rgba(210,160,255,0)');
     c2.fillStyle = halo;
     c2.beginPath();
     c2.ellipse(0, centerY, w*1.26, h*1.10, 0, 0, TAU);
@@ -4995,10 +5070,10 @@ const neb = (x,y,r, a, cr,cg,cb) => {
       c2.fill();
       c2.restore();
 
-      // Relleno principal: rojo sólido (con un micro “bloom” para que no se vea plano)
-      const red = { r: 214, g: 10, b: 34 }; // rojo intenso
+      // Relleno principal: morado sólido (con un micro “bloom” para que no se vea plano)
+      const petalBase = col;
       c2.globalAlpha = alpha;
-      c2.fillStyle = rgba(red.r, red.g, red.b, 0.98);
+      c2.fillStyle = rgba(petalBase.r, petalBase.g, petalBase.b, 0.98);
       path();
       c2.fill();
 
@@ -5006,9 +5081,9 @@ const neb = (x,y,r, a, cr,cg,cb) => {
       c2.save();
       c2.globalCompositeOperation = 'screen';
       c2.globalAlpha = alpha * (isBack ? 0.10 : 0.16);
-      c2.shadowColor = 'rgba(255,140,60,0.18)';
+      c2.shadowColor = 'rgba(240,205,255,0.18)';
       c2.shadowBlur  = wid * (isBack ? 0.10 : 0.14);
-      c2.fillStyle   = 'rgba(255,80,80,0.08)';
+      c2.fillStyle   = 'rgba(210,160,255,0.08)';
       path();
       c2.fill();
       c2.restore();
@@ -5092,7 +5167,7 @@ const neb = (x,y,r, a, cr,cg,cb) => {
       c2.fillRect(-wid*1.4, tipY-len*0.25, wid*2.8, len*1.6);
       c2.restore();
 
-      // toques blancos: aclara bordes y tips (mezcla rojo↔blanco)
+      // toques blancos: aclara bordes y tips (mezcla morado↔blanco)
       c2.save();
       c2.globalCompositeOperation = 'screen';
       c2.globalAlpha = alpha * (isBack ? 0.030 : 0.085);
@@ -5145,15 +5220,15 @@ const neb = (x,y,r, a, cr,cg,cb) => {
       rg.addColorStop(0.00, 'rgba(255,220,120,0.10)');
       rg.addColorStop(0.55, 'rgba(255,220,90,0.38)');
       rg.addColorStop(1.00, 'rgba(255,240,160,0.14)');
-      c2.globalAlpha = alpha * (kind==='petal' ? 0.16 : 0.12);
+      c2.globalAlpha = alpha * (kind==='petal' ? 0.24 : 0.18);
       c2.strokeStyle = rg;
-      c2.lineWidth = Math.max(0.55, wid*0.030);
+      c2.lineWidth = Math.max(0.85, wid*0.048);
       path();
       c2.stroke();
 
       // Segundo pase mínimo, ligeramente desplazado (da sensación de borde “ondulado”)
       c2.globalAlpha = alpha * (kind==='petal' ? 0.055 : 0.040);
-      c2.lineWidth = Math.max(0.35, wid*0.018);
+      c2.lineWidth = Math.max(0.60, wid*0.030);
       c2.translate((rndLocal(20)*2-1)*0.35, (rndLocal(21)*2-1)*0.35);
       path();
       c2.stroke();
@@ -5215,7 +5290,7 @@ const neb = (x,y,r, a, cr,cg,cb) => {
       // glaze frío (muy sutil, pero visible): hace que las venas “agarren” el color del pétalo
       c2.globalCompositeOperation = 'screen';
       c2.globalAlpha = alpha * (isBack ? 0.018 : 0.040);
-      c2.strokeStyle = 'rgba(215,255,255,0.26)';
+      c2.strokeStyle = 'rgba(245,235,255,0.24)';
       c2.lineWidth = Math.max(0.55, wid*0.045);
       for(let k=0;k<3;k++){
         const o = (k-1) * wid*0.18;
@@ -5439,10 +5514,10 @@ c2.restore();
       c2.fill();
       c2.restore();
 
-      // relleno principal: rojo sólido (para que no queden “pétalos” azules)
-      const red = { r: 214, g: 10, b: 34 }; // mismo rojo que el resto
+      // relleno principal: morado sólido (coherente con los pétalos)
+      const lipBase = mix(col, {r:255,g:255,b:255}, 0.12);
       c2.globalAlpha = alpha;
-      c2.fillStyle = rgba(red.r, red.g, red.b, 0.98);
+      c2.fillStyle = rgba(lipBase.r, lipBase.g, lipBase.b, 0.98);
       lipPath();
       c2.fill();
 
@@ -5452,9 +5527,9 @@ c2.restore();
       edge.addColorStop(0.00, 'rgba(255,245,160,0.55)');
       edge.addColorStop(0.55, 'rgba(255,210,80,0.38)');
       edge.addColorStop(1.00, 'rgba(255,170,40,0.26)');
-      c2.globalAlpha = alpha * 0.70;
+      c2.globalAlpha = alpha * 0.82;
       c2.strokeStyle = edge;
-      c2.lineWidth = Math.max(1.1, wid*0.060);
+      c2.lineWidth = Math.max(1.55, wid*0.088);
       c2.lineJoin = 'round';
       c2.lineCap  = 'round';
       lipPath();
@@ -5478,8 +5553,8 @@ c2.restore();
       // ruffles/borde ondulado (más natural)
       c2.save();
       c2.globalAlpha = alpha * 0.24;
-      c2.strokeStyle = 'rgba(255,210,80,0.45)';
-      c2.lineWidth = Math.max(0.9, wid*0.055);
+      c2.strokeStyle = 'rgba(255,210,80,0.58)';
+      c2.lineWidth = Math.max(1.20, wid*0.082);
       c2.lineJoin = 'round';
       c2.lineCap  = 'round';
       c2.beginPath();
@@ -6448,8 +6523,7 @@ function renderTulipBloomSprite(c2, w, h, col, seed, open, petalsVisible){
     {dx: 0.18, hf:1.28, bs:1.02},
     {dx: 0.44, hf:1.16, bs:0.92},
     {dx: 0.66, hf:1.05, bs:0.82}, // lateral der (atrás)
-    {dx:-0.06, hf:0.98, bs:0.78}, // front pequeño
-    {dx: 0.06, hf:0.98, bs:0.78}, // front pequeño
+    {dx: 0.00, hf:0.98, bs:0.80}, // front pequeño (único) centrado
   ];
 
   let bouquet = [];
@@ -6640,6 +6714,14 @@ const STEM = {r:55,g:155,b:92};
       strokeCubicTaperPartial(baseX, baseY, cp1x, cp1y, cp2x, cp2y, bloomXFull, bloomYFull, stemU, wBase*0.38, Math.max(1, wTip*0.42), 28);
       ctx.restore();
 
+      // Micro estrías del tallo (realismo barato): fibras finas con baja opacidad
+      ctx.save();
+      ctx.globalCompositeOperation = 'overlay';
+      ctx.globalAlpha = 0.055;
+      ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+      strokeCubicTaperPartial(baseX, baseY, cp1x, cp1y, cp2x, cp2y, bloomXFull, bloomYFull, stemU, Math.max(0.9, wBase*0.13), Math.max(0.8, wTip*0.13), 26);
+      ctx.restore();
+
       // Volumen del tallo: sombra (lado opuesto a la luna) + brillo (lado de la luna)
       const offX = LIGHT_DIR.x * wBase * 0.22;
       const offY = LIGHT_DIR.y * wBase * 0.22;
@@ -6773,22 +6855,13 @@ ctx.restore();
     for(let i=0;i<order.length;i++) bloomOrder[i] = order[i];
     bloomOrder.sort((a,b)=>a.bloomY - b.bloomY);
 
+    // Bounds dinámicos del conjunto (para orbes grupales alrededor de todo el ramo)
+    let minOX =  1e9, maxOX = -1e9, minOY =  1e9, maxOY = -1e9;
+
 for(const f of bloomOrder){
       const bu = (f._bloomU ?? 1);
       if(bu <= 0.001) continue;
-
-      // Brillo que emana hacia arriba desde cada flor (sutil, sin invadir el texto)
-      {
-        const ttg = t * 0.001;
-        const bobXg = (CONFIG.reduceMotion && !CONFIG.forceFlowerMotion) ? 0 : Math.sin(ttg*1.6 + f.phase*4.1) * (5.0*f.scale) * CONFIG.sway;
-        const bobYg = (CONFIG.reduceMotion && !CONFIG.forceFlowerMotion) ? 0 : Math.sin(ttg*1.9 + f.phase*2.0) * (3.6*f.scale) * CONFIG.sway;
-        const nyg = f.bloomY / H;
-        const depthg = clamp((nyg - 0.34) / 0.34, 0, 1);
-        const glowA = bu * (0.42 + 0.38*depthg);
-        drawBloomUpGlow(f.bloomX + bobXg, f.bloomY + bobYg, f.col, f.scale, glowA, t);
-      }
-
-      ctx.save();
+ctx.save();
       ctx.translate(f.bloomX, f.bloomY);
       ctx.globalAlpha *= bu;
       const bScale = (f._bloomScale ?? 1);
@@ -6811,13 +6884,21 @@ for(const f of bloomOrder){
       const bobX = (CONFIG.reduceMotion && !CONFIG.forceFlowerMotion) ? 0 : Math.sin(tt*1.6 + f.phase*4.1) * (5.0*f.scale) * CONFIG.sway;
       const bobY = (CONFIG.reduceMotion && !CONFIG.forceFlowerMotion) ? 0 : Math.sin(tt*1.9 + f.phase*2.0) * (3.6*f.scale) * CONFIG.sway;
 
+      // Centro real (con bob) para los orbes grupales
+      const orbCx = f.bloomX + bobX;
+      const orbCy = f.bloomY + bobY;
+      if(orbCx < minOX) minOX = orbCx;
+      if(orbCx > maxOX) maxOX = orbCx;
+      if(orbCy < minOY) minOY = orbCy;
+      if(orbCy > maxOY) maxOY = orbCy;
+
       const breathe = (CONFIG.reduceMotion && !CONFIG.forceFlowerMotion) ? 1 : (1 + Math.sin(tt*1.5 + f.phase*0.7) * 0.02 * CONFIG.sway);
 
       ctx.translate(bobX, bobY);
       ctx.scale(breathe, breathe);
       ctx.rotate(f.angle + headWobble);
 
-      ctx.shadowColor = 'rgba(255,80,80,0.16)';
+      ctx.shadowColor = 'rgba(210,160,255,0.16)';
       ctx.shadowBlur = (10 + 12*f.scale) * bScale;
 
       drawTulipBloom(f.bw, f.bh, f.col, f.seed, (f._openNow ?? f.open), (f._petals ?? 6));
@@ -6878,6 +6959,19 @@ for(const f of bloomOrder){
       }
       if(HAS_FILTER) ctx.filter = 'none';
       ctx.restore();
+    }
+
+    // Orbes grupales: un solo conjunto alrededor de todo el ramo (no por flor)
+    if(minOX < 1e8){
+      const cxO = (minOX + maxOX) * 0.5;
+      const cyO = (minOY + maxOY) * 0.5;
+
+      // Radio del conjunto (un poco más grande que el bounding box para “envolver”)
+      const rxO = clamp((maxOX - minOX) * 0.60 + 54, 60, W*0.48);
+      const ryO = clamp((maxOY - minOY) * 0.62 + 50, 60, H*0.40);
+
+      const aO = (introActive ? (0.40 + 0.60*master) : 1) * 0.92;
+      drawBouquetOrbs(cxO, cyO, rxO, ryO, aO, t, 7777);
     }
 
     const knotX = W*0.5, knotY = H*0.955;
