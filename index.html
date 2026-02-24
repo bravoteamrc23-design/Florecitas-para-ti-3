@@ -1337,7 +1337,7 @@ function restartIntro(delayMs=0){
     crownStrength: 0.008,
 
     // Texto “en estrellas”
-    starText: 'have a great week, darling',
+    starText: 'No hay día que no pases por mi mente',
     starTextStrength: 1.05    ,
 
     
@@ -1586,7 +1586,7 @@ window.addEventListener('keydown', (e) => {
   const LIGHT = { x:0.18, y:0.14 };
   const SCENE = {
     // Posiciones normalizadas (0..1) para que en móvil/desktop la composición respire
-    msgY: 0.305,          // bloque del mensaje (texto de estrellas)
+    msgY: 0.325,          // bloque del mensaje (texto de estrellas)
     bouquetBaseY: 0.985,  // ancla del ramo (más abajo)
   };
 
@@ -3422,7 +3422,7 @@ function drawSun(t){
 
     // Corazón hecho con estrellas (arriba del bloque de texto)
     {
-      const heartScale = fontSize * 0.42;
+      const heartScale = fontSize * 0.47;
       const hx = clamp(x, heartScale*1.15, tc.width - heartScale*1.15);
       const hy = clamp((y0 - fontSize*0.65), heartScale*1.20, tc.height*0.62);
 
@@ -4911,15 +4911,15 @@ const neb = (x,y,r, a, cr,cg,cb) => {
     });
 
         // Pétalos morados (base) con micro-variación por semilla para que no se vean “clonados”.
-    const basePurple = { r: 152, g: 72, b: 216 };
+    const basePurple = { r: 176, g: 64, b: 194 };
     const v1 = (rnd()*2-1) * 10;
     const v2 = (rnd()*2-1) * 8;
     const v3 = (rnd()*2-1) * 12;
-    col = { r: clamp(basePurple.r + v1, 90, 220), g: clamp(basePurple.g + v2, 40, 170), b: clamp(basePurple.b + v3, 140, 255) };
+    col = { r: clamp(basePurple.r + v1, 120, 245), g: clamp(basePurple.g + v2, 36, 150), b: clamp(basePurple.b + v3, 120, 245) };
 
 // Paleta pétalos: morados (con luces suaves)
     const lite = mix(col, {r:255,g:255,b:255}, 0.82);
-    const mid  = mix(col, {r:255,g:240,b:255}, 0.55);
+    const mid  = mix(col, {r:255,g:218,b:235}, 0.52);
     const deep = mix(col, {r: 26,g: 10,b: 58}, 0.78);
     const edge = mix(lite,{r:255,g:255,b:255}, 0.92);
 
@@ -5077,6 +5077,20 @@ const neb = (x,y,r, a, cr,cg,cb) => {
       path();
       c2.fill();
 
+      // matiz rojizo sutil (toques cálidos sobre el morado)
+      c2.save();
+      c2.globalCompositeOperation = 'screen';
+      c2.globalAlpha = alpha * (isBack ? 0.06 : 0.12);
+      path();
+      c2.clip();
+      const warmTint = c2.createRadialGradient(wid*(rndLocal(30)*0.5-0.25), tipY*0.52, 0, 0, tipY*0.44, len*0.95);
+      warmTint.addColorStop(0.00, 'rgba(255,96,126,0.26)');
+      warmTint.addColorStop(0.42, 'rgba(255,76,118,0.12)');
+      warmTint.addColorStop(1.00, 'rgba(255,70,110,0)');
+      c2.fillStyle = warmTint;
+      c2.fillRect(-wid*1.5, tipY-len*0.30, wid*3.0, len*1.75);
+      c2.restore();
+
       // bloom suave (sutil)
       c2.save();
       c2.globalCompositeOperation = 'screen';
@@ -5196,13 +5210,13 @@ const neb = (x,y,r, a, cr,cg,cb) => {
 
       // borde iluminado (más fino y “natural”)
       c2.save();
-      c2.globalAlpha = alpha * 0.14;
+      c2.globalAlpha = alpha * 0.26;
       const yg = c2.createLinearGradient(0, -len*0.05, 0, tipY);
-      yg.addColorStop(0.00, 'rgba(255,210,80,0.30)');
-      yg.addColorStop(0.55, 'rgba(255,220,90,0.92)');
-      yg.addColorStop(1.00, 'rgba(255,245,160,0.55)');
+      yg.addColorStop(0.00, 'rgba(255,220,90,0.55)');
+      yg.addColorStop(0.55, 'rgba(255,228,105,0.98)');
+      yg.addColorStop(1.00, 'rgba(255,248,175,0.82)');
       c2.strokeStyle = yg;
-      c2.lineWidth = Math.max(0.75, wid*0.085);
+      c2.lineWidth = Math.max(1.05, wid*0.112);
       c2.lineJoin = 'round';
       c2.lineCap  = 'round';
       path();
@@ -5217,18 +5231,18 @@ const neb = (x,y,r, a, cr,cg,cb) => {
       c2.lineCap  = 'round';
 
       const rg = c2.createLinearGradient(0, -len*0.10, 0, tipY);
-      rg.addColorStop(0.00, 'rgba(255,220,120,0.10)');
-      rg.addColorStop(0.55, 'rgba(255,220,90,0.38)');
-      rg.addColorStop(1.00, 'rgba(255,240,160,0.14)');
-      c2.globalAlpha = alpha * (kind==='petal' ? 0.24 : 0.18);
+      rg.addColorStop(0.00, 'rgba(255,226,130,0.18)');
+      rg.addColorStop(0.55, 'rgba(255,224,94,0.62)');
+      rg.addColorStop(1.00, 'rgba(255,245,170,0.24)');
+      c2.globalAlpha = alpha * (kind==='petal' ? 0.34 : 0.26);
       c2.strokeStyle = rg;
-      c2.lineWidth = Math.max(0.85, wid*0.048);
+      c2.lineWidth = Math.max(1.00, wid*0.056);
       path();
       c2.stroke();
 
       // Segundo pase mínimo, ligeramente desplazado (da sensación de borde “ondulado”)
-      c2.globalAlpha = alpha * (kind==='petal' ? 0.055 : 0.040);
-      c2.lineWidth = Math.max(0.60, wid*0.030);
+      c2.globalAlpha = alpha * (kind==='petal' ? 0.085 : 0.060);
+      c2.lineWidth = Math.max(0.72, wid*0.034);
       c2.translate((rndLocal(20)*2-1)*0.35, (rndLocal(21)*2-1)*0.35);
       path();
       c2.stroke();
@@ -5515,7 +5529,7 @@ c2.restore();
       c2.restore();
 
       // relleno principal: morado sólido (coherente con los pétalos)
-      const lipBase = mix(col, {r:255,g:255,b:255}, 0.12);
+      const lipBase = mix(col, {r:255,g:220,b:235}, 0.18);
       c2.globalAlpha = alpha;
       c2.fillStyle = rgba(lipBase.r, lipBase.g, lipBase.b, 0.98);
       lipPath();
@@ -5524,12 +5538,12 @@ c2.restore();
       // contorno amarillo suave (toques en el borde)
       c2.save();
       const edge = c2.createLinearGradient(0, 0, 0, len);
-      edge.addColorStop(0.00, 'rgba(255,245,160,0.55)');
-      edge.addColorStop(0.55, 'rgba(255,210,80,0.38)');
-      edge.addColorStop(1.00, 'rgba(255,170,40,0.26)');
-      c2.globalAlpha = alpha * 0.82;
+      edge.addColorStop(0.00, 'rgba(255,250,180,0.82)');
+      edge.addColorStop(0.55, 'rgba(255,215,85,0.72)');
+      edge.addColorStop(1.00, 'rgba(255,178,42,0.52)');
+      c2.globalAlpha = alpha * 0.95;
       c2.strokeStyle = edge;
-      c2.lineWidth = Math.max(1.55, wid*0.088);
+      c2.lineWidth = Math.max(2.10, wid*0.104);
       c2.lineJoin = 'round';
       c2.lineCap  = 'round';
       lipPath();
@@ -5553,8 +5567,8 @@ c2.restore();
       // ruffles/borde ondulado (más natural)
       c2.save();
       c2.globalAlpha = alpha * 0.24;
-      c2.strokeStyle = 'rgba(255,210,80,0.58)';
-      c2.lineWidth = Math.max(1.20, wid*0.082);
+      c2.strokeStyle = 'rgba(255,216,90,0.74)';
+      c2.lineWidth = Math.max(1.45, wid*0.092);
       c2.lineJoin = 'round';
       c2.lineCap  = 'round';
       c2.beginPath();
