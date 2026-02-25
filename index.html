@@ -436,15 +436,42 @@
     #paperContent{
       position: relative;
       height: 100%;
-      padding: calc(var(--framePad) - 4px) var(--framePad) 22px;
+      padding: calc(var(--framePad) + 14px) var(--framePad) calc(var(--framePad) + 12px);
       display:flex;
       flex-direction: column;
-      justify-content: flex-start;
+      justify-content: flex-start !important;
       align-items: center;
-      gap: 14px;
+      align-content: center;
+      gap: 8px;
+      transform: translateY(0);
       text-align: center;
       z-index: 3;
     }
+
+    /* Inicial decorativa (marca de agua) */
+    .dropcapMark{
+      position:absolute;
+      inset: 0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-family: "Dancing Script", cursive;
+      font-weight: 700;
+      font-size: clamp(120px, 18vw, 240px);
+      line-height: 1;
+      color: rgba(70, 35, 25, 0.10);
+      transform: translateY(-10px) rotate(-7deg);
+      pointer-events:none;
+      user-select:none;
+      z-index: 0;
+      mix-blend-mode: multiply;
+      filter: blur(0.15px);
+    }
+    #introTextBlock, #introBtn{
+      position: relative;
+      z-index: 2;
+    }
+
 
     #introTitle{
       font-family: "Dancing Script", cursive;
@@ -463,13 +490,23 @@
       gap: .12em;
       max-width: 100%;
       transform-origin: center top;
+      width: 100%;
+      text-align: center;
     }
 
     #introTextBlock{
       width: 100%;
+      max-width: 94%;
+      margin: 0 auto;
       padding: 0;
       border-radius: 0;
       background: transparent;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 6px;
+      margin-top: 0;
     }
 
 
@@ -504,6 +541,7 @@
       text-align: center;
       color: rgba(55,30,22,0.92);
       margin: 0 6px 0;
+      width: 100%;
     }
 
     /* botón como sello de cera */
@@ -527,7 +565,7 @@
         inset 0 -14px 22px rgba(0,0,0,0.22),
         0 18px 34px rgba(0,0,0,0.30);
       align-self: center;
-      margin-top: 18px;
+      margin-top: 6px;
       cursor: pointer;
       transform: translateZ(0);
       transition: transform 140ms ease, filter 160ms ease;
@@ -683,6 +721,12 @@
 
   
 
+
+/* Fix final: bloque de texto en la parte superior de la hoja (sin centrado vertical) */
+#paperContent{ justify-content:flex-start !important; padding-top: calc(var(--framePad) + 14px) !important; }
+#introTextBlock{ justify-content:flex-start !important; margin-top: 0 !important; }
+#introBtn{ margin-top: 6px !important; }
+
 /* === Papel "libreta vieja pero especial" (estático + pigmentos) === */
 #letter{ animation: none !important; }
 
@@ -777,6 +821,7 @@
           </svg>
 
           <div id="paperContent">
+            <div class="dropcapMark" aria-hidden="true">I</div>
             <div id="introTextBlock">
               <div id="introMsg">recuerda que son con mucho cariño</div>
               <div id="introTitle">para ti, preciosa <span class="heart" aria-hidden="true">
@@ -1337,7 +1382,7 @@ function restartIntro(delayMs=0){
     crownStrength: 0.008,
 
     // Texto “en estrellas”
-    starText: 'No hay día que no pases por mi mente',
+    starText: 'Siempre tan bonita, como las flores',
     starTextStrength: 1.05    ,
 
     
@@ -1586,7 +1631,7 @@ window.addEventListener('keydown', (e) => {
   const LIGHT = { x:0.18, y:0.14 };
   const SCENE = {
     // Posiciones normalizadas (0..1) para que en móvil/desktop la composición respire
-    msgY: 0.325,          // bloque del mensaje (texto de estrellas)
+    msgY: 0.362,          // bloque del mensaje (texto de estrellas) (bajado un poco más)
     bouquetBaseY: 0.985,  // ancla del ramo (más abajo)
   };
 
@@ -3422,9 +3467,9 @@ function drawSun(t){
 
     // Corazón hecho con estrellas (arriba del bloque de texto)
     {
-      const heartScale = fontSize * 0.47;
+      const heartScale = fontSize * 0.54;
       const hx = clamp(x, heartScale*1.15, tc.width - heartScale*1.15);
-      const hy = clamp((y0 - fontSize*0.65), heartScale*1.20, tc.height*0.62);
+      const hy = clamp((y0 - fontSize*0.78), heartScale*1.20, tc.height*0.62);
 
       const pushStar = (px, py, sizeMul, aMul)=>{
         const r = (0.62 + pr()*1.15) * (fontSize/46) * sizeMul;
@@ -4910,17 +4955,17 @@ const neb = (x,y,r, a, cr,cg,cb) => {
       b: Math.round(lerp(a.b,b.b,t))
     });
 
-        // Pétalos morados (base) con micro-variación por semilla para que no se vean “clonados”.
-    const basePurple = { r: 176, g: 64, b: 194 };
+        // Pétalos azul cielo (base) con micro-variación por semilla para que no se vean “clonados”.
+    const baseSky = { r: 108, g: 186, b: 244 };
     const v1 = (rnd()*2-1) * 10;
     const v2 = (rnd()*2-1) * 8;
     const v3 = (rnd()*2-1) * 12;
-    col = { r: clamp(basePurple.r + v1, 120, 245), g: clamp(basePurple.g + v2, 36, 150), b: clamp(basePurple.b + v3, 120, 245) };
+    col = { r: clamp(baseSky.r + v1, 70, 220), g: clamp(baseSky.g + v2, 130, 235), b: clamp(baseSky.b + v3, 175, 255) };
 
-// Paleta pétalos: morados (con luces suaves)
+// Paleta pétalos: azul cielo (con luces suaves)
     const lite = mix(col, {r:255,g:255,b:255}, 0.82);
-    const mid  = mix(col, {r:255,g:218,b:235}, 0.52);
-    const deep = mix(col, {r: 26,g: 10,b: 58}, 0.78);
+    const mid  = mix(col, {r:255,g:232,b:238}, 0.44);
+    const deep = mix(col, {r: 10,g: 28,b: 74}, 0.72);
     const edge = mix(lite,{r:255,g:255,b:255}, 0.92);
 
     // neutros para micro-variación
@@ -4929,11 +4974,11 @@ const neb = (x,y,r, a, cr,cg,cb) => {
 
     // garganta/centro: crema cálida
     const throat = { r: 255, g: 245, b: 210 }; // crema cálida
-    const throatDeep = mix(deep, {r: 90,g: 20,b: 20}, 0.35);
+    const throatDeep = mix(deep, {r: 110,g: 28,b: 34}, 0.34);
 
-    // labelo (centro): morado con garganta cálida
-    const lipCol  = mix(col, {r:255,g:255,b:220}, 0.42);
-    const lipDeep = mix(col, {r: 30,g:  0,b:  0}, 0.55);
+    // labelo (centro): azul con garganta cálida
+    const lipCol  = mix(col, {r:255,g:236,b:236}, 0.30);
+    const lipDeep = mix(col, {r: 64,g: 14,b: 18}, 0.46);
 
 
     const centerY = -h*0.58;
@@ -4944,8 +4989,8 @@ const neb = (x,y,r, a, cr,cg,cb) => {
     c2.globalAlpha = 0.10;
     const haloR = Math.max(w*1.65, h*1.22);
     const halo = c2.createRadialGradient(0, centerY, 6, 0, centerY, haloR);
-    halo.addColorStop(0, 'rgba(210,160,255,0.22)');
-    halo.addColorStop(0.55, 'rgba(210,160,255,0.06)');
+    halo.addColorStop(0, 'rgba(155,215,255,0.24)');
+    halo.addColorStop(0.55, 'rgba(155,215,255,0.07)');
     halo.addColorStop(1, 'rgba(210,160,255,0)');
     c2.fillStyle = halo;
     c2.beginPath();
@@ -5070,22 +5115,22 @@ const neb = (x,y,r, a, cr,cg,cb) => {
       c2.fill();
       c2.restore();
 
-      // Relleno principal: morado sólido (con un micro “bloom” para que no se vea plano)
+      // Relleno principal: azul cielo sólido (con un micro “bloom” para que no se vea plano)
       const petalBase = col;
       c2.globalAlpha = alpha;
       c2.fillStyle = rgba(petalBase.r, petalBase.g, petalBase.b, 0.98);
       path();
       c2.fill();
 
-      // matiz rojizo sutil (toques cálidos sobre el morado)
+      // matiz rojizo sutil (toques cálidos sobre el azul cielo)
       c2.save();
       c2.globalCompositeOperation = 'screen';
       c2.globalAlpha = alpha * (isBack ? 0.06 : 0.12);
       path();
       c2.clip();
       const warmTint = c2.createRadialGradient(wid*(rndLocal(30)*0.5-0.25), tipY*0.52, 0, 0, tipY*0.44, len*0.95);
-      warmTint.addColorStop(0.00, 'rgba(255,96,126,0.26)');
-      warmTint.addColorStop(0.42, 'rgba(255,76,118,0.12)');
+      warmTint.addColorStop(0.00, 'rgba(255,92,116,0.32)');
+      warmTint.addColorStop(0.42, 'rgba(255,70,110,0.16)');
       warmTint.addColorStop(1.00, 'rgba(255,70,110,0)');
       c2.fillStyle = warmTint;
       c2.fillRect(-wid*1.5, tipY-len*0.30, wid*3.0, len*1.75);
@@ -5095,9 +5140,9 @@ const neb = (x,y,r, a, cr,cg,cb) => {
       c2.save();
       c2.globalCompositeOperation = 'screen';
       c2.globalAlpha = alpha * (isBack ? 0.10 : 0.16);
-      c2.shadowColor = 'rgba(240,205,255,0.18)';
+      c2.shadowColor = 'rgba(190,228,255,0.18)';
       c2.shadowBlur  = wid * (isBack ? 0.10 : 0.14);
-      c2.fillStyle   = 'rgba(210,160,255,0.08)';
+      c2.fillStyle   = 'rgba(155,215,255,0.09)';
       path();
       c2.fill();
       c2.restore();
@@ -5181,7 +5226,7 @@ const neb = (x,y,r, a, cr,cg,cb) => {
       c2.fillRect(-wid*1.4, tipY-len*0.25, wid*2.8, len*1.6);
       c2.restore();
 
-      // toques blancos: aclara bordes y tips (mezcla morado↔blanco)
+      // toques blancos: aclara bordes y tips (mezcla azul↔blanco)
       c2.save();
       c2.globalCompositeOperation = 'screen';
       c2.globalAlpha = alpha * (isBack ? 0.030 : 0.085);
@@ -5210,7 +5255,7 @@ const neb = (x,y,r, a, cr,cg,cb) => {
 
       // borde iluminado (más fino y “natural”)
       c2.save();
-      c2.globalAlpha = alpha * 0.26;
+      c2.globalAlpha = alpha * 0.30;
       const yg = c2.createLinearGradient(0, -len*0.05, 0, tipY);
       yg.addColorStop(0.00, 'rgba(255,220,90,0.55)');
       yg.addColorStop(0.55, 'rgba(255,228,105,0.98)');
@@ -5528,8 +5573,8 @@ c2.restore();
       c2.fill();
       c2.restore();
 
-      // relleno principal: morado sólido (coherente con los pétalos)
-      const lipBase = mix(col, {r:255,g:220,b:235}, 0.18);
+      // relleno principal: azul cielo sólido (coherente con los pétalos)
+      const lipBase = mix(col, {r:255,g:232,b:238}, 0.16);
       c2.globalAlpha = alpha;
       c2.fillStyle = rgba(lipBase.r, lipBase.g, lipBase.b, 0.98);
       lipPath();
