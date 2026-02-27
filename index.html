@@ -69,10 +69,7 @@
 
   
     /* ===== Intro "carta de amor" (estilo sobre + rosa) ===== */
-    canvas{ will-change: opacity, filter, transform; opacity:0; filter: blur(14px) saturate(0.92); transform: scale(1.03);
-      transition: opacity 1500ms cubic-bezier(.16,1,.3,1), filter 1500ms cubic-bezier(.16,1,.3,1), transform 1500ms cubic-bezier(.16,1,.3,1);
-      transition-delay: 0ms;
-    }
+    canvas{ will-change: auto; opacity:1; filter:none; transform:none; transition:none; }
     body.transitioning canvas{ transition-delay: 180ms; }
     canvas.show{ opacity:1; filter:none; transform: none; }
 
@@ -795,51 +792,6 @@
 <body>
   <canvas id="c" role="img" aria-label="Animación de un ramo de orquídeas bajo un cielo estrellado con nubes, luna y la constelación de Capricornio y Leo"></canvas>
 
-  <div id="introScreen" role="dialog" aria-modal="true" aria-labelledby="introTitle" aria-describedby="introMsg">
-    <div id="loveWrap">
-      <div id="envelope" aria-hidden="true">
-        <!-- Marco de "márgenes" como la hoja vertical -->
-        <svg class="paperFrame envelopeFrame" viewBox="0 0 600 400" aria-hidden="true" focusable="false" preserveAspectRatio="none">
-          <g>
-            <rect x="28" y="28" width="544" height="344" rx="22" fill="none" stroke="currentColor" opacity=".20" class="thin"/>
-            <rect x="44" y="44" width="512" height="312" rx="18" fill="none" stroke="currentColor" opacity=".14" class="thin"/>
-          </g>
-        </svg>
-      </div>
-
-      <div id="letter" aria-hidden="false">
-        <div class="paperBack" aria-hidden="true"></div>
-        <div class="paper">
-
-          <div class="paperShimmer" aria-hidden="true"></div>
-
-          <svg class="paperFrame" viewBox="0 0 600 800" aria-hidden="true" focusable="false" preserveAspectRatio="none">
-            <g>
-              <rect x="28" y="28" width="544" height="744" rx="22" fill="none" stroke="currentColor" opacity=".22" class="thin"/>
-              <rect x="44" y="44" width="512" height="712" rx="18" fill="none" stroke="currentColor" opacity=".16" class="thin"/>
-            </g>
-          </svg>
-
-          <div id="paperContent">
-            <div class="dropcapMark" aria-hidden="true">I</div>
-            <div id="introTextBlock">
-              <div id="introMsg">recuerda que son con mucho cariño</div>
-              <div id="introTitle">para ti, preciosa <span class="heart" aria-hidden="true">
-                <svg class="heartSvg" viewBox="0 0 24 24" focusable="false" aria-hidden="true">
-                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5C2 6 3.99 4 6.5 4c1.74 0 3.41.81 4.5 2.09C12.09 4.81 13.76 4 15.5 4C18.01 4 20 6 20 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                </svg>
-              </span></div>
-            </div>
-
-            <button id="introBtn" type="button" aria-label="Abrir la carta">Toca aquí</button>
-</div>
-        </div>
-      </div>
-
-      <div id="rose" aria-hidden="true"></div>
-    </div>
-  </div>
-
   <script>
 (() => {
   'use strict';
@@ -850,114 +802,9 @@
   try{ ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high'; }catch(_){ ctx.imageSmoothingEnabled = true; }
 
 
-  // ===== Intro overlay (móvil + desktop) =====
-  const introScreen = document.getElementById('introScreen');
-  const introBtn    = document.getElementById('introBtn');
-
-  // Enfoca el botón para accesibilidad/teclado (sin desplazar la vista)
-  requestAnimationFrame(() => {
-    try { introBtn && introBtn.focus({ preventScroll:true }); } catch(_){}
-  });
-
-  const paperEl  = document.querySelector('#letter .paper');
-
-  const titleEl = document.getElementById('introTitle');
-
-  function fitIntroTitle(){
-    if(!titleEl || !paperEl) return;
-    // reset
-    titleEl.style.transform = '';
-    // available width inside margins
-    const framePad = parseFloat(getComputedStyle(paperEl).getPropertyValue('--framePad')) || 40;
-    const maxW = Math.max(120, paperEl.clientWidth - framePad*2 - 10);
-    // force no-wrap while measuring
-    const w = titleEl.scrollWidth || titleEl.getBoundingClientRect().width;
-    if(w > maxW){
-      const s = Math.max(0.80, maxW / w);
-      titleEl.style.transform = `scale(${s})`;
-    }
-  }
-window.addEventListener('resize', () => requestAnimationFrame(() => { fitIntroTitle(); }), {passive:true});
-  try{
-    if(document.fonts && document.fonts.ready){
-      document.fonts.ready.then(() => requestAnimationFrame(() => { fitIntroTitle(); }));
-    }
-  }catch(_){}
-  requestAnimationFrame(() => { fitIntroTitle(); });
-  // Mantén el canvas escondido hasta el toque/click
-  canvas.classList.remove('show');
-
-  let _started = false;
-  function startExperience(){
-    if(_started) return;
-    _started = true;
-
-    // Marca el estado para que el FAILSAFE no bloquee el fade-out
-    try{ document.body.classList.add('started','transitioning'); }catch(_){}
-
-    // Inicia la “generación” del ramo a partir del toque.
-    // La retrasamos un poco para que la transición (carta -> noche) se sienta suave.
-    try{ restartIntro(520); }catch(_){}
-
-    // Transición visual (tipo “pasar página”)
-    try{ document.getElementById('loveWrap')?.classList.add('go'); }catch(_){}
-
-    // Dispara el cross-fade en el siguiente frame (evita saltos de estilo)
-    requestAnimationFrame(() => {
-      try{ canvas.classList.add('show'); }catch(_){}
-      try{ introScreen && introScreen.classList.add('hide'); }catch(_){}
-    });
-
-    // Arranca la animación del canvas
-    start();
-
-    // Limpieza: quita el overlay justo cuando termine la transición (con fallback)
-    if(introScreen){
-      const cleanup = ()=>{
-        try{ introScreen.remove(); }catch(_){}
-        try{ document.body.classList.remove('transitioning'); }catch(_){}
-      };
-      const onEnd = (ev)=>{
-        if(ev && ev.target !== introScreen) return;
-        try{ introScreen.removeEventListener('transitionend', onEnd); }catch(_){}
-        cleanup();
-      };
-      try{ introScreen.addEventListener('transitionend', onEnd); }catch(_){}
-      setTimeout(cleanup, 1900);
-    }else{
-      setTimeout(()=>{ try{ document.body.classList.remove('transitioning'); }catch(_){} }, 1200);
-    }
-  }
-
-  // En móvil, NO confíes solo en "click". Usa pointer y touch también.
-  const bindStart = (el) => {
-    if(!el) return;
-    const opts = { passive:true, once:true };
-    if (window.PointerEvent) {
-      el.addEventListener('pointerup', startExperience, opts);
-    } else {
-      el.addEventListener('touchend', startExperience, opts);
-      el.addEventListener('click', startExperience, opts);
-    }
-  };
-  bindStart(introBtn);
-
-  // Permite tocar en cualquier parte de la carta (móvil friendly)
-  if(introScreen){
-    const tapAnywhere = (e)=>{
-      // Si fue el botón, ya lo maneja el propio botón
-      try{ if(e && e.target && e.target.closest && e.target.closest('#introBtn')) return; }catch(_){}
-      startExperience();
-    };
-    introScreen.addEventListener('pointerup', tapAnywhere, {passive:true});
-    introScreen.addEventListener('touchend',  tapAnywhere, {passive:true});
-    introScreen.addEventListener('click',     tapAnywhere, {passive:true});
-  }
-
-  window.addEventListener('keydown', (e)=>{
-    if(e.key === 'Enter' || e.key === ' ') startExperience();
-  });
-
+  // ===== Sin interfaz inicial: arrancar directo =====
+  let _started = true;
+  try{ document.body.classList.add('started'); }catch(_){ }
 
   const hud = document.getElementById('hud');
 
@@ -1033,6 +880,11 @@ const smoothstep = (a,b,x) => {
 };
 
 const easeOutCubic = (t)=> 1 - Math.pow(1 - clamp(t,0,1), 3);
+const easeInOutCubic = (t)=>{
+  t = clamp(t,0,1);
+  return t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3)/2;
+};
+
 
 const cubic = (t, a,b,c,d) => {
   const u = 1 - t;
@@ -1444,11 +1296,12 @@ function drawPaperWrap(t, alpha, scale, front){
   const cx = (minX + maxX) * 0.5;
 
   // Dimensiones: más “alto” y con cintura marcada para parecer envoltorio real
-  const w = clamp(W*0.78, 280*scale, Math.min(W*0.92, 640*scale));
-  const h = clamp(H*0.44, 300*scale, Math.min(H*0.62, 560*scale));
+  const wrapF = 0.58; // un poco más grande (mejor lectura en móvil)
+  const w = clamp(W*0.78*wrapF, 280*scale*wrapF, Math.min(W*0.92*wrapF, 640*scale*wrapF));
+  const h = clamp(H*0.44*wrapF, 300*scale*wrapF, Math.min(H*0.62*wrapF, 560*scale*wrapF));
 
   // Inclinación sutil del ramo
-  const rot = -0.17;
+  const rot = -0.24;
 
   const pat = getWrapPaperPattern();
 
@@ -1832,6 +1685,17 @@ const cy = cyBase + (front ? 6*scale : 0);
 function restartIntro(delayMs=0){
   INTRO.active = true;
   INTRO.t0 = performance.now() + (delayMs||0);
+
+  // Reinicia la caída de pétalos
+  try{ fallingPetals.length = 0; }catch(_){ }
+  try{
+    if(Array.isArray(bouquet)){
+      for(const f of bouquet){
+        f._dropT0 = undefined;
+        f._dropK  = -1;
+      }
+    }
+  }catch(_){ }
 }
 
 
@@ -1869,7 +1733,8 @@ function restartIntro(delayMs=0){
     crownStrength: 0.008,
 
     // Texto “en estrellas”
-    starText: 'Tú eres la historia más bonita en este capítulo de mi vida',
+    // Texto en estrellas desactivado
+    starText: '',
     starTextStrength: 1.05    ,
 
     
@@ -2077,6 +1942,328 @@ window.addEventListener('keydown', (e) => {
   const textStars = [];
   const tapSparkles = [];
 
+  // ===== Pétalos que caen (uno cada 4.5s) =====
+  const fallingPetals = [];
+
+  const PETAL_SLOTS = [
+    // Coordenadas en el espacio local del bloom (antes de rotar): x,y relativos a bw/bh
+    {x: 0.00, y: -0.92}, // dorsal (arriba)
+    {x: 0.42, y: -0.70}, // sepal izq
+    {x:-0.42, y: -0.70}, // sepal der
+    {x: 0.26, y: -0.58}, // petal izq
+    {x:-0.26, y: -0.58}, // petal der
+    {x: 0.00, y: -0.44}, // labelo/centro
+  ];
+
+  // Orden de caída: de izquierda a derecha (según x local), y al final el pétalo inferior (labelo).
+// Esto se usa tanto para soltar los pétalos como para “apagar” las piezas en el sprite.
+  const ORCHID_DROP_SEQ = (() => {
+  const ids = [0,1,2,3,4]; // todas menos el labelo (5)
+  ids.sort((a,b)=> (PETAL_SLOTS[a].x - PETAL_SLOTS[b].x) || (PETAL_SLOTS[a].y - PETAL_SLOTS[b].y));
+  ids.push(5); // el pequeño de abajo al final
+  return ids;
+})();
+
+// rank más alto = se apaga primero cuando petalsVisible baja.
+  const ORCHID_STAGE_RANK = (() => {
+  const r = new Array(6).fill(0);
+  for(let j=0;j<ORCHID_DROP_SEQ.length;j++){
+    r[ORCHID_DROP_SEQ[j]] = 5 - j;
+  }
+  return r;
+})();
+
+
+  // Orden para “rebrote” (aparición): izquierda → derecha y al final el pétalo inferior.
+  const ORCHID_STAGE_RANK_REGEN = (() => {
+    const r = new Array(6).fill(0);
+    for(let j=0;j<ORCHID_DROP_SEQ.length;j++){
+      r[ORCHID_DROP_SEQ[j]] = j; // 0..5
+    }
+    return r;
+  })();
+
+
+  const PETAL_YELLOW = { r: 252, g: 214, b: 96 }; // amarillo difuminado
+
+  function spawnFallingPetal(f, slotIdx, t){
+    if(!f || !Number.isFinite(f.bloomX) || !Number.isFinite(f.bloomY)) return;
+
+    const s = PETAL_SLOTS[clamp(slotIdx|0, 0, PETAL_SLOTS.length-1)];
+
+    // Replicamos el “bob” del bloom para que nazca pegado a la flor.
+    const tt = t * 0.001;
+    const bobX = (CONFIG.reduceMotion && !CONFIG.forceFlowerMotion) ? 0 : Math.sin(tt*1.6 + f.phase*4.1) * (5.0*f.scale) * CONFIG.sway;
+    const bobY = (CONFIG.reduceMotion && !CONFIG.forceFlowerMotion) ? 0 : Math.sin(tt*1.9 + f.phase*2.0) * (3.6*f.scale) * CONFIG.sway;
+
+    const bw = f.bw, bh = f.bh;
+    const centerY = -bh*0.58;
+    const lx = (s.x * bw);
+    const ly = (centerY + s.y * bh);
+
+    const ca = Math.cos(f.angle);
+    const sa = Math.sin(f.angle);
+    const wx = f.bloomX + bobX + (lx*ca - ly*sa);
+    const wy = f.bloomY + bobY + (lx*sa + ly*ca);
+
+    // Viento base (campo global)
+    const wind = windField(t);
+
+    // PRNG barato por flor + slot para que sea estable
+    let ss = ((f.seed ^ (slotIdx*0x9e3779b9)) >>> 0) || 1;
+    const rnd = () => (ss = (ss * 1664525 + 1013904223) >>> 0, ss / 4294967296);
+
+    // Tamaño del pétalo (ligero, con variación)
+    const scale = (0.62 + rnd()*0.62) * (0.80 + f.scale*0.28);
+    const len = (30 + rnd()*28) * scale;
+    const wid = (16 + rnd()*16) * scale;
+    // “Se suelta”: primero se despega hacia el tallo (micro deslizamiento), luego lo agarra el viento
+    const stemDx = -Math.sin(f.angle);
+    const stemDy =  Math.cos(f.angle);
+
+    const release = (rnd()*2-1);
+
+    // Fase de desprendimiento (antes de la física completa)
+    const detachDur = 640 + rnd()*360; // ms
+    const detachDist = (10 + rnd()*18) * (0.90 + scale*0.25);
+
+    // Principalmente hacia el tallo (+y local), con una pizca lateral para que no sea idéntico
+    const detachDx = stemDx * detachDist + (-stemDy) * (release * (3 + rnd()*4));
+    const detachDy = stemDy * detachDist + (6 + rnd()*8);
+
+    // Velocidad inicial una vez "libre" (más suave y menos brusca que antes)
+    const vx0 = (wind * (28 + rnd()*42)) + stemDx*(10 + rnd()*18) + release*(5 + rnd()*9);
+    const vy0 = (-4 + rnd()*14) + stemDy*(8 + rnd()*14);
+
+    // Parámetros de vuelo
+    const flutterSeed = rnd()*TAU;
+    const noiseSeed   = rnd()*TAU;
+
+    const gustPhase = rnd()*TAU;
+    const gustAmp   = (0.55 + rnd()*0.85) * (0.65 + 0.35*Math.min(1, Math.abs(wind)));
+
+    const drag   = 0.95 + rnd()*0.85;     // más drag = más planeo
+    const g      = 72  + rnd()*78;        // gravedad efectiva
+    const termVy = 140 + rnd()*120;       // velocidad terminal (caída suave)
+
+
+    const rot0 = f.angle + (rnd()*2-1)*0.65;
+
+    fallingPetals.push({
+      x: wx, y: wy,
+      x0: wx, y0: wy,
+      rot0,
+      detachDur,
+      detachDx,
+      detachDy,
+      detachSpin: (rnd()*2-1) * (0.25 + rnd()*0.35),
+      detachWob: rnd()*TAU,
+      released: false,
+      glow: clamp((f._petalGlow ?? 0.55) * 1.15, 0.35, 1.05),
+      vx: vx0, vy: vy0,
+      g, termVy,
+      rot: rot0,
+      vr: (rnd()*2-1) * (0.9 + rnd()*1.2),
+      flutter: flutterSeed,
+      flutterAmp: 0.6 + rnd()*0.9,
+      flutterFreq: 1.0 + rnd()*1.3,
+      windMul: 0.85 + rnd()*0.70,
+      noiseSeed,
+      gustPhase,
+      gustAmp,
+      drag,
+      len,
+      wid,
+      col: PETAL_YELLOW,
+      t0: t,
+      life: 17000 + rnd()*7000
+    });
+  }
+
+  function drawFallingPetal(p, t){
+    const age = (t - p.t0);
+    const k = clamp(1 - age / p.life, 0, 1);
+    if(k <= 0) return;
+    const spawn = (p.detachDur ? smoothstep(0, p.detachDur*0.55, age) : 1);
+    const a = k * k * spawn;
+
+    const tt = t * 0.001;
+    const flutter = (CONFIG.reduceMotion && !CONFIG.forceFlowerMotion)
+      ? 0
+      : Math.sin(tt * (p.flutterFreq * 4.2) + p.flutter) * (p.flutterAmp || 0.8);
+
+    const col = p.col || PETAL_YELLOW;
+
+    ctx.save();
+    ctx.translate(p.x, p.y);
+
+    // Inclinación extra por flutter y deriva: se siente como “planeo”
+    const tilt = flutter * 0.18 + clamp((p.vx||0) / 220, -0.25, 0.25);
+    ctx.rotate(p.rot + tilt);
+
+    // sombra suave (no una mancha fija)
+    ctx.save();
+    ctx.globalAlpha = 0.07 * a;
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.beginPath();
+    ctx.ellipse(3, 6, p.wid*0.92, p.len*0.54, 0.28, 0, TAU);
+    ctx.fill();
+    ctx.restore();
+
+    // pétalo (amarillo difuminado)
+const glowS = clamp((p.glow ?? 0.75), 0.35, 1.10);
+ctx.globalAlpha = 0.78 * a;
+
+const g = ctx.createRadialGradient(-p.wid*0.22, -p.len*0.28, 0, 0, 0, Math.max(p.len, p.wid)*1.18);
+g.addColorStop(0.00, 'rgba(255,255,255,0.72)');
+g.addColorStop(0.35, rgba(col.r, col.g, col.b, 0.98));
+g.addColorStop(0.78, rgba(Math.round(col.r*0.82), Math.round(col.g*0.72), Math.round(col.b*0.45), 0.58));
+g.addColorStop(1.00, 'rgba(60,40,12,0.10)');
+
+const L = p.len;
+const Wd = p.wid;
+
+// Forma con leve “ruffle” según flutter (evita simetría perfecta)
+const r = 0.06 + 0.05*Math.abs(flutter);
+
+ctx.beginPath();
+ctx.moveTo(0, -L);
+ctx.bezierCurveTo( Wd*(1.00+r), -L*0.62,  Wd*(1.08+r),  L*0.10, 0,  L*0.80);
+ctx.bezierCurveTo(-Wd*(1.08+r),  L*0.10, -Wd*(1.00+r), -L*0.62, 0, -L);
+ctx.closePath();
+
+// Glow perceptible (screen + sombra suave). No es “neón”, es brillo de pétalo al reflejar luz.
+ctx.save();
+ctx.globalCompositeOperation = 'screen';
+ctx.globalAlpha = (0.34 + 0.14*Math.abs(flutter)) * a * glowS;
+ctx.shadowBlur = Math.max(12, Wd*1.05) * (0.95 + 0.22*Math.sin((t*0.001)*2.6 + (p.noiseSeed||0)));
+ctx.shadowColor = 'rgba(255,245,205,0.95)';
+ctx.fillStyle = rgba(col.r, col.g, col.b, 0.20);
+ctx.fill();
+ctx.restore();
+
+// Capa principal
+ctx.fillStyle = g;
+ctx.fill();
+
+    // borde y brillo
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    ctx.globalAlpha = 0.20 * a;
+    ctx.strokeStyle = 'rgba(255,255,255,0.34)';
+    ctx.lineWidth = Math.max(0.8, Wd*0.08);
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.restore();
+  }
+
+  function updateAndDrawFallingPetals(t, dt){
+    if(!fallingPetals.length) return;
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'source-over';
+
+    const dtS = clamp((dt||0) / 1000, 0, 0.050);
+    const tt = t * 0.001;
+
+    // viento global (del cielo) + turbulencia por pétalo
+    const baseWind = windField(t);
+
+    for(let i=fallingPetals.length-1;i>=0;i--){
+      const p = fallingPetals[i];
+      const age = t - p.t0;
+
+      // Fase de desprendimiento: antes de que la física completa tome control,
+      // el pétalo se despega hacia el tallo como si aún tuviera un poquito de fricción.
+      const dd = (p.detachDur || 0);
+      if(dd > 0 && age < dd){
+        const u = easeInOutCubic(age / dd);
+        const wob = (CONFIG.reduceMotion && !CONFIG.forceFlowerMotion) ? 0 : (
+          Math.sin(tt*6.2 + (p.detachWob||0)) * (1-u) * 1.1
+        );
+        // trayectoria tipo "peel" (ligera curva)
+        const cx = (p.detachDx||0) * 0.42 + wob;
+        const cy = (p.detachDy||0) * 0.38;
+
+        p.x = (p.x0 ?? p.x) + cx*u*(1-u)*2 + (p.detachDx||0)*u;
+        p.y = (p.y0 ?? p.y) + cy*u*(1-u)*2 + (p.detachDy||0)*u;
+        p.rot = (p.rot0 ?? p.rot) + (p.detachSpin||0) * u;
+
+        drawFallingPetal(p, t);
+        continue;
+      }
+      if(dd > 0 && !p.released && age >= dd){
+        p.released = true;
+        p.x = (p.x0 ?? p.x) + (p.detachDx||0);
+        p.y = (p.y0 ?? p.y) + (p.detachDy||0);
+        p.rot = (p.rot0 ?? p.rot) + (p.detachSpin||0);
+      }
+
+      if(age > p.life || p.y > H + 180 || p.x < -260 || p.x > W + 260){
+        fallingPetals.splice(i,1);
+        continue;
+      }
+
+      const height = clamp(1 - (p.y / (H*1.05)), 0, 1); // más turbulencia arriba
+      const n =
+        Math.sin(tt*0.55 + p.noiseSeed) +
+        0.5*Math.sin(tt*1.05 + p.noiseSeed*1.7) +
+        0.25*Math.sin(tt*2.00 + p.noiseSeed*2.9);
+
+      const flutter = (CONFIG.reduceMotion && !CONFIG.forceFlowerMotion)
+        ? 0
+        : Math.sin(tt * (p.flutterFreq * 4.2) + p.flutter) * (p.flutterAmp || 0.8);
+
+      // viento local: mezcla de viento base + ruido (suave)
+      const localWind = baseWind * (0.70 + 0.35*height) + n * (0.55 + 0.55*height);
+      const gust = (CONFIG.reduceMotion && !CONFIG.forceFlowerMotion)
+        ? 0
+        : Math.sin(tt*0.18 + (p.gustPhase||0)) * (p.gustAmp||0.8) * (0.35 + 0.65*height);
+
+      // aceleración horizontal: viento + flutter (planeo) + ráfagas suaves
+      const w = (localWind + gust);
+      const ax = w*(24*(p.windMul||1)) + flutter*(16 + 10*height) + n*10;
+
+      p.vx += ax * dtS;
+
+      // lift: flutter “sostiene” un poco y hace que planee
+      const termVy = (p.termVy || 240);
+      const lift = (CONFIG.reduceMotion && !CONFIG.forceFlowerMotion)
+        ? 0
+        : (Math.abs(flutter) * (20 + 16*height) * clamp(1 - (p.vy/termVy), 0, 1) + Math.abs(w)*0.12);
+
+      p.vy += (p.g - lift) * dtS;
+
+      // drag depende de la velocidad (más rápido = más freno)
+      const sp = Math.hypot(p.vx, p.vy);
+      const drag = clamp((0.10 + 0.08*(p.drag||1)) * (1 + sp/240), 0, 0.32);
+      const d = 1 - drag*dtS;
+
+      p.vx *= d;
+      p.vy *= d * (1 - 0.06*dtS); // un poquito más de drag vertical
+
+      // velocidad terminal (caída “natural” y suave)
+      if(p.vy > termVy) p.vy = termVy;
+
+      p.x += p.vx * dtS;
+      p.y += p.vy * dtS;
+
+      // rotación: tumble por flutter y por viento local (no constante)
+      p.rot += (p.vr + flutter*0.85 + w*0.05) * dtS;
+
+      // Alineación suave con el vector de movimiento (se siente más “aerodinámico”)
+      const velAng = Math.atan2(p.vy, p.vx);
+      let da = velAng - p.rot;
+      da = (da + Math.PI) % TAU; if(da < 0) da += TAU; da -= Math.PI;
+      p.rot += da * 0.08 * dtS;
+
+      drawFallingPetal(p, t);
+    }
+
+    ctx.restore();
+  }
+
   // ---- Sprites para "letras-estrellas" (más legible que puntitos)
   const glyphCache = new Map();
   function getGlyphSprite(r){
@@ -2119,7 +2306,7 @@ window.addEventListener('keydown', (e) => {
   const SCENE = {
     // Posiciones normalizadas (0..1) para que en móvil/desktop la composición respire
     msgY: 0.362,          // bloque del mensaje (texto de estrellas) (bajado un poco más)
-    bouquetBaseY: 0.905,  // ancla del ramo (más arriba)
+    bouquetBaseY: 0.915,  // ancla del ramo (ligeramente más abajo para no tapar el texto)
   };
 
   const LIGHT_DIR = (() => {
@@ -3800,6 +3987,9 @@ function drawSun(t){
     textStars.length = 0;
     textLayout = null;
 
+    const msg = String(CONFIG.starText ?? '').trim();
+    if(!msg) return; // sin frase, sin corazón
+
     const sMin = Math.min(W, H);
     let fontSize = clamp(sMin * 0.085, 24, 58);
 
@@ -3833,13 +4023,13 @@ function drawSun(t){
       return lines;
     };
 
-    let lines = [CONFIG.starText];
+    let lines = [msg];
     let lineHeight = fontSize * 1.15;
 
     // Ajusta tamaño y/o wrap para que NO se haga microscópico en móvil
     for(let it=0; it<10; it++){
       g.font = `700 ${Math.round(fontSize)}px ${family}`;
-      lines = wrapLines(CONFIG.starText);
+      lines = wrapLines(msg);
 
       // Si se pasó de líneas, reducimos fuente y reintentamos
       if(lines.length > maxLines){
@@ -5383,15 +5573,16 @@ const neb = (x,y,r, a, cr,cg,cb) => {
   }
 
   // ===== Pétalos =====
-  function getBloomSprite(w, h, col, seed, open, petalsVisible){
+  function getBloomSprite(w, h, col, seed, open, petalsVisible, stageMode){
     const oQ = Math.round(((open||1) * 20));
     // Suaviza la “generación”: en lugar de 7 pasos (0..6), usamos 25 pasos (0..24) = incrementos de 0.25
     const pvRaw = (petalsVisible==null ? 6 : petalsVisible);
     const pvQ = clamp(Math.round(pvRaw * 4), 0, 24); // 0..24
     const pv = pvQ / 4; // 0..6 (float)
+    const mode = (stageMode === 'regen') ? 'regen' : 'drop';
     // Super-sampling del sprite (mejora bordes/gradientes de pétalos)
     const ss = (CONFIG.quality>=2 ? 3 : 2);
-    const key = `${Math.round(w)}x${Math.round(h)}_${col.r},${col.g},${col.b}_${seed}_o${oQ}_p${pvQ}_ss${ss}`;
+    const key = `${Math.round(w)}x${Math.round(h)}_${col.r},${col.g},${col.b}_${seed}_o${oQ}_p${pvQ}_m${mode}_ss${ss}`;
     const cached = bloomCache.get(key);
     if(cached) return cached;
 
@@ -5414,14 +5605,14 @@ const neb = (x,y,r, a, cr,cg,cb) => {
     c2.setTransform(ss,0,0,ss,0,0);
     c2.translate(ax, ay);
 
-    renderOrchidBloomSprite(c2, w, h, col, seed, oQ/20, pv);
+    renderOrchidBloomSprite(c2, w, h, col, seed, oQ/20, pv, mode);
 
     const obj = { canvas: off, ox: ax, oy: ay, ss };
     bloomCache.set(key, obj);
     return obj;
   }
   
-  function renderOrchidBloomSprite(c2, w, h, col, seed, open, petalsVisible){
+  function renderOrchidBloomSprite(c2, w, h, col, seed, open, petalsVisible, stageMode){
     // Orquídea más realista (sin volverse una foto ni matar rendimiento):
     // - Formas más redondeadas (menos “punta”), borde ligeramente ondulado
     // - Sub-surface/“translucencia” en bordes, AO suave en el centro
@@ -5442,22 +5633,22 @@ const neb = (x,y,r, a, cr,cg,cb) => {
       b: Math.round(lerp(a.b,b.b,t))
     });
 
-        // Pétalos rosados (base) con micro-variación por semilla para que no se vean “clonados”.
-    const basePink = { r: 236, g: 92, b: 172 };
-    const v1 = (rnd()*2-1) * 12;
-    const v2 = (rnd()*2-1) * 10;
-    const v3 = (rnd()*2-1) * 12;
+        // Pétalos amarillos (difuminados) con micro-variación por semilla para que no se vean “clonados”.
+    const baseYellow = { r: 252, g: 214, b: 96 };
+    const v1 = (rnd()*2-1) * 10;   // r
+    const v2 = (rnd()*2-1) * 14;   // g
+    const v3 = (rnd()*2-1) * 18;   // b (más variación para difuminar)
     col = {
-      r: clamp(basePink.r + v1, 170, 255),
-      g: clamp(basePink.g + v2,  55, 210),
-      b: clamp(basePink.b + v3, 120, 245)
+      r: clamp(baseYellow.r + v1, 210, 255),
+      g: clamp(baseYellow.g + v2, 160, 245),
+      b: clamp(baseYellow.b + v3,  40, 150)
     };
 
-// Paleta pétalos: rosado (con luces suaves)
-    const lite = mix(col, {r:255,g:255,b:255}, 0.82);
-    const mid  = mix(col, {r:255,g:232,b:238}, 0.44);
-    const deep = mix(col, {r: 70,g:  6,b: 40}, 0.72);
-    const edge = mix(lite,{r:255,g:255,b:255}, 0.92);
+// Paleta pétalos: amarillo difuminado (luces cálidas y sombras suaves)
+    const lite = mix(col, {r:255,g:255,b:255}, 0.86);
+    const mid  = mix(col, {r:255,g:248,b:214}, 0.55);
+    const deep = mix(col, {r:120,g: 80,b: 16}, 0.80);
+    const edge = mix(lite,{r:255,g:255,b:255}, 0.94);
 
     // neutros para micro-variación
     const frostA = {r:255,g:255,b:255};
@@ -5480,9 +5671,9 @@ const neb = (x,y,r, a, cr,cg,cb) => {
     c2.globalAlpha = 0.10;
     const haloR = Math.max(w*1.65, h*1.22);
     const halo = c2.createRadialGradient(0, centerY, 6, 0, centerY, haloR);
-    halo.addColorStop(0, 'rgba(255,190,235,0.22)');
-    halo.addColorStop(0.55, 'rgba(255,190,235,0.07)');
-    halo.addColorStop(1, 'rgba(255,200,230,0)');
+    halo.addColorStop(0, 'rgba(255,238,190,0.22)');
+    halo.addColorStop(0.55, 'rgba(255,238,190,0.07)');
+    halo.addColorStop(1, 'rgba(255,238,190,0)');
     c2.fillStyle = halo;
     c2.beginPath();
     c2.ellipse(0, centerY, w*1.26, h*1.10, 0, 0, TAU);
@@ -5498,18 +5689,53 @@ const neb = (x,y,r, a, cr,cg,cb) => {
     c2.fill();
     c2.restore();
 
-    const stage = (i)=>{
-      // 6 partes: 0 dorsal, 1 sepal izq, 2 sepal der, 3 petal izq, 4 petal der, 5 labelo+columna
-      const x = clamp(appear*6 - i, 0, 1);
-      return x*x*(3-2*x);
-    };
+    const stageRaw = (pieceIdx)=>{
+  // 6 partes: 0 dorsal, 1 sepal izq, 2 sepal der, 3 petal izq, 4 petal der, 5 labelo+columna
+  // “drop”: apagado siguiendo la caída (izq→der y el de abajo al final)
+  // “regen”: aparición siguiendo el rebrote (izq→der y el de abajo al final)
+  const ranksDrop  = (typeof ORCHID_STAGE_RANK !== 'undefined' && ORCHID_STAGE_RANK && ORCHID_STAGE_RANK.length >= 6) ? ORCHID_STAGE_RANK : null;
+  const ranksRegen = (typeof ORCHID_STAGE_RANK_REGEN !== 'undefined' && ORCHID_STAGE_RANK_REGEN && ORCHID_STAGE_RANK_REGEN.length >= 6) ? ORCHID_STAGE_RANK_REGEN : null;
+  const mode = (stageMode === 'regen') ? 'regen' : 'drop';
+  const ranks = (mode === 'regen' && ranksRegen) ? ranksRegen : ranksDrop;
+  const i = ranks ? (ranks[pieceIdx] ?? pieceIdx) : pieceIdx;
+  return clamp(pv - i, 0, 1);
+};
 
-    const drawPetal = (ang, len, wid, alpha, tint, curl, isBack, kind)=>{
+const stage = (pieceIdx)=>{
+  const x = stageRaw(pieceIdx);
+  return x*x*(3-2*x);
+};
+
+    const drawPetal = (pieceIdx, ang, len, wid, alpha, tint, curl, isBack, kind)=>{
       if(alpha <= 0) return;
 
       c2.save();
       c2.translate(0, centerY);
       c2.rotate(ang);
+
+      // Desprendimiento más natural (hacia el tallo): cuando la pieza está en transición de caída,
+      // se "despega" primero con un pequeño tirón hacia la base + un giro tipo bisagra.
+      if(stageMode !== 'regen'){
+        const raw = stageRaw(pieceIdx);
+        // raw: 1=pleno, 0=apagado. det: 0..1 durante el apagado.
+        let det = 1 - raw;
+        if(det > 0 && det < 1){
+          det = det*det*(3-2*det); // smoothstep
+          const side = (Math.sign(ang) || 1);
+
+          // Tirón suave hacia la base (tallo) y un toque hacia adentro.
+          const pullY = len * (0.075 + 0.020*(kind==='petal' ? 1 : 0.85)) * det;
+          const pullX = (-side) * wid * (0.050 + 0.015*(kind==='petal' ? 1 : 0.75)) * det;
+
+          // Pequeña torsión como bisagra, y un pelín de "colapso" para que no parezca teletransporte.
+          const hinge = (-side) * (0.16 + 0.06*(kind==='petal')) * det;
+          const squish = 1 - 0.028*det;
+
+          c2.translate(pullX, pullY);
+          c2.rotate(hinge);
+          c2.scale(squish, 1);
+        }
+      }
 
       // Apertura: open = más extendida
       const spread = lerp(0.80, 1.08, op);
@@ -5620,9 +5846,9 @@ const neb = (x,y,r, a, cr,cg,cb) => {
       path();
       c2.clip();
       const warmTint = c2.createRadialGradient(wid*(rndLocal(30)*0.5-0.25), tipY*0.52, 0, 0, tipY*0.44, len*0.95);
-      warmTint.addColorStop(0.00, 'rgba(255,92,116,0.32)');
-      warmTint.addColorStop(0.42, 'rgba(255,70,110,0.16)');
-      warmTint.addColorStop(1.00, 'rgba(255,70,110,0)');
+      warmTint.addColorStop(0.00, 'rgba(255,190,85,0.30)');
+      warmTint.addColorStop(0.42, 'rgba(255,165,60,0.16)');
+      warmTint.addColorStop(1.00, 'rgba(255,165,60,0)');
       c2.fillStyle = warmTint;
       c2.fillRect(-wid*1.5, tipY-len*0.30, wid*3.0, len*1.75);
       c2.restore();
@@ -5631,9 +5857,9 @@ const neb = (x,y,r, a, cr,cg,cb) => {
       c2.save();
       c2.globalCompositeOperation = 'screen';
       c2.globalAlpha = alpha * (isBack ? 0.10 : 0.16);
-      c2.shadowColor = 'rgba(255,196,236,0.18)';
+      c2.shadowColor = 'rgba(255,226,160,0.18)';
       c2.shadowBlur  = wid * (isBack ? 0.10 : 0.14);
-      c2.fillStyle   = 'rgba(255,170,220,0.09)';
+      c2.fillStyle   = 'rgba(255,214,140,0.09)';
       path();
       c2.fill();
       c2.restore();
@@ -6215,17 +6441,17 @@ c2.restore();
     const sepalLen = h*(0.98 + 0.08*rnd());
     const sepalWid = w*(0.50 + 0.08*rnd());
 
-    drawPetal( 0.00 + (rnd()*0.06-0.03), sepalLen*0.96, sepalWid*0.92, 0.70*a0, 0.14,  0.00, true, 'dorsal');
-    drawPetal( 0.98 + (rnd()*0.08-0.04), sepalLen*0.92, sepalWid*0.94, 0.62*a1, 0.14,  0.02, true, 'sepal');
-    drawPetal(-0.98 + (rnd()*0.08-0.04), sepalLen*0.92, sepalWid*0.94, 0.62*a2, 0.14, -0.02, true, 'sepal');
+    drawPetal(0,  0.00 + (rnd()*0.06-0.03), sepalLen*0.96, sepalWid*0.92, 0.70*a0, 0.14,  0.00, true, 'dorsal');
+    drawPetal(1,  0.98 + (rnd()*0.08-0.04), sepalLen*0.92, sepalWid*0.94, 0.62*a1, 0.14,  0.02, true, 'sepal');
+    drawPetal(2, -0.98 + (rnd()*0.08-0.04), sepalLen*0.92, sepalWid*0.94, 0.62*a2, 0.14, -0.02, true, 'sepal');
 
     // Pétalos (frente)
     const a3 = stage(3);
     const a4 = stage(4);
     const petLen = h*(0.96 + 0.12*rnd());
     const petWid = w*(0.56 + 0.12*rnd());
-    drawPetal( 0.42 + (rnd()*0.08-0.04), petLen, petWid, 0.82*a3, 0.14,  0.03, false, 'petal');
-    drawPetal(-0.42 + (rnd()*0.08-0.04), petLen, petWid, 0.82*a4, 0.14, -0.03, false, 'petal');
+    drawPetal(3,  0.42 + (rnd()*0.08-0.04), petLen, petWid, 0.82*a3, 0.14,  0.03, false, 'petal');
+    drawPetal(4, -0.42 + (rnd()*0.08-0.04), petLen, petWid, 0.82*a4, 0.14, -0.03, false, 'petal');
 
     // Labelo + columna
     const a5 = stage(5);
@@ -6790,8 +7016,8 @@ function renderTulipBloomSprite(c2, w, h, col, seed, open, petalsVisible){
 
 
 
-  function drawTulipBloom(w, h, col, seed, open, petalsVisible){
-    const spr = getBloomSprite(w, h, col, seed, open, petalsVisible);
+  function drawTulipBloom(w, h, col, seed, open, petalsVisible, stageMode){
+    const spr = getBloomSprite(w, h, col, seed, open, petalsVisible, stageMode);
     ctx.drawImage(
       spr.canvas,
       -spr.ox,
@@ -7079,13 +7305,8 @@ function renderTulipBloomSprite(c2, w, h, col, seed, open, petalsVisible){
 // ===== Bouquet =====
   // Ramo más rico (8 orquídeas): más profundidad, mejor composición y sin amontonarse.
   const DESCS = [
-    {dx:-0.66, hf:1.05, bs:0.82}, // lateral izq (atrás)
-    {dx:-0.44, hf:1.16, bs:0.92},
-    {dx:-0.18, hf:1.28, bs:1.02},
-    {dx: 0.18, hf:1.28, bs:1.02},
-    {dx: 0.44, hf:1.16, bs:0.92},
-    {dx: 0.66, hf:1.05, bs:0.82}, // lateral der (atrás)
-    {dx: 0.00, hf:0.98, bs:0.80}, // front pequeño (único) centrado
+    // Una sola orquídea (sin ramo completo)
+    {dx: 0.00, hf: 1.18, bs: 1.00},
   ];
 
   let bouquet = [];
@@ -7138,6 +7359,11 @@ function renderTulipBloomSprite(c2, w, h, col, seed, open, petalsVisible){
     });
   }
 function drawBouquet(t){
+    // dt local (para física de pétalos)
+    const _pt = (drawBouquet._tPrev ?? t);
+    const dt = clamp(t - _pt, 0, 60);
+    drawBouquet._tPrev = t;
+
     // Suelo mínimo (sin césped): degradado oscuro suave para anclar el ramo
     {
       const gy = H * 0.74;
@@ -7177,8 +7403,8 @@ function drawBouquet(t){
       const rr = Math.min(W,H) * (0.62 + 0.10*pulse);
 
       const glow = ctx.createRadialGradient(cx, cy, 10, cx, cy, rr);
-      glow.addColorStop(0, `rgba(220,130,200,${0.06 + 0.04*pulse})`);
-      glow.addColorStop(0.55, `rgba(190,95,170,${0.035 + 0.03*pulse})`);
+      glow.addColorStop(0, `rgba(255,210,120,${0.06 + 0.04*pulse})`);
+      glow.addColorStop(0.55, `rgba(255,185,95,${0.035 + 0.03*pulse})`);
       glow.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.save();
       ctx.globalCompositeOperation = 'screen';
@@ -7192,7 +7418,7 @@ const STEM = {r:55,g:155,b:92};
     const gw = windField(t) * CONFIG.sway;
 
     // Inclinación general del ramo (como en un bouquet real)
-    const bouquetLean = -0.14;
+    const bouquetLean = -0.18;
 
     const order = drawBouquet._order || (drawBouquet._order = []);
     order.length = bouquet.length;
@@ -7203,63 +7429,9 @@ const STEM = {r:55,g:155,b:92};
     const master = introActive ? clamp((t - INTRO.t0) / INTRO.dur, 0, 1) : 1;
     if(introActive && master >= 1) INTRO.active = false;
 
-    // Envoltura de papel (capa trasera): dibuja antes de tallos para que parezca que salen del ramo
-    const wrapS = lerp(0.82, 1.10, clamp(Math.min(W,H)/820, 0, 1));
-    const wrapAlpha = introActive ? smoothstep(0.28, 0.78, master) : 1;
+    const introNow = INTRO.active;
 
-    // Punto donde se “juntan” los tallos (agarre del ramo) para que se vea envuelto y no como flores sueltas
-    drawPaperWrap(t, wrapAlpha, wrapS, false);
-    const wg = drawPaperWrap._geom;
-
-    // agarre cerca de la “cintura” del envoltorio (donde iría el listón)
-    let gripX = W*0.52;
-    let gripY = (bouquet[0].baseY ?? (H*SCENE.bouquetBaseY)) + 18*wrapS;
-    if(wg){
-      const yLocal = wg.h * 0.07;
-      gripX = wg.cx + Math.sin(wg.rot) * yLocal;
-      gripY = wg.cy + Math.cos(wg.rot) * yLocal;
-    }
-
-    // Clip: que los tallos queden *dentro* del papel (solo debajo de la boca)
-    let clipWrap = false;
-    if(wg){
-      ctx.save();
-      ctx.translate(wg.cx, wg.cy);
-      ctx.rotate(wg.rot);
-
-      const tw = wg.w * 0.82;
-      const bw = wg.w * 0.33;
-      ctx.beginPath();
-      // “boca” redondeada (arriba)
-      ctx.moveTo(-tw*0.40, wg.topY + wg.h*0.10);
-      ctx.quadraticCurveTo(-tw*0.18, wg.topY - wg.h*0.05, 0, wg.topY);
-      ctx.quadraticCurveTo( tw*0.18, wg.topY - wg.h*0.05, tw*0.40, wg.topY + wg.h*0.10);
-
-      // costados hacia la cintura
-      ctx.quadraticCurveTo( tw*0.56, wg.topY + wg.h*0.38, tw*0.30, wg.openY);
-      ctx.quadraticCurveTo( tw*0.18, wg.knotY - wg.h*0.10, tw*0.06, wg.knotY);
-
-      // base
-      ctx.quadraticCurveTo( bw*0.82, wg.botY - wg.h*0.08, bw*0.56, wg.botY);
-      ctx.quadraticCurveTo( 0, wg.botY + wg.h*0.06, -bw*0.56, wg.botY);
-      ctx.quadraticCurveTo(-bw*0.82, wg.botY - wg.h*0.08, -tw*0.06, wg.knotY);
-
-      // regreso por el costado izquierdo
-      ctx.quadraticCurveTo(-tw*0.18, wg.knotY - wg.h*0.10, -tw*0.30, wg.openY);
-      ctx.quadraticCurveTo(-tw*0.56, wg.topY + wg.h*0.38, -tw*0.40, wg.topY + wg.h*0.10);
-      ctx.closePath();
-
-      ctx.clip();
-
-      // Solo la parte "interior" (debajo de la boca) para no cortar las flores
-      ctx.beginPath();
-      ctx.rect(-wg.w, wg.openY - wg.h*0.06, wg.w*2, wg.h*1.30);
-      ctx.clip();
-
-      // volver a coordenadas normales para dibujar tallos sin transformar
-      ctx.setTransform(DPR,0,0,DPR,0,0);
-      clipWrap = true;
-    }
+        // Sin envoltorio: sin papel ni listón.
 
     for(const f of order){
       let uGen=1, stemU=1, leafU=1, bloomU=1, petals=6;
@@ -7273,24 +7445,126 @@ const STEM = {r:55,g:155,b:92};
         const pU = smoothstep(0.58, 1.00, uGen);
         // Pétalos en continuo (0..6). getBloomSprite ya cuantiza a pasos finos.
         petals = clamp(easeOutCubic(pU) * 6, 0, 6);
+      }else if(!introNow){
+        // Caída de pétalos: primero los de la izquierda, luego hacia la derecha,
+      // y al final el pétalo pequeño de abajo. Tras 30s, “rebrotan” y se repite.
+      const interval   = 4500;
+      const fadeDur    = 950;
+      const regenDelay = 30000;
+      const regenDur   = 3200;
+      const holdFull   = 900;
+
+      const seq = (typeof ORCHID_DROP_SEQ !== 'undefined' && ORCHID_DROP_SEQ && ORCHID_DROP_SEQ.length === 6)
+      ? ORCHID_DROP_SEQ
+      : [2,4,0,3,1,5];
+
+      if(f._petalCycle == null){
+      f._petalCycle = { phase:'drop', dropT0:t, dropK:-1, emptyAt:null, regenT0:null, holdUntil:null };
+      }
+
+      const st = f._petalCycle;
+
+      // Modo de aparición/apagado de piezas (afecta el sprite cache)
+      f._petalStageMode = (st.phase === 'regen') ? 'regen' : 'drop';
+
+      // Brillo extra cuando “nacen” pétalos nuevos (y un poco durante la caída)
+      f._petalGlow = (f._petalGlow ?? 0.55);
+
+      if(st.phase === 'regen'){
+      const elr = Math.max(0, t - (st.regenT0 ?? t));
+      const u = clamp(elr / regenDur, 0, 1);
+
+      // Mini “despliegue” al regenerar (escala/vida sin ser caricatura)
+      f._regenPop = 0.035 * Math.sin(u*Math.PI);
+
+      // Van “apareciendo” (0..6) antes de volver a caer.
+      petals = easeOutCubic(u) * 6;
+
+      // Glow perceptible durante el rebrote
+      f._petalGlow = 0.95 - 0.35*u;
+
+      if(u >= 1){
+      // Tras el rebrote, detenemos la caída: los pétalos quedan puestos.
+      st.phase = 'hold';
+      st.done = true;
+      st.dropT0 = null;
+      st.dropK = -1;
+      st.emptyAt = null;
+      st.regenT0 = null;
+      st.holdUntil = null;
+      petals = 6;
+      f._regenPop = 0;
+      }
+
+      }else if(st.phase === 'hold'){
+      petals = 6;
+      f._regenPop = 0;
+      // Respira un poquito, pero sin soltar nada (fin del ciclo)
+      f._petalGlow = 0.78 + 0.06*(0.5 + 0.5*Math.sin(t*0.0012 + f.phase));
+      }else{
+      // DROP
+      const el = Math.max(0, t - (st.dropT0 ?? t));
+
+      // Pausa “full”: pétalos completos sin soltar nada todavía.
+      if(st.holdUntil != null && t < st.holdUntil){
+      petals = 6;
+      f._petalGlow = 0.78;
+      }else{
+      st.holdUntil = null;
+      f._regenPop = 0;
+
+      const kMax = seq.length - 1; // 0..5
+      const kRaw = Math.floor(el / interval);
+      const k  = clamp(kRaw, 0, kMax);
+      const r  = el - k*interval;
+      const fade = smoothstep(0, fadeDur, r);
+
+      // pv (0..6) controla el sprite: se “apagan” piezas en el orden rankeado
+      petals = clamp(6 - k - fade, 0, 6);
+
+      const last = (st.dropK ?? -1);
+      if(k > last){
+      for(let kk=last+1; kk<=k; kk++){
+      const slotIdx = seq[kk];
+      if(slotIdx != null) spawnFallingPetal(f, slotIdx, t);
+      }
+      st.dropK = k;
+      }
+
+      // Glow suave mientras cae (más al inicio, menos al final)
+      f._petalGlow = 0.62 * clamp(1 - el / (interval*seq.length), 0, 1) + 0.38;
+
+      // ¿Ya se quedaron sin pétalos? (incluye el fade final)
+      const doneAt = (kMax * interval + fadeDur);
+      if(el >= doneAt){
+      petals = 0;
+      if(st.emptyAt == null) st.emptyAt = t;
+
+      if(t - st.emptyAt >= regenDelay){
+      st.phase = 'regen';
+      st.regenT0 = t;
+      }
+      }
+      }
+      }
       }
 
       const sway = (CONFIG.reduceMotion && !CONFIG.forceFlowerMotion) ? 0 : (gw*0.22 + Math.sin(t*0.001 + f.phase) * 0.08 * CONFIG.sway);
       const angle = bouquetLean + sway + (f.x - W*0.5) * 0.0006;
 
       // Base del tallo: más cerca del “agarre” (ramo) para que todo parezca dentro del envoltorio
-      const baseX = lerp(f.x, gripX, 0.72);
-      const baseY = lerp(f.baseY, gripY, 0.60);
-      const topY  = baseY - f.height;
+      const baseX = f.x;
+      const baseY = f.baseY;
+      const topY  = f.baseY - f.height;
 
       // La cabeza (flor) mantiene su “apertura” arriba, no pegada al centro
       const bloomXFull = f.x + Math.sin(angle) * 12 * f.scale;
       const bloomYFull = topY + Math.cos(angle) * 5 * f.scale;
 
       // Curva del tallo: nace junto y se abre hacia la flor (como un manojo)
-      const cp1x = lerp(baseX, bloomXFull, 0.28) + Math.sin(f.phase)*10*f.scale;
+      const cp1x = lerp(baseX, bloomXFull, 0.28) + Math.sin(f.phase)*7*f.scale;
       const cp1y = baseY - f.height*0.38;
-      const cp2x = lerp(baseX, bloomXFull, 0.64) + Math.cos(f.phase*1.7)*16*f.scale;
+      const cp2x = lerp(baseX, bloomXFull, 0.64) + Math.cos(f.phase*1.7)*11*f.scale;
       const cp2y = baseY - f.height*0.74;
 
       const endP = {
@@ -7430,73 +7704,9 @@ const STEM = {r:55,g:155,b:92};
     }
 
     
-    if(clipWrap) ctx.restore();
+    
 
-    // Envoltura de papel (capa frontal): cubre la base de tallos y hace que el ramo se sienta “envuelto”
-    drawPaperWrap(t, wrapAlpha, wrapS, true);
-
-
-    /* bundle_stems_below_wrap_v141 */
-    // Tallos visibles saliendo por debajo del envoltorio (manojo), para que se vea como ramo real
-    if(wg){
-      const cosR = Math.cos(wg.rot), sinR = Math.sin(wg.rot);
-      const inY  = wg.botY - wg.h*0.05;   // justo dentro del papel
-      const outY = wg.botY + wg.h*0.22;   // sobresale por abajo
-      const bandW = wg.w*0.14;
-      const strands = 7;
-
-      // recorta para que solo aparezcan debajo de la base del envoltorio
-      ctx.save();
-      ctx.translate(wg.cx, wg.cy);
-      ctx.rotate(wg.rot);
-      ctx.beginPath();
-      ctx.rect(-wg.w*0.26, wg.botY - wg.h*0.02, wg.w*0.52, wg.h*0.40);
-      ctx.clip();
-      // volver a coordenadas normales
-      ctx.setTransform(DPR,0,0,DPR,0,0);
-
-      ctx.lineCap='round';
-      ctx.lineJoin='round';
-
-      for(let i=0;i<strands;i++){
-        const u = (i/(strands-1))-0.5;
-        const lx = u*bandW + Math.sin(t*0.0012 + i*13.7)*bandW*0.06;
-
-        const sx = wg.cx + lx*cosR - inY*sinR;
-        const sy = wg.cy + lx*sinR + inY*cosR;
-        const ex = wg.cx + (lx*0.92)*cosR - outY*sinR;
-        const ey = wg.cy + (lx*0.92)*sinR + outY*cosR;
-
-        const g = ctx.createLinearGradient(sx, sy, ex, ey);
-        g.addColorStop(0.00, rgba(STEM2.r, STEM2.g, STEM2.b, 0.90));
-        g.addColorStop(1.00, rgba(STEM.r,  STEM.g,  STEM.b,  0.95));
-        ctx.strokeStyle = g;
-
-        const w0 = 4.2 * wg.scale;
-        const w1 = 2.2 * wg.scale;
-        ctx.lineWidth = lerp(w0, w1, Math.abs(u)*0.65);
-
-        ctx.beginPath();
-        const mx = (sx+ex)*0.5 + (u*bandW)*0.05;
-        const my = (sy+ey)*0.5 + 8*wg.scale;
-        ctx.quadraticCurveTo(mx, my, ex, ey);
-        ctx.stroke();
-
-        // highlight suave
-        ctx.save();
-        ctx.globalCompositeOperation='screen';
-        ctx.globalAlpha=0.12;
-        ctx.strokeStyle='rgba(210,255,230,0.60)';
-        ctx.lineWidth = Math.max(1, ctx.lineWidth*0.32);
-        ctx.beginPath();
-        ctx.quadraticCurveTo(mx, my, ex, ey);
-        ctx.stroke();
-        ctx.restore();
-      }
-      ctx.restore();
-    }
-
-    ctx.save();
+ctx.save();
     ctx.globalCompositeOperation = 'screen';
     const fogTop = H*0.72;
     const fog = ctx.createLinearGradient(0, fogTop, 0, H);
@@ -7542,7 +7752,7 @@ const STEM = {r:55,g:155,b:92};
     // Bounds dinámicos del conjunto (para orbes grupales alrededor de todo el ramo)
     let minOX =  1e9, maxOX = -1e9, minOY =  1e9, maxOY = -1e9;
 
-for(const f of bloomOrder){
+    for(const f of bloomOrder){
       const bu = (f._bloomU ?? 1);
       if(bu <= 0.001) continue;
 ctx.save();
@@ -7579,13 +7789,14 @@ ctx.save();
       const breathe = (CONFIG.reduceMotion && !CONFIG.forceFlowerMotion) ? 1 : (1 + Math.sin(tt*1.5 + f.phase*0.7) * 0.02 * CONFIG.sway);
 
       ctx.translate(bobX, bobY);
-      ctx.scale(breathe, breathe);
+      const pop = (f._regenPop ?? 0);
+      ctx.scale(breathe*(1+pop), breathe*(1+pop));
       ctx.rotate(f.angle + headWobble);
 
-      ctx.shadowColor = 'rgba(210,160,255,0.16)';
+      ctx.shadowColor = 'rgba(255,224,160,0.16)';
       ctx.shadowBlur = (10 + 12*f.scale) * bScale;
 
-      drawTulipBloom(f.bw, f.bh, f.col, f.seed, (f._openNow ?? f.open), (f._petals ?? 6));
+      drawTulipBloom(f.bw, f.bh, f.col, f.seed, (f._openNow ?? f.open), (f._petals ?? 6), (f._petalStageMode ?? 'drop'));
 
       // Volumen extra: un toque de luz y sombra direccional (recorta mejor y se ve menos “plano”)
       {
@@ -7645,6 +7856,9 @@ ctx.save();
       ctx.restore();
     }
 
+    // Pétalos cayendo por delante del ramo
+    updateAndDrawFallingPetals(t, dt);
+
     // Orbes grupales: un solo conjunto alrededor de todo el ramo (no por flor)
     if(minOX < 1e8){
       const cxO = (minOX + maxOX) * 0.5;
@@ -7657,19 +7871,6 @@ ctx.save();
       const aO = (introActive ? (0.40 + 0.60*master) : 1) * 0.92;
       drawBouquetOrbs(cxO, cyO, rxO, ryO, aO, t, 7777);
     }
-
-    const knotX = W*0.5, knotY = H*0.955;
-    ctx.save();
-    ctx.globalAlpha *= (introActive ? wrapAlpha : 1);
-    // Sombra más suave bajo el nudo/envoltura (evita la “línea negra”)
-    const ks = ctx.createRadialGradient(knotX, knotY, 6, knotX, knotY, Math.min(140, W*0.26));
-    ks.addColorStop(0, 'rgba(0,0,0,0.16)');
-    ks.addColorStop(0.55, 'rgba(0,0,0,0.08)');
-    ks.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = ks;
-    ctx.beginPath();
-    ctx.ellipse(knotX, knotY, Math.min(130, W*0.24), 34, 0, 0, TAU);
-    ctx.fill();ctx.restore();
 
     // Luciérnagas/polvo brillante (sutil): le da vida al primer plano
     drawFireflies(t, introActive ? (0.35 + 0.65*master) : 1);
@@ -7728,6 +7929,9 @@ ctx.save();
     H = Math.floor(vv ? vv.height : window.innerHeight);
 
     const isSmall = Math.min(W, H) < 420;
+
+    // Composición: en pantallas pequeñas bajamos un poco el ramo para que no tape el texto
+    SCENE.bouquetBaseY = isSmall ? 0.932 : 0.915;
 
     // Auto-tune a couple settings for small screens
     if(CONFIG._baseStars == null) CONFIG._baseStars = CONFIG.stars;
@@ -7798,7 +8002,9 @@ rebuildBouquetShadeCache();
     console.assert(Array.isArray(starLinks), 'starLinks no existe');
     console.assert(stars.length < 40 || starLinks.length > 0, 'Constelaciones no generadas');
     console.assert(Array.isArray(tapSparkles), 'tapSparkles no existe');
-    console.assert(Array.isArray(textStars) && textStars.length>200, 'Texto en estrellas no generado');
+    if(String(CONFIG.starText ?? '').trim()){
+      console.assert(Array.isArray(textStars) && textStars.length>200, 'Texto en estrellas no generado');
+    }
     console.assert(!!skyCache && skyCache.width>0, 'Sky cache no generado');
     console.assert(Array.isArray(bouquet) && bouquet.length===DESCS.length, 'Bouquet no se generó correctamente');
     console.assert(CONFIG.crownStrength >= 0 && CONFIG.crownStrength <= 1, 'crownStrength fuera de rango');
@@ -7888,7 +8094,8 @@ document.addEventListener('visibilitychange', () => {
 }, {passive:true});
 
 resize();
-// No arrancamos hasta que el usuario toque la carta.
+restartIntro(0);
+start();
 })();
 </script>
 </body>
